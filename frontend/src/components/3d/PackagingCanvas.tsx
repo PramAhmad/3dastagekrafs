@@ -1147,6 +1147,7 @@ function ContinuousJarModel({
   onUpdateSelectedObjectPos,
   setOrbitEnabled,
   setIsHoveringObject,
+  dielineSvgUrl,
 }: {
   radius: number
   height: number
@@ -1159,6 +1160,7 @@ function ContinuousJarModel({
   onUpdateSelectedObjectPos?: (x: number, y: number) => void
   setOrbitEnabled: (enabled: boolean) => void
   setIsHoveringObject: (hovering: boolean) => void
+  dielineSvgUrl?: string
 }) {
   const isDraggingRef = useRef(false)
   const dragStartUvRef = useRef<{ u: number; v: number; initialPosX: number; initialPosY: number } | null>(null)
@@ -1181,6 +1183,22 @@ function ContinuousJarModel({
   const clearcoat = isGlossy ? 1.0 : 0.0
 
   const loadedImages = useImageCache(objects)
+  const [svgImg, setSvgImg] = useState<HTMLImageElement | null>(null)
+
+  useEffect(() => {
+    if (!dielineSvgUrl) {
+      setSvgImg(null)
+      return
+    }
+    const img = new Image()
+    img.crossOrigin = "anonymous"
+    img.onload = () => setSvgImg(img)
+    if (!dielineSvgUrl.startsWith("data:") && dielineSvgUrl.includes("<svg")) {
+      img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(dielineSvgUrl)}`
+    } else {
+      img.src = dielineSvgUrl
+    }
+  }, [dielineSvgUrl])
 
   const wrapTexture = useMemo(() => {
     const canvas = document.createElement("canvas")
@@ -1190,6 +1208,10 @@ function ContinuousJarModel({
     if (!ctx) return null
 
     applyMaterialBackground(ctx, canvas.width, canvas.height, boxColor, materialFinish, materialType)
+
+    if (svgImg && svgImg.complete && svgImg.naturalWidth > 0) {
+      ctx.drawImage(svgImg, 0, 0, canvas.width, canvas.height)
+    }
 
     const pxPerMmX = canvas.width / perimeter
     const pxPerMmY = canvas.height / height
@@ -1434,6 +1456,7 @@ function ContinuousBottleModel({
   materialType,
   objects,
   selectedObjectId,
+  dielineSvgUrl,
 }: {
   radius: number
   height: number
@@ -1442,6 +1465,7 @@ function ContinuousBottleModel({
   materialType?: string
   objects: CanvasObject[]
   selectedObjectId: string | null
+  dielineSvgUrl?: string
 }) {
   const maxDim = Math.max(radius * 2, height)
   const normFactor = maxDim > 120 ? 1.55 / maxDim : 1.55 / Math.max(75, maxDim)
@@ -1450,6 +1474,22 @@ function ContinuousBottleModel({
   const bodyH = h * 0.7
 
   const loadedImages = useImageCache(objects)
+  const [svgImg, setSvgImg] = useState<HTMLImageElement | null>(null)
+
+  useEffect(() => {
+    if (!dielineSvgUrl) {
+      setSvgImg(null)
+      return
+    }
+    const img = new Image()
+    img.crossOrigin = "anonymous"
+    img.onload = () => setSvgImg(img)
+    if (!dielineSvgUrl.startsWith("data:") && dielineSvgUrl.includes("<svg")) {
+      img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(dielineSvgUrl)}`
+    } else {
+      img.src = dielineSvgUrl
+    }
+  }, [dielineSvgUrl])
 
   const bottleTexture = useMemo(() => {
     const canvas = document.createElement("canvas")
@@ -1459,6 +1499,10 @@ function ContinuousBottleModel({
     if (!ctx) return null
 
     applyMaterialBackground(ctx, canvas.width, canvas.height, boxColor, materialFinish, materialType)
+
+    if (svgImg && svgImg.complete && svgImg.naturalWidth > 0) {
+      ctx.drawImage(svgImg, 0, 0, canvas.width, canvas.height)
+    }
 
     const perimeter = 2 * Math.PI * radius
     const pxPerMmX = canvas.width / perimeter
@@ -1474,7 +1518,7 @@ function ContinuousBottleModel({
     tex.colorSpace = THREE.SRGBColorSpace
     tex.needsUpdate = true
     return tex
-  }, [boxColor, materialFinish, materialType, objects, selectedObjectId, loadedImages, radius, height])
+  }, [boxColor, materialFinish, materialType, objects, selectedObjectId, loadedImages, radius, height, svgImg])
 
   return (
     <group position={[0, h / 2, 0]}>
@@ -1523,6 +1567,7 @@ function ContinuousCanModel({
   materialType,
   objects,
   selectedObjectId,
+  dielineSvgUrl,
 }: {
   radius: number
   height: number
@@ -1531,6 +1576,7 @@ function ContinuousCanModel({
   materialType?: string
   objects: CanvasObject[]
   selectedObjectId: string | null
+  dielineSvgUrl?: string
 }) {
   const maxDim = Math.max(radius * 2, height)
   const normFactor = maxDim > 120 ? 1.55 / maxDim : 1.55 / Math.max(75, maxDim)
@@ -1538,6 +1584,22 @@ function ContinuousCanModel({
   const h = height * normFactor
 
   const loadedImages = useImageCache(objects)
+  const [svgImg, setSvgImg] = useState<HTMLImageElement | null>(null)
+
+  useEffect(() => {
+    if (!dielineSvgUrl) {
+      setSvgImg(null)
+      return
+    }
+    const img = new Image()
+    img.crossOrigin = "anonymous"
+    img.onload = () => setSvgImg(img)
+    if (!dielineSvgUrl.startsWith("data:") && dielineSvgUrl.includes("<svg")) {
+      img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(dielineSvgUrl)}`
+    } else {
+      img.src = dielineSvgUrl
+    }
+  }, [dielineSvgUrl])
 
   const canTexture = useMemo(() => {
     const canvas = document.createElement("canvas")
@@ -1547,6 +1609,10 @@ function ContinuousCanModel({
     if (!ctx) return null
 
     applyMaterialBackground(ctx, canvas.width, canvas.height, boxColor, "metallic", materialType || "silver_foil")
+
+    if (svgImg && svgImg.complete && svgImg.naturalWidth > 0) {
+      ctx.drawImage(svgImg, 0, 0, canvas.width, canvas.height)
+    }
 
     const perimeter = 2 * Math.PI * radius
     const pxPerMmX = canvas.width / perimeter
@@ -1562,7 +1628,7 @@ function ContinuousCanModel({
     tex.colorSpace = THREE.SRGBColorSpace
     tex.needsUpdate = true
     return tex
-  }, [boxColor, materialType, objects, selectedObjectId, loadedImages, radius, height])
+  }, [boxColor, materialType, objects, selectedObjectId, loadedImages, radius, height, svgImg])
 
   return (
     <group position={[0, h / 2, 0]}>
@@ -2349,6 +2415,7 @@ export default function PackagingCanvas({
               onUpdateSelectedObjectPos={onUpdateSelectedObjectPos}
               setOrbitEnabled={setOrbitEnabled}
               setIsHoveringObject={setIsHoveringObject}
+              dielineSvgUrl={dielineSvgUrl}
             />
           ) : category === "BOTTLE" ? (
             <ContinuousBottleModel
@@ -2359,6 +2426,7 @@ export default function PackagingCanvas({
               materialType={materialType}
               objects={objects}
               selectedObjectId={selectedObjectId}
+              dielineSvgUrl={dielineSvgUrl}
             />
           ) : category === "CAN" ? (
             <ContinuousCanModel
@@ -2369,6 +2437,7 @@ export default function PackagingCanvas({
               materialType={materialType}
               objects={objects}
               selectedObjectId={selectedObjectId}
+              dielineSvgUrl={dielineSvgUrl}
             />
           ) : category === "TRIANGLE" ? (
             <ContinuousTriangleModel

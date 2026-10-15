@@ -123,6 +123,7 @@ function AdminStudioContent() {
   const [model3dUrl, setModel3dUrl] = useState<string | undefined>(undefined)
   const [modelFormat, setModelFormat] = useState<string>("glb")
   const [customDielineSvgUrl, setCustomDielineSvgUrl] = useState<string | undefined>(undefined)
+  const [customDielineSvgRaw, setCustomDielineSvgRaw] = useState<string | null>(null)
   const [manifestJson, setManifestJson] = useState<any>(null)
   const [modelScaleMultiplier, setModelScaleMultiplier] = useState<number>(1.0)
   const [maxVisualBound, setMaxVisualBound] = useState<number>(1.65)
@@ -263,14 +264,50 @@ function AdminStudioContent() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    const reader = new FileReader()
-    reader.onload = async (evt) => {
-      const dataUrl = evt.target?.result as string
-      setCustomDielineSvgUrl(dataUrl)
-      await saveAsset(`temp_dieline_${file.name}`, dataUrl)
-      showToast(`Dieline SVG "${file.name}" terhubung langsung ke tekstur 3D!`)
+    try {
+      const text = await file.text()
+      setCustomDielineSvgRaw(text)
+
+      const reader = new FileReader()
+      reader.onload = async (evt) => {
+        const dataUrl = evt.target?.result as string
+        setCustomDielineSvgUrl(dataUrl)
+        await saveAsset(`temp_dieline_${file.name}`, dataUrl)
+
+        // Intelligent auto-detection of Cylindrical Bottle / Can wrap label vs Folding Box
+        const isCylinderPattern =
+          /cylinder|spray|bottle|kaleng|can|wrap|melingkar/i.test(file.name) ||
+          /Cylindrical|cylinder|Spray|Wrap Label/i.test(text)
+
+        if (isCylinderPattern) {
+          setCategory("BOTTLE")
+          setSelectedFormId("bottle-spray")
+          setFormName(file.name.replace(/\.[^/.]+$/, ""))
+
+          // Extract wrap dimensions if available (e.g. 126 x 98 mm)
+          const dimMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:mm|x|×)\s*(\d+(?:\.\d+)?)\s*mm/i)
+          if (dimMatch) {
+            const parsedWrap = parseFloat(dimMatch[1])
+            const parsedH = parseFloat(dimMatch[2])
+            if (parsedWrap > 0 && parsedH > 0) {
+              const calculatedRadius = Math.round(parsedWrap / (2 * Math.PI))
+              setRadius(calculatedRadius)
+              setHeight(parsedH)
+            }
+          } else {
+            setRadius(20)
+            setHeight(98)
+          }
+          showToast(`Terdeteksi Dieline Botol Spray Silinder! Kategori 3D beralih ke BOTOL.`, "info")
+        } else {
+          showToast(`Dieline SVG "${file.name}" terhubung langsung ke tekstur 3D!`)
+        }
+      }
+      reader.readAsDataURL(file)
+    } catch (err) {
+      console.error("Gagal membaca file SVG:", err)
+      showToast("Gagal membaca file SVG yang diunggah.", "error")
     }
-    reader.readAsDataURL(file)
   }
 
   // Handle Artwork / Decal Image Upload
@@ -761,14 +798,18 @@ function AdminStudioContent() {
               {/* SVG Vector Dieline Preview Thumbnail */}
               <div className="rounded-xl border border-[#30363d] bg-white p-2 flex flex-col items-center justify-center overflow-hidden">
                 <div
-                  className="w-full h-44 flex items-center justify-center overflow-hidden"
-                  dangerouslySetInnerHTML={{ __html: currentDieline.svgString }}
+                  className="w-full h-44 flex items-center justify-center overflow-hidden [&>svg]:max-w-full [&>svg]:max-h-full"
+                  dangerouslySetInnerHTML={{ __html: customDielineSvgRaw || currentDieline.svgString }}
                 />
                 <div className="w-full pt-2 flex items-center justify-between text-[10px] text-[#475569] border-t border-slate-200">
                   <span>
-                    Ukuran Lembaran: <b>{currentDieline.totalWidthMm} × {currentDieline.totalHeightMm} mm</b>
+                    {customDielineSvgRaw ? (
+                      <span className="text-emerald-700 font-bold">✓ Dieline Kustom Vektor (Aktif)</span>
+                    ) : (
+                      <>Ukuran Lembaran: <b>{currentDieline.totalWidthMm} × {currentDieline.totalHeightMm} mm</b></>
+                    )}
                   </span>
-                  <span className="font-mono text-red-600 font-bold">Cut = Solid Red</span>
+                  <span className="font-mono text-red-600 font-bold">Cut = Magenta/Red</span>
                 </div>
               </div>
 

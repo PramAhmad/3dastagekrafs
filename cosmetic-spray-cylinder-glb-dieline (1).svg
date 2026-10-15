@@ -12,8 +12,30 @@
       .safe-line { stroke: #2e7d32; stroke-width: 0.25; stroke-dasharray: 0.8 1.2; fill: none; }
     </style>
   </defs>
-  <!-- ARTWORK DESIGN LAYER (Place graphics here) -->
-  <g id="Artwork-Layer" />
+  <!-- 1. SHEET BACKGROUND -->
+  <g id="layer-sheet">
+    <rect width="226" height="223" fill="#ffffff" />
+  </g>
+
+  <!-- 2. SEMANTIC PANELS (3D CYLINDER UV MAPPING: DEPAN 0°-180° & BELAKANG 180°-360°) -->
+  <g id="layer-panels">
+    <!-- Panel Muka Depan (Front Face 0° - 180°) -->
+    <rect id="face-front" data-face="front" x="30" y="30" width="63" height="98" fill="rgba(37, 99, 235, 0.04)" stroke="rgba(37, 99, 235, 0.3)" stroke-width="0.3" stroke-dasharray="1.5 1.5" />
+    <text x="61.5" y="79" class="txt-dim" fill="#64748b" font-size="3.2px">MUKA DEPAN (FRONT 0° - 180°)</text>
+
+    <!-- Panel Muka Belakang (Back Face 180° - 360°) -->
+    <rect id="face-back" data-face="back" x="93" y="30" width="63" height="98" fill="rgba(37, 99, 235, 0.02)" stroke="rgba(37, 99, 235, 0.3)" stroke-width="0.3" stroke-dasharray="1.5 1.5" />
+    <text x="124.5" y="79" class="txt-dim" fill="#64748b" font-size="3.2px">MUKA BELAKANG (BACK 180° - 360°)</text>
+    
+    <!-- Garis Pemisah Visual Sisi Botol -->
+    <line x1="93" y1="30" x2="93" y2="128" stroke="#94a3b8" stroke-width="0.3" stroke-dasharray="2 1.5" />
+  </g>
+
+  <!-- 3. ARTWORK & FACE COLOR LAYER (Warna Dasar Stiker & Desain Grafis) -->
+  <g id="Artwork-Layer">
+    <!-- Stiker Base / Face Color Fill (Warna Dasar Stiker Botol) -->
+    <rect x="30" y="30" width="126" height="98" rx="2" fill="#FFFFFF" stroke="none" />
+  </g>
   <!-- 3MM SAFE MARGIN -->
   <g id="Safe-Zone" class="safe-line">
     <path d="M 34 33 L 152 33 Q 153 33 153 34 L 153 124 Q 153 125 152 125 L 34 125 Q 33 125 33 124 L 33 34 Q 33 33 34 33 Z"/>
