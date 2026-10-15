@@ -204,14 +204,57 @@ export default function DielineCanvas({
   const selectedObject = objects.find((o) => o.id === selectedObjectId) || null
 
   const isCustomSvg = !!svgMeta
-  // Normalize large SVGs (e.g. 1280px standard design assets) to a comfortable editing size ~480px on screen
-  const svgMaxDim = svgMeta ? Math.max(svgMeta.width, svgMeta.height) : 1
-  const svgAutoFitScale = isCustomSvg && svgMaxDim > 500 ? 480 / svgMaxDim : 1.0
-  const effectiveSvgScale = isCustomSvg ? svgAutoFitScale * (zoom / 100) : 1.0
 
-  // Pixels per mm scale on 2D screen (at 100% zoom, 1mm = 2.4px, at 70% zoom = ~1.68px)
-  const scaleMmToPx = 2.4 * (zoom / 100)
-  const activeScale = isCustomSvg ? effectiveSvgScale : scaleMmToPx
+  // Raw millimeter dimensions before scaling
+  const rawDielineW = useMemo(() => {
+    if (svgMeta) return svgMeta.width
+    const isBox = category === "BOX" || !category
+    const isCylinder = category === "JAR" || category === "BOTTLE" || category === "CAN"
+    if (isBox) {
+      const flapH = height
+      const dustWingW = height * 0.75
+      const centerX = dustWingW + flapH + 20
+      return centerX + length + flapH + dustWingW + 40
+    }
+    if (isCylinder) {
+      const radiusMm = (length || 65) / 2
+      const circumference = Math.round(2 * Math.PI * radiusMm)
+      return 15 + circumference + 15 + 40
+    }
+    return (length || 100) + 40
+  }, [svgMeta, category, length, height])
+
+  const rawDielineH = useMemo(() => {
+    if (svgMeta) return svgMeta.height
+    const isBox = category === "BOX" || !category
+    const isCylinder = category === "JAR" || category === "BOTTLE" || category === "CAN"
+    if (isBox) {
+      const flapH = height
+      const tuckH = Math.min(25, height * 0.7)
+      const topOffset = flapH * 2 + 15
+      const baseY = topOffset + flapH
+      const lidY = baseY + width + flapH
+      const tuckY = lidY + width
+      return tuckY + tuckH + 40
+    }
+    if (isCylinder) {
+      return (height || 98) + 60
+    }
+    return (height || 100) + 40
+  }, [svgMeta, category, width, height])
+
+  // Responsive base scale so any packaging dieline (custom SVG or procedural) fits cleanly at 100% zoom (~520px target)
+  const basePxPerMm = useMemo(() => {
+    const maxDim = Math.max(rawDielineW, rawDielineH, 50)
+    const ideal = 520 / maxDim
+    return Math.max(0.5, Math.min(3.0, ideal))
+  }, [rawDielineW, rawDielineH])
+
+  const activeScale = useMemo(() => {
+    return basePxPerMm * (zoom / 100)
+  }, [basePxPerMm, zoom])
+
+  const scaleMmToPx = activeScale
 
   // --------------------------------------------------------------------------
   // PACDORA-STYLE REVERSE SVG & PACKAGING DIELINE GENERATION
@@ -611,16 +654,22 @@ export default function DielineCanvas({
     [faceColors, materialType, boxColor]
   )
 
-  // Auto Center & Fit on Initial Mount or Dimensions change
-  useEffect(() => {
+  // Auto Center & Fit on Initial Mount or Dimensions / Zoom change
+  const centerDieline = useCallback(() => {
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect()
+      const renderedW = dieline.totalW * activeScale
+      const renderedH = dieline.totalH * activeScale
       setPan({
-        x: Math.max(20, (rect.width - dieline.totalW * scaleMmToPx) / 2),
-        y: Math.max(20, (rect.height - dieline.totalH * scaleMmToPx) / 2),
+        x: Math.round((rect.width - renderedW) / 2),
+        y: Math.round(Math.max(20, (rect.height - renderedH) / 2)),
       })
     }
-  }, [dieline.totalW, dieline.totalH, scaleMmToPx])
+  }, [dieline.totalW, dieline.totalH, activeScale])
+
+  useEffect(() => {
+    centerDieline()
+  }, [centerDieline])
 
   // Pan Canvas handlers
   const handleMouseDownCanvas = (e: React.MouseEvent) => {
@@ -1376,22 +1425,15 @@ export default function DielineCanvas({
           <RotateCw className="w-4 h-4" />
         </button>
 
-        {/* Fit / Center View (70% Default) */}
+        {/* Fit / Center View (100% Default) */}
         <button
           onClick={() => {
-            onZoomChange(70)
+            onZoomChange(100)
             setRotationAngle(0)
-            if (containerRef.current) {
-              const rect = containerRef.current.getBoundingClientRect()
-              const scale70 = 2.4 * (70 / 100)
-              setPan({
-                x: Math.max(20, (rect.width - dieline.totalW * scale70) / 2),
-                y: Math.max(20, (rect.height - dieline.totalH * scale70) / 2),
-              })
-            }
+            centerDieline()
           }}
           className="p-1.5 rounded-xl hover:bg-neutral-100 text-neutral-700 transition-colors"
-          title="Fit View & Center (70%)"
+          title="Reset Zoom ke 100% & Pusatkan"
         >
           <Maximize2 className="w-4 h-4" />
         </button>

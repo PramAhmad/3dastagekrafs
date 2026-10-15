@@ -301,7 +301,7 @@ function EditorComponent() {
   // Camera Orbit & Grid
   const [cameraView, setCameraView] = useState<"iso" | "front" | "back" | "top" | "side">("iso")
   const [showGrid, setShowGrid] = useState(false)
-  const [dielineZoom, setDielineZoom] = useState(50)
+  const [dielineZoom, setDielineZoom] = useState(100)
   const [openProgress, setOpenProgress] = useState(0)
 
   const handleUpdateFaceColor = (faceId: string, color: string) => {

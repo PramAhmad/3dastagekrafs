@@ -401,39 +401,49 @@ export function sanitizeSvgFor3D(rawSvgText: string): string | null {
     // 1. Remove all text and tspan elements
     doc.querySelectorAll("text, tspan").forEach((t) => t.remove())
 
-    // 2. Remove technical annotations, dimension lines, title blocks, legends, bleed/safe
-    const annotationSelectors = [
+    // 2. Remove technical annotations, cut lines, crease lines, dimension lines, title blocks, legends, bleed/safe
+    const technicalLayerSelectors = [
+      "#layer-cut",
+      "#layer-crease",
+      "#layer-dieline",
+      "#Dieline-Cut",
+      "#Crease-Score",
+      "#Safe-Zone",
+      "#Bleed-3mm",
+      "#layer-bleed",
+      "#layer-safe",
+      "#layer-sheet",
+      "#layer-panels",
       "#layer-annotations",
       "#Technical-Annotations",
       "#Legend",
-      "#Title-Block",
-      ".title-label",
-      ".dim-label",
-      ".txt-title",
-      ".txt-meta",
-      ".txt-dim",
-      ".dim-line",
-      "#layer-sheet",
-      "#Sheet-Background",
-      "#base-face-color",
-      "#layer-panels",
-      "#Panels-Layer",
-      "[data-face]",
-      "#layer-bleed",
-      "#layer-safe",
-      "#Bleed-3mm",
-      "#Safe-Zone",
-      ".bleed-line",
-      ".safe-line",
       "#Registration-Marks",
       "#Reg-Marks",
       "#Crosshairs",
       "#Dimensions",
       "#Guides",
+      "#Title-Block",
+      "#base-face-color",
+      "#Sheet-Background",
+      "#Panels-Layer",
+      "[data-face]",
+      ".cut-line",
+      ".crease-line",
+      ".perf-line",
+      ".bleed-line",
+      ".safe-line",
+      ".dim-line",
+      ".title-label",
+      ".dim-label",
+      ".panel-label",
+      ".txt-title",
+      ".txt-meta",
+      ".txt-dim",
+      "style",
       "metadata",
       "foreignObject",
     ]
-    annotationSelectors.forEach((sel) => {
+    technicalLayerSelectors.forEach((sel) => {
       doc.querySelectorAll(sel).forEach((el) => el.remove())
     })
 
@@ -469,7 +479,10 @@ export function sanitizeSvgFor3D(rawSvgText: string): string | null {
     }
 
     doc.querySelectorAll("path, line, polyline, polygon, rect").forEach((el) => {
-      if (isCutOrCreaseOrGuide(el)) {
+      if (
+        isCutOrCreaseOrGuide(el) ||
+        el.closest("#layer-cut, #layer-crease, #Dieline-Cut, #Crease-Score, .cut-line, .crease-line")
+      ) {
         el.remove()
       }
     })
