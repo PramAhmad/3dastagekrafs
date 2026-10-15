@@ -3,19 +3,29 @@ import { writeFile, mkdir } from "fs/promises"
 import fs from "fs"
 import path from "path"
 
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads")
+function getTargetUploadDirs(): string[] {
+  const cwd = process.cwd()
+  const candidates = [
+    path.join(cwd, "public", "uploads"),
+    path.join(cwd, "frontend", "public", "uploads"),
+    path.join("/var/www/astaKraf/frontend/public/uploads"),
+  ]
 
-function ensureUploadDir(): string {
-  if (!fs.existsSync(UPLOAD_DIR)) {
-    fs.mkdirSync(UPLOAD_DIR, { recursive: true })
+  const validDirs: string[] = []
+  for (const dir of candidates) {
+    try {
+      if (!fs.existsSync(/*turbopackIgnore: true*/ dir)) {
+        fs.mkdirSync(dir, { recursive: true })
+      }
+      validDirs.push(dir)
+    } catch (e) {}
   }
-  return UPLOAD_DIR
+  return validDirs.length > 0 ? validDirs : [path.join(cwd, "public", "uploads")]
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const uploadDir = ensureUploadDir()
-    await mkdir(uploadDir, { recursive: true })
+    const uploadDirs = getTargetUploadDirs()
 
     const contentType = req.headers.get("content-type") || ""
 
@@ -47,9 +57,13 @@ export async function POST(req: NextRequest) {
       const ext = path.extname(filename) || ".png"
       const cleanBase = path.basename(filename, ext).replace(/[^a-zA-Z0-9_-]/g, "_")
       const finalName = `${cleanBase}_${Date.now()}${ext}`
-      const filePath = path.join(uploadDir, finalName)
 
-      await writeFile(filePath, buffer)
+      for (const dir of uploadDirs) {
+        try {
+          await writeFile(path.join(dir, finalName), buffer)
+        } catch (e) {}
+      }
+
       const publicUrl = `/uploads/${finalName}`
 
       return NextResponse.json({
@@ -75,9 +89,13 @@ export async function POST(req: NextRequest) {
     const ext = path.extname(originalName) || ".png"
     const cleanBase = path.basename(originalName, ext).replace(/[^a-zA-Z0-9_-]/g, "_")
     const finalName = `${cleanBase}_${Date.now()}${ext}`
-    const filePath = path.join(uploadDir, finalName)
 
-    await writeFile(filePath, buffer)
+    for (const dir of uploadDirs) {
+      try {
+        await writeFile(path.join(dir, finalName), buffer)
+      } catch (e) {}
+    }
+
     const publicUrl = `/uploads/${finalName}`
 
     return NextResponse.json({
