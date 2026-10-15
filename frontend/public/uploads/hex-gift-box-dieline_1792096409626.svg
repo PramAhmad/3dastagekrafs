@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="540mm" height="184mm" viewBox="0 0 540 184">
+  <defs>
+    <style>
+      .txt-title { font-family: 'Barlow', 'Helvetica Neue', Arial, sans-serif; font-weight: 700; font-size: 4.5px; fill: #111827; }
+      .txt-meta { font-family: 'Barlow', 'Helvetica Neue', Arial, sans-serif; font-size: 2.8px; fill: #4b5563; }
+      .txt-dim { font-family: 'Barlow', 'Helvetica Neue', Arial, sans-serif; font-size: 2.6px; font-weight: 600; fill: #1f2937; text-anchor: middle; }
+      .dim-line { stroke: #6b7280; stroke-width: 0.25; fill: none; }
+      .cut-line { stroke: #ff007f; stroke-width: 0.45; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .crease-line { stroke: #00a651; stroke-width: 0.45; stroke-dasharray: 2 1.5; fill: none; stroke-linecap: round; }
+      .bleed-line { stroke: #00a0e9; stroke-width: 0.35; stroke-dasharray: 1.5 1.5; fill: none; }
+      .safe-line { stroke: #2e7d32; stroke-width: 0.25; stroke-dasharray: 0.8 1.2; fill: none; }
+    </style>
+  </defs>
+  <!-- ARTWORK DESIGN LAYER (Place graphics here) -->
+  <g id="Artwork-Layer" />
+  <!-- 3MM SAFE MARGIN -->
+  <g id="Safe-Zone" class="safe-line">
+    <path d="M 34 33 L 466 33 Q 467 33 467 34 L 467 85 Q 467 86 466 86 L 34 86 Q 33 86 33 85 L 33 34 Q 33 33 34 33 Z"/>
+  </g>
+  <!-- 3MM BLEED OUTLINE -->
+  <g id="Bleed-3mm" class="bleed-line">
+    <path d="M 32 27 L 468 27 Q 473 27 473 32 L 473 87 Q 473 92 468 92 L 32 92 Q 27 92 27 87 L 27 32 Q 27 27 32 27 Z"/>
+  </g>
+  <!-- DIE CUT LINE (Spot Magenta #ff007f) -->
+  <g id="Dieline-Cut" class="cut-line">
+    <path d="M 32 30 L 468 30 Q 470 30 470 32 L 470 87 Q 470 89 468 89 L 32 89 Q 30 89 30 87 L 30 32 Q 30 30 32 30 Z"/>
+  </g>
+  <!-- CREASE / SCORE LINES (Green Dashed #00a651) -->
+  <g id="Crease-Score" class="crease-line">
+
+  </g>
+  <!-- TECHNICAL DIMENSIONS & REGISTRATION -->
+  <g id="Technical-Annotations">
+    <!-- Registration Crosshairs -->
+    <g stroke="#222222" stroke-width="0.3" fill="none"><circle cx="10" cy="10" r="3"/><line x1="5" y1="10" x2="15" y2="10"/><line x1="10" y1="5" x2="10" y2="15"/></g>
+    <g stroke="#222222" stroke-width="0.3" fill="none"><circle cx="530" cy="10" r="3"/><line x1="525" y1="10" x2="535" y2="10"/><line x1="530" y1="5" x2="530" y2="15"/></g>
+    <g stroke="#222222" stroke-width="0.3" fill="none"><circle cx="10" cy="174" r="3"/><line x1="5" y1="174" x2="15" y2="174"/><line x1="10" y1="169" x2="10" y2="179"/></g>
+    <g stroke="#222222" stroke-width="0.3" fill="none"><circle cx="530" cy="174" r="3"/><line x1="525" y1="174" x2="535" y2="174"/><line x1="530" y1="169" x2="530" y2="179"/></g>
+    <!-- Dimension Lines -->
+<line x1="30" y1="101" x2="470" y2="101" class="dim-line"/><circle cx="30" cy="101" r="0.6" fill="#6b7280"/><circle cx="470" cy="101" r="0.6" fill="#6b7280"/><text x="250" y="99.5" class="txt-dim">440 mm Wrap</text>
+<line x1="482" y1="30" x2="482" y2="89" class="dim-line"/><circle cx="482" cy="30" r="0.6" fill="#6b7280"/><circle cx="482" cy="89" r="0.6" fill="#6b7280"/><text x="482" y="58" class="txt-dim">59 mm Height</text>
+    <!-- Title Block & Specifications Header -->
+    <g transform="translate(10, 160)">
+      <rect x="0" y="0" width="520" height="18" fill="#f9fafb" stroke="#e5e7eb" stroke-width="0.3" rx="1.5"/>
+      <text x="5" y="5.5" class="txt-title">Hexagonal Rigid Confectionery Box — Production Dieline</text>
+      <text x="5" y="10" class="txt-meta">Finished Size: 440 x 59 mm | Bleed: +3.0 mm | Scale: 100% 1:1</text>
+      <text x="5" y="14.5" class="txt-meta">Shape: Cylindrical Body Wrap Label (440 x 59 mm) | Material: Pressure Sensitive Label (PSL) / Wet-Glue Paper / BOPP Film</text>
+      <!-- Legend -->
+      <g transform="translate(420, 4)">
+        <line x1="0" y1="2" x2="10" y2="2" class="cut-line"/>
+        <text x="12" y="3" class="txt-meta">Cut Line</text>
+        <line x1="45" y1="2" x2="55" y2="2" class="bleed-line"/>
+        <text x="57" y="3" class="txt-meta">Bleed (3mm)</text>
+        <line x1="0" y1="8.5" x2="10" y2="8.5" class="crease-line"/>
+        <text x="12" y="9.5" class="txt-meta">Crease Line</text>
+        <line x1="45" y1="8.5" x2="55" y2="8.5" class="safe-line"/>
+        <text x="57" y="9.5" class="txt-meta">Safe Zone</text>
+      </g>
+    </g>
+  </g>
+</svg>

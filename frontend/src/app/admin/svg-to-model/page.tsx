@@ -486,6 +486,58 @@ export default function SvgToModelPage() {
                   </div>
                 </div>
 
+                {/* Pacdora CAD Rules Inspector: Red Solid (Cut) vs Green Dashed (Crease) */}
+                <div className="pt-2 border-t border-[#D5E4F0]/80 space-y-1.5">
+                  <span className="text-[9px] font-extrabold text-[#1F3A5C] uppercase tracking-wider block">
+                    Aturan Garis CAD (Standar Pacdora):
+                  </span>
+                  <div className="space-y-1">
+                    {/* Red Line: Through Cut */}
+                    <div className="flex items-center justify-between p-1.5 rounded-lg bg-white border border-[#D5E4F0] text-[8.5px]">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-5 h-0.5 bg-[#e11d48] rounded-full shrink-0" />
+                        <div>
+                          <span className="font-bold text-[#1F3A5C]">Merah Solid: Pisau Potong (Through Cut)</span>
+                          <span className="text-[7.5px] text-[#718BAA] block">Memotong kontur luar & sudut flap (Dipotong, bukan dilipat)</span>
+                        </div>
+                      </div>
+                      <span className="px-1.5 py-0.5 rounded bg-red-50 text-red-600 font-mono font-bold text-[8px]">
+                        {analysis.cadStats?.cutSegmentsCount || 0} potong
+                      </span>
+                    </div>
+
+                    {/* Green Line: Crease / Score */}
+                    <div className="flex items-center justify-between p-1.5 rounded-lg bg-white border border-[#D5E4F0] text-[8.5px]">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-5 h-0.5 border-t-2 border-dashed border-[#10b981] shrink-0" />
+                        <div>
+                          <span className="font-bold text-[#1F3A5C]">Hijau Dashed: Garis Lipat (Score / Crease)</span>
+                          <span className="text-[7.5px] text-[#718BAA] block">Ditekan membentuk sendi lipatan 3D (Hinges)</span>
+                        </div>
+                      </div>
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-mono font-bold text-[8px]">
+                        {analysis.cadStats?.creaseSegmentsCount || 0} lipatan
+                      </span>
+                    </div>
+
+                    {/* Blue Line: Bleed */}
+                    {analysis.cadStats?.bleedSegmentsCount > 0 && (
+                      <div className="flex items-center justify-between p-1.5 rounded-lg bg-white border border-[#D5E4F0] text-[8.5px]">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-5 h-0.5 border-t border-dotted border-[#00a0e9] shrink-0" />
+                          <div>
+                            <span className="font-bold text-[#1F3A5C]">Biru / Cyan: Batas Bleed & Margin</span>
+                            <span className="text-[7.5px] text-[#718BAA] block">Toleransi area lebihan cetak 3mm</span>
+                          </div>
+                        </div>
+                        <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-mono font-bold text-[8px]">
+                          {analysis.cadStats?.bleedSegmentsCount} bleed
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 {/* Detected Panels Tag Cloud */}
                 <div className="flex flex-wrap gap-1 pt-1">
                   {analysis.panels.map((p, i) => (

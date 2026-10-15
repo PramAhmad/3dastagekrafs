@@ -13,6 +13,7 @@ import { PackagingManifestV2, PanelMappingDefinition, ModelUVDiagnosticReport } 
 import { analyzeModelUV, createUVDebugTexture } from "@/lib/uvDiagnostics"
 import { migrateLegacyManifest, getPanelMapping } from "@/lib/panelManifestManager"
 import { createVisualCalibrationTexture, PANEL_CALIBRATION_COLORS } from "@/lib/calibrationPattern"
+import { applyCardboardBackground, getCardboardBumpTexture } from "@/lib/cardboardTexture"
 
 export type DecalType = "image" | "circle" | "square" | "triangle" | "star" | "hexagon" | "badge"
 export type SurfaceTarget = "front" | "back" | "top" | "left" | "right"
@@ -402,114 +403,9 @@ function useSanitizedSvgImage(dielineSvgUrl?: string): HTMLImageElement | null {
 }
 
 
-// Procedural Kraft / Corrugated Cardboard Bump Map (creates authentic physical fiber & fluting relief)
-let cachedKraftBumpTex: THREE.CanvasTexture | null = null
-let cachedCorrugatedBumpTex: THREE.CanvasTexture | null = null
-
+// Procedural Kraft / Corrugated Cardboard Bump Map
 function getKraftBumpTexture(isCorrugated: boolean): THREE.CanvasTexture {
-  if (isCorrugated && cachedCorrugatedBumpTex) return cachedCorrugatedBumpTex
-  if (!isCorrugated && cachedKraftBumpTex) return cachedKraftBumpTex
-
-  const canvas = document.createElement("canvas")
-  canvas.width = 1024
-  canvas.height = 1024
-  const ctx = canvas.getContext("2d")
-  if (!ctx) {
-    return new THREE.CanvasTexture(canvas)
-  }
-
-  // 1. Neutral mid-gray base (128)
-  ctx.fillStyle = "#808080"
-  ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-  // 2. Corrugated fluting waves (soft sinusoidal ridges & valleys)
-  if (isCorrugated) {
-    const flutePitch = 28
-    for (let x = 0; x < canvas.width; x += flutePitch) {
-      // Valley groove (darker = indented into surface)
-      const valleyGrad = ctx.createLinearGradient(x, 0, x + flutePitch * 0.45, 0)
-      valleyGrad.addColorStop(0, "rgba(45, 45, 45, 0.42)")
-      valleyGrad.addColorStop(1, "rgba(128, 128, 128, 0)")
-      ctx.fillStyle = valleyGrad
-      ctx.fillRect(x, 0, flutePitch * 0.45, canvas.height)
-
-      // Crest ridge (lighter = raised above surface)
-      const crestGrad = ctx.createLinearGradient(x + flutePitch * 0.45, 0, x + flutePitch, 0)
-      crestGrad.addColorStop(0, "rgba(128, 128, 128, 0)")
-      crestGrad.addColorStop(0.5, "rgba(205, 205, 205, 0.38)")
-      crestGrad.addColorStop(1, "rgba(128, 128, 128, 0)")
-      ctx.fillStyle = crestGrad
-      ctx.fillRect(x + flutePitch * 0.45, 0, flutePitch * 0.55, canvas.height)
-
-      // Fine linear press groove
-      ctx.fillStyle = "rgba(40, 40, 40, 0.25)"
-      ctx.fillRect(x, 0, 1.2, canvas.height)
-    }
-  }
-
-  // 3. Tactile Wood & Cellulose Fiber Relief Strands
-  const fiberCount = 4200
-  for (let i = 0; i < fiberCount; i++) {
-    const fx = Math.random() * canvas.width
-    const fy = Math.random() * canvas.height
-    const fLength = Math.random() * 16 + 5
-    const angle = (Math.random() - 0.5) * 0.4 // gentle paper grain angle
-    const isRaised = Math.random() > 0.4
-
-    ctx.beginPath()
-    ctx.moveTo(fx, fy)
-    const midX = fx + Math.cos(angle) * (fLength / 2) + (Math.random() - 0.5) * 1.5
-    const midY = fy + Math.sin(angle) * (fLength / 2) + (Math.random() - 0.5) * 1.5
-    const endX = fx + Math.cos(angle) * fLength
-    const endY = fy + Math.sin(angle) * fLength
-
-    ctx.quadraticCurveTo(midX, midY, endX, endY)
-    ctx.strokeStyle = isRaised
-      ? `rgba(215, 215, 215, ${Math.random() * 0.25 + 0.12})`
-      : `rgba(45, 45, 45, ${Math.random() * 0.28 + 0.12})`
-    ctx.lineWidth = Math.random() * 1.2 + 0.5
-    ctx.stroke()
-  }
-
-  // 4. Recycled pulp flakes & flecks (tiny 3D bumps and dips)
-  const speckCount = 2000
-  for (let i = 0; i < speckCount; i++) {
-    const sx = Math.random() * canvas.width
-    const sy = Math.random() * canvas.height
-    const sSize = Math.random() * 2.2 + 0.6
-    const isRaised = Math.random() > 0.5
-    ctx.fillStyle = isRaised
-      ? `rgba(225, 225, 225, ${Math.random() * 0.35 + 0.15})`
-      : `rgba(35, 35, 35, ${Math.random() * 0.35 + 0.15})`
-    ctx.fillRect(sx, sy, sSize, sSize)
-  }
-
-  // 5. Fine unbleached paper grain stippling noise
-  ctx.fillStyle = "rgba(30, 30, 30, 0.08)"
-  for (let i = 0; i < 3500; i++) {
-    const rx = Math.random() * canvas.width
-    const ry = Math.random() * canvas.height
-    ctx.fillRect(rx, ry, 1, 1)
-  }
-  ctx.fillStyle = "rgba(230, 230, 230, 0.08)"
-  for (let i = 0; i < 3500; i++) {
-    const rx = Math.random() * canvas.width
-    const ry = Math.random() * canvas.height
-    ctx.fillRect(rx, ry, 1, 1)
-  }
-
-  const tex = new THREE.CanvasTexture(canvas)
-  tex.wrapS = THREE.RepeatWrapping
-  tex.wrapT = THREE.RepeatWrapping
-  tex.repeat.set(1, 1)
-  tex.needsUpdate = true
-
-  if (isCorrugated) {
-    cachedCorrugatedBumpTex = tex
-  } else {
-    cachedKraftBumpTex = tex
-  }
-  return tex
+  return getCardboardBumpTexture(isCorrugated)
 }
 
 // Helper to apply authentic procedural packaging material background (paper grain, flutes, cellulose fibers, sheen)
@@ -519,134 +415,28 @@ function applyMaterialBackground(
   h: number,
   baseColor: string,
   finish: string,
-  materialType?: string
+  materialType?: string,
+  orientation: "vertical" | "horizontal" = "vertical",
+  seed?: number
 ) {
+  const type = materialType || finish
+
+  if (type === "kraft" || type === "corrugated" || finish === "kraft") {
+    applyCardboardBackground(ctx, w, h, {
+      baseColor,
+      materialFinish: finish,
+      materialType,
+      isCorrugated: type === "corrugated",
+      orientation,
+      seed,
+    })
+    return
+  }
+
   ctx.fillStyle = baseColor
   ctx.fillRect(0, 0, w, h)
 
-  const type = materialType || finish
-
-  if (type === "kraft" || type === "corrugated") {
-    ctx.save()
-
-    // 1. Organic unbleached pulp cloud blotches (warm amber/brown depth)
-    const blotchCount = Math.max(35, Math.floor((w * h) / 30000))
-    for (let i = 0; i < blotchCount; i++) {
-      const bx = Math.random() * w
-      const by = Math.random() * h
-      const br = Math.random() * 110 + 35
-      const grad = ctx.createRadialGradient(bx, by, 0, bx, by, br)
-      const isDark = Math.random() > 0.45
-      grad.addColorStop(0, isDark ? "rgba(55, 28, 8, 0.07)" : "rgba(255, 235, 195, 0.06)")
-      grad.addColorStop(1, "rgba(0, 0, 0, 0)")
-      ctx.fillStyle = grad
-      ctx.beginPath()
-      ctx.arc(bx, by, br, 0, Math.PI * 2)
-      ctx.fill()
-    }
-
-    // 2. Corrugated cardboard fluting ridges (Gelombang Karton)
-    if (type === "corrugated") {
-      const flutePitch = 28 // px per flute ridge
-      for (let x = 0; x < w; x += flutePitch) {
-        // Flute shadow valley (left side of ridge)
-        const shadowGrad = ctx.createLinearGradient(x, 0, x + flutePitch * 0.45, 0)
-        shadowGrad.addColorStop(0, "rgba(35, 18, 5, 0.12)")
-        shadowGrad.addColorStop(1, "rgba(35, 18, 5, 0.0)")
-        ctx.fillStyle = shadowGrad
-        ctx.fillRect(x, 0, flutePitch * 0.45, h)
-
-        // Flute crest highlight (right side of ridge)
-        const highlightGrad = ctx.createLinearGradient(x + flutePitch * 0.45, 0, x + flutePitch, 0)
-        highlightGrad.addColorStop(0, "rgba(255, 250, 230, 0.14)")
-        highlightGrad.addColorStop(0.5, "rgba(255, 250, 230, 0.07)")
-        highlightGrad.addColorStop(1, "rgba(255, 250, 230, 0.0)")
-        ctx.fillStyle = highlightGrad
-        ctx.fillRect(x + flutePitch * 0.45, 0, flutePitch * 0.55, h)
-
-        // Fine linear indentation press line
-        ctx.fillStyle = "rgba(40, 20, 5, 0.10)"
-        ctx.fillRect(x, 0, 1.5, h)
-      }
-    }
-
-    // 3. Subtle horizontal paper machine grain streaks
-    const streakCount = Math.max(120, Math.floor((w * h) / 9000))
-    for (let i = 0; i < streakCount; i++) {
-      const sx = Math.random() * w
-      const sy = Math.random() * h
-      const sLen = Math.random() * 80 + 30
-      ctx.fillStyle = Math.random() > 0.5 ? "rgba(50, 25, 8, 0.03)" : "rgba(255, 245, 225, 0.035)"
-      ctx.fillRect(sx, sy, sLen, 1)
-    }
-
-    // 4. Realistic Wood & Cellulose Fiber Strands (Serat kardus asli dengan berbagai warna pulp)
-    const fiberCount = Math.max(3000, Math.floor((w * h) / 380))
-    for (let i = 0; i < fiberCount; i++) {
-      const fx = Math.random() * w
-      const fy = Math.random() * h
-      const fLength = Math.random() * 14 + 4
-      const angle = (Math.random() - 0.5) * 0.5 // aligned with paper grain direction
-      const fiberType = Math.random()
-
-      ctx.beginPath()
-      ctx.moveTo(fx, fy)
-      const midX = fx + Math.cos(angle) * (fLength / 2) + (Math.random() - 0.5) * 1.5
-      const midY = fy + Math.sin(angle) * (fLength / 2) + (Math.random() - 0.5) * 1.5
-      const endX = fx + Math.cos(angle) * fLength
-      const endY = fy + Math.sin(angle) * fLength
-
-      ctx.quadraticCurveTo(midX, midY, endX, endY)
-
-      if (fiberType < 0.4) {
-        // Dark unbleached wood fiber
-        ctx.strokeStyle = `rgba(50, 25, 8, ${Math.random() * 0.18 + 0.06})`
-        ctx.lineWidth = Math.random() * 1.0 + 0.4
-      } else if (fiberType < 0.7) {
-        // Light cellulose fiber
-        ctx.strokeStyle = `rgba(255, 248, 230, ${Math.random() * 0.20 + 0.08})`
-        ctx.lineWidth = Math.random() * 1.0 + 0.4
-      } else {
-        // Reddish-amber raw wood lignin fiber
-        ctx.strokeStyle = `rgba(120, 60, 20, ${Math.random() * 0.14 + 0.04})`
-        ctx.lineWidth = Math.random() * 0.8 + 0.3
-      }
-      ctx.stroke()
-    }
-
-    // 5. Recycled pulp flecks & dark bits
-    const speckCount = Math.max(1600, Math.floor((w * h) / 750))
-    for (let i = 0; i < speckCount; i++) {
-      const sx = Math.random() * w
-      const sy = Math.random() * h
-      const sSize = Math.random() * 2.2 + 0.6
-      const speckType = Math.random()
-      if (speckType < 0.45) {
-        ctx.fillStyle = `rgba(40, 18, 5, ${Math.random() * 0.25 + 0.08})`
-      } else if (speckType < 0.8) {
-        ctx.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.25 + 0.08})`
-      } else {
-        ctx.fillStyle = `rgba(140, 70, 20, ${Math.random() * 0.20 + 0.06})`
-      }
-      ctx.fillRect(sx, sy, sSize, sSize)
-    }
-
-    // 6. Micro-grain paper pulp stippling noise
-    ctx.fillStyle = "rgba(0, 0, 0, 0.035)"
-    for (let i = 0; i < 4500; i++) {
-      const rx = Math.random() * w
-      const ry = Math.random() * h
-      ctx.fillRect(rx, ry, 1, 1)
-    }
-    ctx.fillStyle = "rgba(255, 255, 255, 0.03)"
-    for (let i = 0; i < 4500; i++) {
-      const rx = Math.random() * w
-      const ry = Math.random() * h
-      ctx.fillRect(rx, ry, 1, 1)
-    }
-
-    ctx.restore()
-  } else if (type === "gold_foil" || type === "silver_foil" || finish === "metallic") {
+  if (type === "gold_foil" || type === "silver_foil" || finish === "metallic") {
     ctx.save()
     const grad = ctx.createLinearGradient(0, 0, w, h)
     if (type === "gold_foil") {
@@ -729,7 +519,7 @@ function ContinuousBoxModel({
   const kraftBumpMap = isKraft ? getKraftBumpTexture(isCorrugated) : null
   const kraftBumpScale = isCorrugated ? 0.035 : 0.022
 
-  const roughness = isGlossy ? 0.06 : isKraft ? 0.92 : isMetallic ? 0.15 : 0.65
+  const roughness = isGlossy ? 0.06 : isKraft ? 0.88 : isMetallic ? 0.15 : 0.65
   const metalness = isMetallic ? 0.88 : isGlossy ? 0.05 : 0.0
   const clearcoat = isGlossy ? 1.0 : 0.0
 
@@ -771,9 +561,9 @@ function ContinuousBoxModel({
     const ctx = canvas.getContext("2d")
     if (!ctx) return null
 
-    applyMaterialBackground(ctx, canvas.width, canvas.height, boxColor, materialFinish, materialType)
+    applyMaterialBackground(ctx, canvas.width, canvas.height, boxColor, materialFinish, materialType, "vertical", 1001)
 
-    // Per-face background color rendering
+    // Per-face background color rendering (Preserves cardboard fiber texture!)
     if (faceColors) {
       const u0 = 0
       const u1 = (length / perimeter) * canvas.width
@@ -781,22 +571,32 @@ function ContinuousBoxModel({
       const u3 = ((2 * length + width) / perimeter) * canvas.width
       const u4 = canvas.width
 
-      if (faceColors.front) {
-        ctx.fillStyle = faceColors.front
-        ctx.fillRect(u0, 0, u1 - u0, canvas.height)
+      const renderFaceBg = (x: number, wPx: number, color?: string, seedOffset: number = 0) => {
+        if (!color) return
+        if (isKraft) {
+          ctx.save()
+          ctx.beginPath()
+          ctx.rect(x, 0, wPx, canvas.height)
+          ctx.clip()
+          applyCardboardBackground(ctx, canvas.width, canvas.height, {
+            baseColor: color,
+            materialFinish,
+            materialType,
+            isCorrugated,
+            orientation: "vertical",
+            seed: 6000 + seedOffset,
+          })
+          ctx.restore()
+        } else {
+          ctx.fillStyle = color
+          ctx.fillRect(x, 0, wPx, canvas.height)
+        }
       }
-      if (faceColors.right) {
-        ctx.fillStyle = faceColors.right
-        ctx.fillRect(u1, 0, u2 - u1, canvas.height)
-      }
-      if (faceColors.back) {
-        ctx.fillStyle = faceColors.back
-        ctx.fillRect(u2, 0, u3 - u2, canvas.height)
-      }
-      if (faceColors.left) {
-        ctx.fillStyle = faceColors.left
-        ctx.fillRect(u3, 0, u4 - u3, canvas.height)
-      }
+
+      renderFaceBg(u0, u1 - u0, faceColors.front, 1)
+      renderFaceBg(u1, u2 - u1, faceColors.right, 2)
+      renderFaceBg(u2, u3 - u2, faceColors.back, 3)
+      renderFaceBg(u3, u4 - u3, faceColors.left, 4)
     }
 
     const pxPerMmX = canvas.width / perimeter

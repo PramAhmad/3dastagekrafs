@@ -21,11 +21,19 @@ export interface DielineAnalysis {
     width: number  // mm
     height: number // mm
   }
+  cadStats: {
+    cutSegmentsCount: number       // Pisau Potong (Merah Solid / Non-dash)
+    creaseSegmentsCount: number    // Garis Lipat (Hijau Dashed)
+    bleedSegmentsCount: number     // Garis Bleed / Safe Zone (Biru/Cyan)
+  }
 }
 
 /**
  * Parses raw SVG dieline and extracts cut boundaries, crease lines, and semantic panels
- * Handles viewBox coordinate systems, millimeter scaling, and FEFCO/CAD vector topologies
+ * Strictly follows Pacdora & Packaging CAD rules:
+ * - Red / Magenta / Non-dash Solid = PISAU POTONG (Through Cut) -> Boundary & cutout profile (Dipotong, bukan dilipat)
+ * - Green / Dashed (stroke-dasharray) = GARIS LIPAT (Crease / Score) -> Sendi lipatan kemasan 3D (Hinges)
+ * - Cyan / Blue = BLEED / SAFE MARGIN (Batas lebihan cetak 3mm)
  */
 export function analyzeSvgDieline(svgText: string): DielineAnalysis {
   if (!svgText) {
@@ -40,6 +48,7 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
       panels: [],
       boxType: "generic-box",
       dims: { length: 100, width: 60, height: 100 },
+      cadStats: { cutSegmentsCount: 0, creaseSegmentsCount: 0, bleedSegmentsCount: 0 },
     }
   }
 
@@ -90,6 +99,10 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
   const rawVertSegments: Array<{ x: number; y1: number; y2: number }> = []
   const rawHorizSegments: Array<{ y: number; x1: number; x2: number }> = []
 
+  let cutSegmentsCount = 0
+  let creaseSegmentsCount = 0
+  let bleedSegmentsCount = 0
+
   while ((match = tagReg.exec(svgText)) !== null) {
     const isClose = !!match[1]
     const tag = match[2].toLowerCase()
@@ -103,8 +116,9 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
         const id = (attrsStr.match(/\bid=["\']([^"\']+)["\']/i) || [])[1] || ""
         const cls = (attrsStr.match(/\bclass=["\']([^"\']+)["\']/i) || [])[1] || ""
         const stroke = (attrsStr.match(/\bstroke=["\']([^"\']+)["\']/i) || [])[1] || ""
+        const dash = (attrsStr.match(/\bstroke-dasharray=["\']([^"\']+)["\']/i) || [])[1] || ""
         const isCut = /cut|die-cut|pisau/i.test(id + " " + cls) || /#(ff007f|e11d48|f43f5e|ff0000|d41a5a|magenta)/i.test(stroke)
-        const isCrease = /crease|fold|score|lipat/i.test(id + " " + cls) || /#(00a651|10b981|22c55e|00ff00|00adee)/i.test(stroke)
+        const isCrease = /crease|fold|score|lipat/i.test(id + " " + cls) || /#(00a651|10b981|22c55e|00ff00|00adee)/i.test(stroke) || (dash.length > 0 && dash !== "none")
         groupStack.push({ id, cls, stroke, isCut, isCrease })
         if (isSelfClosing) groupStack.pop()
       }
@@ -115,17 +129,32 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
       const id = (attrsStr.match(/\bid=["\']([^"\']+)["\']/i) || [])[1] || ""
       const cls = (attrsStr.match(/\bclass=["\']([^"\']+)["\']/i) || [])[1] || ""
       const stroke = (attrsStr.match(/\bstroke=["\']([^"\']+)["\']/i) || [])[1] || ""
+      const dash = (attrsStr.match(/\bstroke-dasharray=["\']([^"\']+)["\']/i) || [])[1] || ""
 
-      // Filter out dimensions, annotations, registration marks, bleed, safe lines
-      if (/dim|annotation|crosshair|register|bleed|safe|sheet/i.test(id + " " + cls)) {
+      // Filter out dimensions, annotations, registration marks
+      if (/dim|annotation|crosshair|register|sheet/i.test(id + " " + cls)) {
         continue
       }
+
+      const isDashed = dash.length > 0 && dash !== "none"
+      const isRedStroke = /#(ff007f|e11d48|f43f5e|ff0000|d41a5a|magenta)/i.test(stroke)
+      const isGreenStroke = /#(00a651|10b981|22c55e|00ff00|008000)/i.test(stroke)
+      const isBlueStroke = /#(00a0e9|00adee|2563eb|3b82f6)/i.test(stroke)
 
       const parentCut = groupStack.some((g) => g.isCut)
       const parentCrease = groupStack.some((g) => g.isCrease)
 
-      const isCut = parentCut || /cut|die-cut|pisau/i.test(id + " " + cls) || /#(ff007f|e11d48|f43f5e|ff0000|d41a5a|magenta)/i.test(stroke)
-      const isCrease = !isCut && (parentCrease || /crease|fold|score|lipat/i.test(id + " " + cls) || /#(00a651|10b981|22c55e|00ff00|00adee)/i.test(stroke))
+      // Pacdora Rule Classification:
+      // 1. Bleed: Blue/cyan stroke or bleed/safe class
+      // 2. Crease (LIPAT): Green stroke OR Dashed line OR parent/class crease/fold
+      // 3. Cut (POTONG): Red/Magenta stroke OR Solid non-dash cut/die-cut
+      const isBleed = /bleed|safe/i.test(id + " " + cls) || isBlueStroke
+      const isCrease = !isBleed && (parentCrease || isDashed || isGreenStroke || /crease|fold|score|lipat/i.test(id + " " + cls))
+      const isCut = !isBleed && !isCrease && (parentCut || isRedStroke || /cut|die-cut|pisau/i.test(id + " " + cls) || (!isDashed && stroke !== ""))
+
+      if (isBleed) bleedSegmentsCount++
+      else if (isCrease) creaseSegmentsCount++
+      else if (isCut) cutSegmentsCount++
 
       if (tag === "path") {
         const d = (attrsStr.match(/\bd=["\']([^"\']+)["\']/i) || [])[1] || ""
@@ -187,7 +216,6 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
   }
 
   // 4. Cluster and filter creases
-  // Vertical creases: group by X position
   const clusterValues = (arr: number[], threshold: number = 3.0) => {
     if (arr.length === 0) return []
     const sorted = [...arr].sort((a, b) => a - b)
@@ -316,6 +344,11 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
     panels,
     boxType,
     dims: { length: lengthMm, width: widthMm, height: heightMm },
+    cadStats: {
+      cutSegmentsCount,
+      creaseSegmentsCount,
+      bleedSegmentsCount,
+    },
   }
 }
 
@@ -344,11 +377,6 @@ export function createPanelGeometry(
   const v0 = Math.max(0, Math.min(1, panelSvgY / svgTotalH))
   const v1 = Math.max(0, Math.min(1, (panelSvgY + pH) / svgTotalH))
 
-  // PlaneGeometry vertex order:
-  // 0: top-left (-w/2, +h/2) -> (u0, v0)
-  // 1: top-right (+w/2, +h/2) -> (u1, v0)
-  // 2: bottom-left (-w/2, -h/2) -> (u0, v1)
-  // 3: bottom-right (+w/2, -h/2) -> (u1, v1)
   uvAttr.setXY(0, u0, v0)
   uvAttr.setXY(1, u1, v0)
   uvAttr.setXY(2, u0, v1)
@@ -356,6 +384,116 @@ export function createPanelGeometry(
   uvAttr.needsUpdate = true
 
   return geo
+}
+
+/**
+ * Creates an authentically die-cut packaging flap geometry with tapered or chamfered edges
+ * (Dipotong sesuai profil pisau potong CAD, bukan sekadar kotak persegi kaku)
+ */
+export function createDieCutFlapGeometry(
+  widthWorld: number,
+  heightWorld: number,
+  panelSvgX: number,
+  panelSvgY: number,
+  svgTotalW: number,
+  svgTotalH: number,
+  panelSvgW?: number,
+  panelSvgH?: number,
+  flapType: "glue" | "dust-top" | "dust-bottom" | "tuck" | "rect" = "rect"
+): THREE.BufferGeometry {
+  const pW = panelSvgW !== undefined ? panelSvgW : widthWorld
+  const pH = panelSvgH !== undefined ? panelSvgH : heightWorld
+
+  if (flapType === "glue") {
+    // Glue flap: hinged at x=0 (y in [-H/2, +H/2]), extends into -X (width G)
+    // Tapered at 15-20 degrees at top and bottom corners (DIPOTONG)
+    const taper = Math.min(heightWorld * 0.12, widthWorld * 0.45)
+    const shape = new THREE.Shape()
+    shape.moveTo(0, -heightWorld / 2)
+    shape.lineTo(-widthWorld, -heightWorld / 2 + taper)
+    shape.lineTo(-widthWorld, heightWorld / 2 - taper)
+    shape.lineTo(0, heightWorld / 2)
+    shape.closePath()
+
+    const geo = new THREE.ShapeGeometry(shape)
+    applyShapeUVs(geo, -widthWorld, 0, -heightWorld / 2, heightWorld / 2, panelSvgX, panelSvgY, pW, pH, svgTotalW, svgTotalH)
+    return geo
+  }
+
+  if (flapType === "dust-top") {
+    // Top dust flap: hinged at y=0 (x in [-W/2, +W/2]), extends into +Y (height H_flap)
+    // Chamfered cut corners at outer left and right edges (DIPOTONG)
+    const chamfer = Math.min(widthWorld * 0.22, heightWorld * 0.4)
+    const shape = new THREE.Shape()
+    shape.moveTo(-widthWorld / 2, 0)
+    shape.lineTo(-widthWorld / 2 + chamfer, heightWorld)
+    shape.lineTo(widthWorld / 2 - chamfer, heightWorld)
+    shape.lineTo(widthWorld / 2, 0)
+    shape.closePath()
+
+    const geo = new THREE.ShapeGeometry(shape)
+    applyShapeUVs(geo, -widthWorld / 2, widthWorld / 2, 0, heightWorld, panelSvgX, panelSvgY, pW, pH, svgTotalW, svgTotalH)
+    return geo
+  }
+
+  if (flapType === "dust-bottom") {
+    // Bottom dust flap: hinged at y=0 (x in [-W/2, +W/2]), extends into -Y (height H_flap)
+    // Chamfered cut corners at outer left and right edges (DIPOTONG)
+    const chamfer = Math.min(widthWorld * 0.22, heightWorld * 0.4)
+    const shape = new THREE.Shape()
+    shape.moveTo(-widthWorld / 2, 0)
+    shape.lineTo(-widthWorld / 2 + chamfer, -heightWorld)
+    shape.lineTo(widthWorld / 2 - chamfer, -heightWorld)
+    shape.lineTo(widthWorld / 2, 0)
+    shape.closePath()
+
+    const geo = new THREE.ShapeGeometry(shape)
+    applyShapeUVs(geo, -widthWorld / 2, widthWorld / 2, -heightWorld, 0, panelSvgX, panelSvgY, pW, pH, svgTotalW, svgTotalH)
+    return geo
+  }
+
+  // Default rectangular plane
+  return createPanelGeometry(widthWorld, heightWorld, panelSvgX, panelSvgY, svgTotalW, svgTotalH, pW, pH)
+}
+
+function applyShapeUVs(
+  geo: THREE.BufferGeometry,
+  minX: number,
+  maxX: number,
+  minY: number,
+  maxY: number,
+  panelSvgX: number,
+  panelSvgY: number,
+  pW: number,
+  pH: number,
+  svgTotalW: number,
+  svgTotalH: number
+) {
+  const posAttr = geo.attributes.position
+  const uvArr = new Float32Array(posAttr.count * 2)
+
+  const spanX = Math.max(0.001, maxX - minX)
+  const spanY = Math.max(0.001, maxY - minY)
+
+  for (let i = 0; i < posAttr.count; i++) {
+    const px = posAttr.getX(i)
+    const py = posAttr.getY(i)
+
+    const nx = (px - minX) / spanX
+    const ny = (py - minY) / spanY
+
+    // In Three.js with flipY=false: V=0 is top, V=1 is bottom
+    // ny=1 is top of flap (py=maxY) -> v = panelSvgY / svgTotalH
+    // ny=0 is bottom of flap (py=minY) -> v = (panelSvgY + pH) / svgTotalH
+    const u = Math.max(0, Math.min(1, (panelSvgX + nx * pW) / svgTotalW))
+    const v = Math.max(0, Math.min(1, (panelSvgY + (1 - ny) * pH) / svgTotalH))
+
+    uvArr[i * 2] = u
+    uvArr[i * 2 + 1] = v
+  }
+
+  geo.setAttribute("uv", new THREE.BufferAttribute(uvArr, 2))
+  geo.attributes.uv.needsUpdate = true
 }
 
 export interface FoldModelHierarchy {
@@ -370,8 +508,8 @@ export interface FoldModelHierarchy {
  */
 export function buildFolded3DModel(
   analysis: DielineAnalysis,
-  boxColor: string = "#ffffff",
-  materialFinish: string = "matte",
+  boxColor: string = "#be8d58",
+  materialFinish: string = "kraft",
   dielineTexture: THREE.CanvasTexture | null = null
 ): FoldModelHierarchy {
   const rootGroup = new THREE.Group()
@@ -567,12 +705,12 @@ export function buildFolded3DModel(
   leftHinge.add(leftMesh)
 
   // 5. Glue Flap Hinge (attached to left edge of Left Wall: X = -W)
+  // DIE-CUT: Tapered corners at top and bottom (Dipotong, bukan persegi kaku)
   const glueHinge = new THREE.Group()
   glueHinge.position.set(-W, 0, 0)
   leftHinge.add(glueHinge)
 
-  const glueGeo = createPanelGeometry(G, H, glueP.x, glueP.y, svgW, svgH, glueP.width, glueP.height)
-  glueGeo.translate(-G / 2, 0, 0)
+  const glueGeo = createDieCutFlapGeometry(G, H, glueP.x, glueP.y, svgW, svgH, glueP.width, glueP.height, "glue")
   const glueMesh = new THREE.Mesh(glueGeo, createMaterial())
   glueHinge.add(glueMesh)
 
@@ -617,12 +755,12 @@ export function buildFolded3DModel(
   }
 
   // Left & Right Top Dust Flaps:
+  // DIE-CUT: Chamfered cut corners at outer edges
   const leftTopHinge = new THREE.Group()
   leftTopHinge.position.set(-W / 2, H / 2, 0)
   leftHinge.add(leftTopHinge)
 
-  const lTopGeo = createPanelGeometry(W, topFlapH * 0.75, leftP.x, topP.y, svgW, svgH, leftP.width, topP.height)
-  lTopGeo.translate(0, (topFlapH * 0.75) / 2, 0)
+  const lTopGeo = createDieCutFlapGeometry(W, topFlapH * 0.75, leftP.x, topP.y, svgW, svgH, leftP.width, topP.height, "dust-top")
   const lTopMesh = new THREE.Mesh(lTopGeo, createMaterial())
   leftTopHinge.add(lTopMesh)
 
@@ -630,8 +768,7 @@ export function buildFolded3DModel(
   rightTopHinge.position.set(W / 2, H / 2, 0)
   rightHinge.add(rightTopHinge)
 
-  const rTopGeo = createPanelGeometry(W, topFlapH * 0.75, rightP.x, topP.y, svgW, svgH, rightP.width, topP.height)
-  rTopGeo.translate(0, (topFlapH * 0.75) / 2, 0)
+  const rTopGeo = createDieCutFlapGeometry(W, topFlapH * 0.75, rightP.x, topP.y, svgW, svgH, rightP.width, topP.height, "dust-top")
   const rTopMesh = new THREE.Mesh(rTopGeo, createMaterial())
   rightTopHinge.add(rTopMesh)
 
@@ -656,13 +793,13 @@ export function buildFolded3DModel(
   const bBotMesh = new THREE.Mesh(bBotGeo, createMaterial())
   backBottomHinge.add(bBotMesh)
 
-  // Left & Right Bottom Flaps:
+  // Left & Right Bottom Dust Flaps:
+  // DIE-CUT: Chamfered cut corners at outer edges
   const leftBottomHinge = new THREE.Group()
   leftBottomHinge.position.set(-W / 2, -H / 2, 0)
   leftHinge.add(leftBottomHinge)
 
-  const lBotGeo = createPanelGeometry(W, bottomFlapH * 0.75, leftP.x, bottomP.y, svgW, svgH, leftP.width, bottomP.height)
-  lBotGeo.translate(0, -(bottomFlapH * 0.75) / 2, 0)
+  const lBotGeo = createDieCutFlapGeometry(W, bottomFlapH * 0.75, leftP.x, bottomP.y, svgW, svgH, leftP.width, bottomP.height, "dust-bottom")
   const lBotMesh = new THREE.Mesh(lBotGeo, createMaterial())
   leftBottomHinge.add(lBotMesh)
 
@@ -670,8 +807,7 @@ export function buildFolded3DModel(
   rightBottomHinge.position.set(W / 2, -H / 2, 0)
   rightHinge.add(rightBottomHinge)
 
-  const rBotGeo = createPanelGeometry(W, bottomFlapH * 0.75, rightP.x, bottomP.y, svgW, svgH, rightP.width, bottomP.height)
-  rBotGeo.translate(0, -(bottomFlapH * 0.75) / 2, 0)
+  const rBotGeo = createDieCutFlapGeometry(W, bottomFlapH * 0.75, rightP.x, bottomP.y, svgW, svgH, rightP.width, bottomP.height, "dust-bottom")
   const rBotMesh = new THREE.Mesh(rBotGeo, createMaterial())
   rightBottomHinge.add(rBotMesh)
 
