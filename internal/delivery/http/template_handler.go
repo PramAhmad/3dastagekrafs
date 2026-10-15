@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"3dkemasansaas/internal/domain"
 	"3dkemasansaas/internal/usecase"
 	"3dkemasansaas/pkg/response"
 
@@ -18,13 +19,11 @@ func NewTemplateHandler(templateUsecase usecase.TemplateUsecase) *TemplateHandle
 	return &TemplateHandler{templateUsecase: templateUsecase}
 }
 
-// ListTemplates returns preset 3D packaging templates for the 3D editor
 func (h *TemplateHandler) ListTemplates(c *gin.Context) {
 	templates := h.templateUsecase.GetCatalog()
 	response.Success(c, http.StatusOK, "Berhasil memuat katalog template kemasan", templates)
 }
 
-// GetTemplateDetail returns specific template with dimension constraints
 func (h *TemplateHandler) GetTemplateDetail(c *gin.Context) {
 	id := c.Param("id")
 	template, err := h.templateUsecase.GetByID(id)
@@ -35,17 +34,16 @@ func (h *TemplateHandler) GetTemplateDetail(c *gin.Context) {
 	response.Success(c, http.StatusOK, "Berhasil memuat detail template", template)
 }
 
-// CreateTemplate creates a new packaging template
 func (h *TemplateHandler) CreateTemplate(c *gin.Context) {
-	var tmpl usecase.StandardPackagingCatalog
+	var tmpl domain.PackagingTemplate
 	var input struct {
-		ID                string                                `json:"id"`
-		Name              string                                `json:"name"`
-		Category          string                                `json:"category"`
-		Description       string                                `json:"description"`
-		PreviewURL        string                                `json:"preview_url"`
-		IsPrintable       bool                                  `json:"is_printable"`
-		Constraints       map[string]struct {
+		ID          string `json:"id"`
+		Name        string `json:"name"`
+		Category    string `json:"category"`
+		Description string `json:"description"`
+		PreviewURL  string `json:"preview_url"`
+		IsPrintable bool   `json:"is_printable"`
+		Constraints map[string]struct {
 			MinMM   float64 `json:"min_mm"`
 			MaxMM   float64 `json:"max_mm"`
 			Default float64 `json:"default_mm"`
@@ -97,10 +95,11 @@ func (h *TemplateHandler) DeleteTemplate(c *gin.Context) {
 	response.Success(c, http.StatusOK, "Template model kemasan berhasil dihapus", nil)
 }
 
-// GenerateSTL generates a binary STL file on the fly and returns it as a direct download or JSON stats
 func (h *TemplateHandler) GenerateSTL(c *gin.Context) {
 	id := c.Param("id")
-	var req GenerateSTLRequest
+	var req struct {
+		Dimensions map[string]float64 `json:"dimensions"`
+	}
 	_ = c.ShouldBindJSON(&req)
 
 	stlBytes, stats, filename, err := h.templateUsecase.GenerateSTL(id, req.Dimensions)
@@ -117,9 +116,9 @@ func (h *TemplateHandler) GenerateSTL(c *gin.Context) {
 	}
 
 	response.Success(c, http.StatusOK, "Model 3D STL berhasil digenerate secara prosedural", gin.H{
-		"filename":   filename,
-		"size_bytes": len(stlBytes),
-		"mesh_stats": stats,
+		"filename":     filename,
+		"size_bytes":   len(stlBytes),
+		"mesh_stats":   stats,
 		"download_url": fmt.Sprintf("/api/v1/templates/%s/export-stl?download=true", id),
 	})
 }

@@ -1,0 +1,125 @@
+{
+  "assets": [
+    {
+      "name": "multisheetbox-150x100x200",
+      "dims_mm": [
+        150,
+        100,
+        200
+      ],
+      "dims_m": [
+        0.15,
+        0.1,
+        0.2
+      ],
+      "glb": "/home/ubuntu/.hermes/profiles/mesh/cache/scratch/batch_3d_assets/multisheetbox-150x100x200.glb",
+      "obj": "/home/ubuntu/.hermes/profiles/mesh/cache/scratch/batch_3d_assets/multisheetbox-150x100x200.obj",
+      "mtl": "/home/ubuntu/.hermes/profiles/mesh/cache/scratch/batch_3d_assets/multisheetbox-150x100x200.mtl",
+      "spec": "/home/ubuntu/.hermes/profiles/mesh/cache/scratch/batch_3d_assets/multisheetbox-150x100x200_spec.txt",
+      "glb_bytes": 2708,
+      "header": {
+        "magic_hex": "0x46546c67",
+        "magic_ascii": "glTF",
+        "version": 2,
+        "length": 2708,
+        "json_chunk_len": 2416,
+        "json_chunk_type_hex": "0x4e4f534a",
+        "valid": true,
+        "mesh_primitives": 6,
+        "materials": 6
+      },
+      "extra": "multi-sheet box"
+    },
+    {
+      "name": "milkcarton-100x80x140_roof_25",
+      "dims_mm": [
+        100,
+        80,
+        140
+      ],
+      "dims_m": [
+        0.1,
+        0.08,
+        0.14
+      ],
+      "glb": "/home/ubuntu/.hermes/profiles/mesh/cache/scratch/batch_3d_assets/milkcarton-100x80x140_roof_25.glb",
+      "obj": "/home/ubuntu/.hermes/profiles/mesh/cache/scratch/batch_3d_assets/milkcarton-100x80x140_roof_25.obj",
+      "mtl": "/home/ubuntu/.hermes/profiles/mesh/cache/scratch/batch_3d_assets/milkcarton-100x80x140_roof_25.mtl",
+      "spec": "/home/ubuntu/.hermes/profiles/mesh/cache/scratch/batch_3d_assets/milkcarton-100x80x140_roof_25_spec.txt",
+      "glb_bytes": 2708,
+      "header": {
+        "magic_hex": "0x46546c67",
+        "magic_ascii": "glTF",
+        "version": 2,
+        "length": 2708,
+        "json_chunk_len": 2416,
+        "json_chunk_type_hex": "0x4e4f534a",
+        "valid": true,
+        "mesh_primitives": 6,
+        "materials": 6
+      },
+      "extra": "gable top roof 25mm"
+    },
+    {
+      "name": "matchbox-70x40x10",
+      "dims_mm": [
+        70,
+        40,
+        10
+      ],
+      "dims_m": [
+        0.07,
+        0.04,
+        0.01
+      ],
+      "glb": "/home/ubuntu/.hermes/profiles/mesh/cache/scratch/batch_3d_assets/matchbox-70x40x10.glb",
+      "obj": "/home/ubuntu/.hermes/profiles/mesh/cache/scratch/batch_3d_assets/matchbox-70x40x10.obj",
+      "mtl": "/home/ubuntu/.hermes/profiles/mesh/cache/scratch/batch_3d_assets/matchbox-70x40x10.mtl",
+      "spec": "/home/ubuntu/.hermes/profiles/mesh/cache/scratch/batch_3d_assets/matchbox-70x40x10_spec.txt",
+      "glb_bytes": 2712,
+      "header": {
+        "magic_hex": "0x46546c67",
+        "magic_ascii": "glTF",
+        "version": 2,
+        "length": 2712,
+        "json_chunk_len": 2420,
+        "json_chunk_type_hex": "0x4e4f534a",
+        "valid": true,
+        "mesh_primitives": 6,
+        "materials": 6
+      },
+      "extra": "sleeve+tray"
+    },
+    {
+      "name": "mailer-154x110x10",
+      "dims_mm": [
+        154,
+        110,
+        10
+      ],
+      "dims_m": [
+        0.154,
+        0.11,
+        0.01
+      ],
+      "glb": "/home/ubuntu/.hermes/profiles/mesh/cache/scratch/batch_3d_assets/mailer-154x110x10.glb",
+      "obj": "/home/ubuntu/.hermes/profiles/mesh/cache/scratch/batch_3d_assets/mailer-154x110x10.obj",
+      "mtl": "/home/ubuntu/.hermes/profiles/mesh/cache/scratch/batch_3d_assets/mailer-154x110x10.mtl",
+      "spec": "/home/ubuntu/.hermes/profiles/mesh/cache/scratch/batch_3d_assets/mailer-154x110x10_spec.txt",
+      "glb_bytes": 2716,
+      "header": {
+        "magic_hex": "0x46546c67",
+        "magic_ascii": "glTF",
+        "version": 2,
+        "length": 2716,
+        "json_chunk_len": 2424,
+        "json_chunk_type_hex": "0x4e4f534a",
+        "valid": true,
+        "mesh_primitives": 6,
+        "materials": 6
+      },
+      "extra": "mailer"
+    }
+  ],
+  "out_dir": "/home/ubuntu/.hermes/profiles/mesh/cache/scratch/batch_3d_assets"
+}

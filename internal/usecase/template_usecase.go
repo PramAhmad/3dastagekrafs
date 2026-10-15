@@ -235,11 +235,21 @@ func (u *templateUsecase) GenerateSTL(templateID string, dims map[string]float64
 		W := dims["width_mm"]
 		H := dims["height_mm"]
 		T := dims["wall_thickness_mm"]
-		if L <= 0 { L = template.DefaultDimensions["length_mm"] }
-		if W <= 0 { W = template.DefaultDimensions["width_mm"] }
-		if H <= 0 { H = template.DefaultDimensions["height_mm"] }
-		if T <= 0 { T = template.DefaultDimensions["wall_thickness_mm"] }
-		if T <= 0 { T = 1.6 }
+		if L <= 0 {
+			L = template.DefaultDimensions["length_mm"]
+		}
+		if W <= 0 {
+			W = template.DefaultDimensions["width_mm"]
+		}
+		if H <= 0 {
+			H = template.DefaultDimensions["height_mm"]
+		}
+		if T <= 0 {
+			T = template.DefaultDimensions["wall_thickness_mm"]
+		}
+		if T <= 0 {
+			T = 1.6
+		}
 
 		stlBytes, stats, err := u.generator.GenerateBox(L, W, H, T)
 		filename := fmt.Sprintf("%s_%.0fx%.0fx%.0f.stl", templateID, L, W, H)
@@ -249,10 +259,18 @@ func (u *templateUsecase) GenerateSTL(templateID string, dims map[string]float64
 		R := dims["radius_mm"]
 		H := dims["height_mm"]
 		T := dims["wall_thickness_mm"]
-		if R <= 0 { R = template.DefaultDimensions["radius_mm"] }
-		if H <= 0 { H = template.DefaultDimensions["height_mm"] }
-		if T <= 0 { T = template.DefaultDimensions["wall_thickness_mm"] }
-		if T <= 0 { T = 1.8 }
+		if R <= 0 {
+			R = template.DefaultDimensions["radius_mm"]
+		}
+		if H <= 0 {
+			H = template.DefaultDimensions["height_mm"]
+		}
+		if T <= 0 {
+			T = template.DefaultDimensions["wall_thickness_mm"]
+		}
+		if T <= 0 {
+			T = 1.8
+		}
 
 		stlBytes, stats, err := u.generator.GenerateCylinderJar(R, H, T, 32)
 		filename := fmt.Sprintf("%s_r%.0fxh%.0f.stl", templateID, R, H)

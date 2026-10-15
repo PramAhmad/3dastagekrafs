@@ -22,14 +22,14 @@ type DimensionConstraint struct {
 }
 
 type PackagingTemplate struct {
-	ID          string              `json:"id"`
-	Name        string              `json:"name"`
-	Category    TemplateCategory    `json:"category"`
-	Description string              `json:"description"`
-	PreviewURL  string              `json:"preview_url"`
-	IsPrintable bool                `json:"is_printable"` // Ready for 3D printing
-	
+	ID          string           `json:"id"`
+	Name        string           `json:"name"`
+	Category    TemplateCategory `json:"category"`
+	Description string           `json:"description"`
+	PreviewURL  string           `json:"preview_url"`
+	IsPrintable bool             `json:"is_printable"` // Ready for 3D printing
+
 	// Constraints for UI Sliders (Pacdora style)
-	Constraints map[string]DimensionConstraint `json:"constraints"`
-	DefaultDimensions map[string]float64        `json:"default_dimensions"`
+	Constraints       map[string]DimensionConstraint `json:"constraints"`
+	DefaultDimensions map[string]float64             `json:"default_dimensions"`
 }
