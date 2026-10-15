@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"3dkemasansaas/internal/config"
+	"3dkemasansaas/internal/database"
 	deliveryHttp "3dkemasansaas/internal/delivery/http"
 	"3dkemasansaas/internal/domain"
 	"3dkemasansaas/internal/middleware"
@@ -60,10 +61,17 @@ func main() {
 			&domain.User{},
 			&domain.Model3D{},
 			&domain.SlicerJob{},
+			&domain.Category{},
+			&domain.PackagingTemplate{},
 		); err != nil {
 			log.Printf("[WARN] Gagal auto-migrate database: %v", err)
 		} else {
-			log.Println("[INFO] Berhasil migrasi schema database")
+			log.Println("[INFO] Berhasil migrasi schema database (Termasuk Category & PackagingTemplate)")
+		}
+
+		// Run Database Seeder (Seeds initial categories & templates directly into DB if empty)
+		if err := database.Seed(db); err != nil {
+			log.Printf("[WARN] Gagal menjalankan seeder database: %v", err)
 		}
 	}
 
@@ -74,14 +82,16 @@ func main() {
 	parametricGen := parametric.NewGenerator()
 	aiService := ai.NewAIService("http://localhost:" + cfg.AppPort)
 
-	// 3. Initialize Repositories
+	// 3. Initialize Repositories (GORM Database Backed)
 	tenantRepo := repository.NewTenantRepository(db)
 	userRepo := repository.NewUserRepository(db)
+	categoryRepo := repository.NewCategoryRepository(db)
+	templateRepo := repository.NewTemplateRepository(db)
 
 	// 4. Initialize Usecases
 	authUsecase := usecase.NewAuthUsecase(tenantRepo, userRepo, jwtService)
 	calcUsecase := usecase.NewCalculatorUsecase(pricingCalculator)
-	templateUsecase := usecase.NewTemplateUsecase(parametricGen)
+	templateUsecase := usecase.NewTemplateUsecase(templateRepo, parametricGen)
 
 	// 5. Initialize Handlers
 	authHandler := deliveryHttp.NewAuthHandler(authUsecase)
@@ -90,7 +100,7 @@ func main() {
 	calculatorHandler := deliveryHttp.NewCalculatorHandler(calcUsecase)
 	templateHandler := deliveryHttp.NewTemplateHandler(templateUsecase)
 	aiHandler := deliveryHttp.NewAIHandler(aiService)
-	categoryHandler := deliveryHttp.NewCategoryHandler("./uploads/data")
+	categoryHandler := deliveryHttp.NewCategoryHandler(categoryRepo)
 
 	// 6. Initialize Gin Router
 	router := gin.Default()

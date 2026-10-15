@@ -15,6 +15,7 @@ import {
   ExternalLink,
   ShieldCheck,
   Layers,
+  Sparkles,
 } from "lucide-react"
 
 import { getAllUmkm } from "@/lib/umkm"
@@ -71,6 +72,14 @@ export default function AdminSidebar({ templateCount = 8, orderCount = 3, pendin
       icon: Box,
       badge: templateCount,
       active: pathname.startsWith("/admin/templates") && !pathname.startsWith("/admin/studio"),
+    },
+    {
+      label: "SVG to Model Template",
+      href: "/admin/svg-to-model",
+      icon: Sparkles,
+      badge: "PACDORA",
+      badgeColor: "bg-purple-500/20 text-purple-700",
+      active: pathname.startsWith("/admin/svg-to-model"),
     },
     {
       label: "3D Packaging Studio",

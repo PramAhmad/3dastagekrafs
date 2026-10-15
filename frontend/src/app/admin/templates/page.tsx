@@ -26,6 +26,8 @@ import {
   Scissors,
   FileCheck,
   Palette,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 import {
   PackagingTemplate,
@@ -42,6 +44,13 @@ export default function AdminTemplatesPage() {
   const [templates, setTemplates] = useState<PackagingTemplate[]>(DEFAULT_TEMPLATES)
   const [masterCategories, setMasterCategories] = useState<CategoryMaster[]>(DEFAULT_MASTER_CATEGORIES)
   const [searchTemplate, setSearchTemplate] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const PAGE_SIZE = 8
+
+  // Reset page when search query changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTemplate])
   const [editingTemplate, setEditingTemplate] = useState<PackagingTemplate | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [notification, setNotification] = useState<string | null>(null)
@@ -365,6 +374,12 @@ export default function AdminTemplatesPage() {
       t.id.toLowerCase().includes(searchTemplate.toLowerCase())
   )
 
+  const totalPages = Math.max(1, Math.ceil(filteredTemplates.length / PAGE_SIZE))
+  const paginatedTemplates = filteredTemplates.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  )
+
   // Collect all unique categories
   const existingCategories = Array.from(
     new Set([...masterCategories.map((c) => c.id), ...templates.map((t) => t.category)])
@@ -479,7 +494,7 @@ export default function AdminTemplatesPage() {
                   </td>
                 </tr>
               ) : (
-                filteredTemplates.map((tmpl) => (
+                paginatedTemplates.map((tmpl) => (
                   <tr key={tmpl.id} className="hover:bg-[#EEF4F8]/60 transition-colors">
                     {/* Image Thumbnail Column */}
                     <td className="p-3.5">
@@ -557,22 +572,38 @@ export default function AdminTemplatesPage() {
                     <td className="p-3.5">
                       <div className="flex flex-wrap items-center gap-1 max-w-[160px]">
                         {tmpl.available_materials && tmpl.available_materials.length > 0 ? (
-                          tmpl.available_materials.map((matId) => {
-                            const matObj = MASTER_MATERIAL_OPTIONS.find((m) => m.id === matId)
-                            return (
-                              <span
-                                key={matId}
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8.5px] font-semibold bg-[#EEF4F8] text-[#1F3A5C] border border-[#D5E4F0]"
-                                title={matObj ? `${matObj.name} (${matObj.subtitle})` : matId}
-                              >
+                          <>
+                            {tmpl.available_materials.slice(0, 2).map((matId) => {
+                              const matObj = MASTER_MATERIAL_OPTIONS.find((m) => m.id === matId)
+                              return (
                                 <span
-                                  className="w-1.5 h-1.5 rounded-full shrink-0"
-                                  style={{ backgroundColor: matObj?.color || "#94a3b8" }}
-                                />
-                                <span className="truncate max-w-[65px]">{matObj?.name.split(" ")[0] || matId}</span>
+                                  key={matId}
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8.5px] font-semibold bg-[#EEF4F8] text-[#1F3A5C] border border-[#D5E4F0]"
+                                  title={matObj ? `${matObj.name} (${matObj.subtitle})` : matId}
+                                >
+                                  <span
+                                    className="w-1.5 h-1.5 rounded-full shrink-0"
+                                    style={{ backgroundColor: matObj?.color || "#94a3b8" }}
+                                  />
+                                  <span className="truncate max-w-[65px]">{matObj?.name.split(" ")[0] || matId}</span>
+                                </span>
+                              )
+                            })}
+                            {tmpl.available_materials.length > 2 && (
+                              <span
+                                className="inline-flex items-center px-1.5 py-0.5 rounded text-[8.5px] font-bold bg-[#EEF4F8] text-[#2F79A6] border border-[#D5E4F0] cursor-help"
+                                title={tmpl.available_materials
+                                  .slice(2)
+                                  .map((matId) => {
+                                    const matObj = MASTER_MATERIAL_OPTIONS.find((m) => m.id === matId)
+                                    return matObj ? `${matObj.name} (${matObj.subtitle})` : matId
+                                  })
+                                  .join(", ")}
+                              >
+                                +{tmpl.available_materials.length - 2} ...
                               </span>
-                            )
-                          })
+                            )}
+                          </>
                         ) : (
                           <span className="text-[9.5px] text-[#718BAA] italic">Semua Bahan</span>
                         )}
@@ -629,6 +660,58 @@ export default function AdminTemplatesPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Bar */}
+        {filteredTemplates.length > 0 && (
+          <div className="px-4 py-3 bg-[#EEF4F8]/60 border-t border-[#D5E4F0] flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-[#718BAA]">
+            <div className="font-medium">
+              Menampilkan <span className="font-bold text-[#1F3A5C]">{(currentPage - 1) * PAGE_SIZE + 1}</span> -{" "}
+              <span className="font-bold text-[#1F3A5C]">
+                {Math.min(currentPage * PAGE_SIZE, filteredTemplates.length)}
+              </span>{" "}
+              dari <span className="font-bold text-[#1F3A5C]">{filteredTemplates.length}</span> template kemasan
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage <= 1}
+                className="p-1.5 rounded-lg border border-[#D5E4F0] bg-white text-[#1F3A5C] hover:bg-[#EEF4F8] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                title="Halaman Sebelumnya"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    type="button"
+                    onClick={() => setCurrentPage(page)}
+                    className={`w-7 h-7 rounded-lg text-[10.5px] font-bold transition-all ${
+                      currentPage === page
+                        ? "bg-[#1F3A5C] text-white shadow-xs"
+                        : "bg-white text-[#1F3A5C] border border-[#D5E4F0] hover:bg-[#EEF4F8]"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages}
+                className="p-1.5 rounded-lg border border-[#D5E4F0] bg-white text-[#1F3A5C] hover:bg-[#EEF4F8] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                title="Halaman Berikutnya"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* MODAL: CREATE / EDIT PACKAGING TEMPLATE */}

@@ -33,12 +33,12 @@ interface UserImageLibraryProps {
 
 const STORAGE_KEY = "astakraf_user_image_library"
 
-const SURFACE_OPTIONS: { id: SurfaceTarget; label: string }[] = [
-  { id: "front", label: "Muka / Depan" },
-  { id: "back", label: "Belakang" },
-  { id: "left", label: "Sisi Kiri" },
-  { id: "right", label: "Sisi Kanan" },
-  { id: "top", label: "Tutup / Atas" },
+const SURFACE_OPTIONS: { id: SurfaceTarget; label: string; shortLabel: string }[] = [
+  { id: "front", label: "Muka / Depan", shortLabel: "Depan" },
+  { id: "left", label: "Sisi Kiri", shortLabel: "Kiri" },
+  { id: "right", label: "Sisi Kanan", shortLabel: "Kanan" },
+  { id: "back", label: "Belakang", shortLabel: "Belakang" },
+  { id: "top", label: "Tutup / Atas", shortLabel: "Atas" },
 ]
 
 export default function UserImageLibrary({
@@ -318,7 +318,7 @@ export default function UserImageLibrary({
                     : "bg-white text-[#4B6B94] hover:bg-white/80 border border-[#D5E4F0]/60"
                 }`}
               >
-                {surf.label.split(" ")[0]}
+                {surf.shortLabel}
               </button>
             ))}
           </div>

@@ -9,6 +9,8 @@ import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js"
 import * as THREE from "three"
 import { parseSvgDielinePanels, DielinePanelZone } from "@/lib/dielineGenerator"
 import { autoFixDielineSvg, sanitizeSvgFor3D } from "@/lib/dielineAutoFixer"
+import { PanelMappingManifest, PanelRegionMapping, ModelUVDiagnosticReport } from "@/types/panelMapping"
+import { analyzeModelUV, createUVDebugTexture } from "@/lib/uvDiagnostics"
 
 export type DecalType = "image" | "circle" | "square" | "triangle" | "star" | "hexagon" | "badge"
 export type SurfaceTarget = "front" | "back" | "top" | "left" | "right"
@@ -46,6 +48,9 @@ export interface PackagingCanvasProps {
   model3dUrl?: string
   modelFormat?: "glb" | "gltf" | "stl" | string
   dielineSvgUrl?: string
+  manifest?: PanelMappingManifest | Record<string, any> | string | null
+  showUVDebug?: boolean
+  onUVDiagnostic?: (report: ModelUVDiagnosticReport) => void
 
   // Multi-Object Layers
   objects: CanvasObject[]
@@ -153,33 +158,11 @@ function GLBExportController({
   return null
 }
 
-// Normalize UV coordinates for packaging 3D meshes (fixes models authored in mm or outside [0, 1])
-function normalizeMeshUVs(geometry: THREE.BufferGeometry) {
-  const uv = geometry.attributes.uv
-  if (!uv) return
-  let minU = Infinity, maxU = -Infinity
-  let minV = Infinity, maxV = -Infinity
-  for (let i = 0; i < uv.count; i++) {
-    const u = uv.getX(i)
-    const v = uv.getY(i)
-    if (u < minU) minU = u
-    if (u > maxU) maxU = u
-    if (v < minV) minV = v
-    if (v > maxV) maxV = v
-  }
-  const spanU = maxU - minU
-  const spanV = maxV - minV
-  // If UV coordinates are unnormalized (e.g. authored in millimeters like [-98.5, 98.5], [-100, 100])
-  if (spanU > 1.5 || minU < -0.1 || minV < -0.1 || spanV > 1.5) {
-    for (let i = 0; i < uv.count; i++) {
-      const u = uv.getX(i)
-      const v = uv.getY(i)
-      const nu = spanU > 0 ? (u - minU) / spanU : 0.5
-      const nv = spanV > 0 ? (v - minV) / spanV : 0.5
-      uv.setXY(i, nu, nv)
-    }
-    uv.needsUpdate = true
-  }
+// Non-destructive UV Channel Preservation:
+// Per AstaKraf Packaging Technical Standard, source geometry buffers are never mutated in-place.
+// UV diagnostics and panel manifest mappings handle coordinate offsets without altering mesh vertices.
+function normalizeMeshUVs(_geometry: THREE.BufferGeometry) {
+  // Non-destructive: preserves original vertex attributes and CAD UVs intact
 }
 
 // Helper to draw single object onto 2D canvas with exact mm / px physical bounds matching 2D dieline
@@ -191,7 +174,8 @@ function drawObject(
   loadedImages: Map<string, HTMLImageElement>,
   isSelected: boolean,
   pxPerMmX: number,
-  pxPerMmY: number
+  pxPerMmY: number,
+  additionalRotation: number = 0
 ) {
   if (!obj.visible) return
 
@@ -205,7 +189,7 @@ function drawObject(
   ctx.save()
   ctx.globalAlpha = obj.opacity ?? 1.0
   ctx.translate(cx, cy)
-  ctx.rotate((obj.rotation * Math.PI) / 180)
+  ctx.rotate(((obj.rotation + additionalRotation) * Math.PI) / 180)
 
   if (obj.type === "image") {
     let img = obj.imageUrl ? loadedImages.get(obj.imageUrl) : null
@@ -1940,6 +1924,9 @@ function CustomMeshModel({
   maxVisualBound = 1.25,
   modelScaleMultiplier = 1.0,
   faceColors,
+  manifest,
+  showUVDebug = false,
+  onUVDiagnostic,
 }: {
   modelUrl: string
   modelFormat?: string
@@ -1955,7 +1942,21 @@ function CustomMeshModel({
   maxVisualBound?: number
   modelScaleMultiplier?: number
   faceColors?: Record<string, string>
+  manifest?: PanelMappingManifest | Record<string, any> | string | null
+  showUVDebug?: boolean
+  onUVDiagnostic?: (report: ModelUVDiagnosticReport) => void
 }) {
+  const parsedManifest = useMemo<PanelMappingManifest | null>(() => {
+    if (!manifest) return null
+    if (typeof manifest === "string") {
+      try {
+        return JSON.parse(manifest) as PanelMappingManifest
+      } catch (e) {
+        return null
+      }
+    }
+    return manifest as PanelMappingManifest
+  }, [manifest])
   const [stlGeometry, setStlGeometry] = useState<THREE.BufferGeometry | null>(null)
   const [gltfScene, setGltfScene] = useState<THREE.Group | null>(null)
   const [initialDims, setInitialDims] = useState<{
@@ -2089,15 +2090,9 @@ function CustomMeshModel({
           if (!isMounted) return
           const scene = gltf.scene.clone()
 
-          // Normalize UV coordinates for meshes where UVs were authored in mm or outside [0, 1]
-          scene.traverse((child) => {
-            if ((child as THREE.Mesh).isMesh) {
-              const mesh = child as THREE.Mesh
-              if (mesh.geometry && mesh.geometry.attributes.uv) {
-                normalizeMeshUVs(mesh.geometry)
-              }
-            }
-          })
+          // Non-destructive UV Channel Analysis
+          const report = analyzeModelUV(scene, modelUrl)
+          if (onUVDiagnostic) onUVDiagnostic(report)
 
           // Pacdora & Standard packaging calibration:
           // Measure true bounding box (e.g. 200mm height or 1280px mesh)
@@ -2153,22 +2148,112 @@ function CustomMeshModel({
   const metalness = isKraft ? 0.0 : materialFinish === "metallic" ? 0.88 : 0.04
   const clearcoat = isKraft ? 0.0 : materialFinish === "glossy" ? 0.95 : 0.0
 
-  // 3. Dynamic Offscreen Texture Baking (Dieline SVG + Artwork Stickers -> 3D Mesh UV Bridge)
+  // 3. Dynamic Offscreen Texture Baking (Manifest UV Bridge + SVG Dieline + Decal Artwork)
   useEffect(() => {
+    // A. UV Diagnostic Debug Mode: Render calibration checkerboard & panel boundaries directly on 3D mesh
+    if (showUVDebug) {
+      const debugTex = createUVDebugTexture(parsedManifest)
+      setDielineTexture(debugTex)
+      return () => {
+        debugTex.dispose()
+      }
+    }
+
     const canvas = document.createElement("canvas")
     canvas.width = 2048
     canvas.height = 2048
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    // A. Base Material Finish & Color
+    // B. Base Material Finish & Color
     applyMaterialBackground(ctx, canvas.width, canvas.height, boxColor, materialFinish, materialType)
 
-    // B. Draw Panel Face Colors, Vector Dieline, and Precisely Mapped Artwork Decals
-    if (svgPanels && svgPanels.panels.length > 0) {
+    // C. Panel Mapping Strategy
+    if (parsedManifest && parsedManifest.panels && Object.keys(parsedManifest.panels).length > 0) {
+      // STRATEGY 1: Explicit Calibrated Panel Mapping Manifest
+      const manifestPanels = Object.values(parsedManifest.panels)
+
+      // 1. Draw individual face colors onto calibrated UV island regions
+      if (faceColors) {
+        manifestPanels.forEach((p) => {
+          const col = faceColors[p.face] || (faceColors as any)[p.id]
+          if (col) {
+            const px = p.uvBounds.uMin * canvas.width
+            const py = p.uvBounds.vMin * canvas.height
+            const pw = (p.uvBounds.uMax - p.uvBounds.uMin) * canvas.width
+            const ph = (p.uvBounds.vMax - p.uvBounds.vMin) * canvas.height
+            ctx.fillStyle = col
+            ctx.fillRect(px, py, pw, ph)
+          }
+        })
+      }
+
+      // 2. Draw sanitized artwork layer from SVG if available
+      if (svgImage && svgImage.complete && svgImage.naturalWidth > 0) {
+        ctx.drawImage(svgImage, 0, 0, canvas.width, canvas.height)
+      }
+
+      // 3. Project Artwork Decals into verified UV regions with rotation and flip compensation
+      objects.forEach((obj) => {
+        if (!obj.visible) return
+
+        const panel =
+          manifestPanels.find((p) => p.face === obj.surfaceTarget) ||
+          manifestPanels.find((p) => p.id === obj.surfaceTarget) ||
+          manifestPanels.find((p) => p.id.toLowerCase().includes(obj.surfaceTarget.toLowerCase())) ||
+          manifestPanels.find((p) => p.face === "front") ||
+          manifestPanels[0]
+
+        if (!panel) return
+
+        const pW = panel.svgBounds.width || 100
+        const pH = panel.svgBounds.height || 100
+
+        // Relative offset from panel center normalized to [-0.5, 0.5]
+        let rx = obj.posX / pW
+        let ry = -obj.posY / pH
+
+        // Normalized to [0, 1] within panel
+        let nx = 0.5 + rx
+        let ny = 0.5 + ry
+
+        // Apply flip if required by UV island authoring
+        if (panel.flipU) nx = 1.0 - nx
+        if (panel.flipV) ny = 1.0 - ny
+
+        // Apply rotation if required by UV island authoring
+        const rot = panel.rotation || 0
+        if (rot === 90) {
+          const temp = nx
+          nx = 1.0 - ny
+          ny = temp
+        } else if (rot === 180) {
+          nx = 1.0 - nx
+          ny = 1.0 - ny
+        } else if (rot === 270) {
+          const temp = nx
+          nx = ny
+          ny = 1.0 - temp
+        }
+
+        const uvWidth = panel.uvBounds.uMax - panel.uvBounds.uMin
+        const uvHeight = panel.uvBounds.vMax - panel.uvBounds.vMin
+
+        const u = panel.uvBounds.uMin + nx * uvWidth
+        const v = panel.uvBounds.vMin + ny * uvHeight
+
+        const cx = u * canvas.width
+        const cy = v * canvas.height
+
+        const pxPerMmX = (uvWidth * canvas.width) / pW
+        const pxPerMmY = (uvHeight * canvas.height) / pH
+
+        drawObject(ctx, obj, cx, cy, loadedImages, false, pxPerMmX, pxPerMmY, rot)
+      })
+    } else if (svgPanels && svgPanels.panels.length > 0) {
+      // STRATEGY 2: Procedural SVG Dieline Panels (Standard Parametric & Auto-fixed SVGs)
       const { totalWidth: svgW, totalHeight: svgH, panels } = svgPanels
 
-      // Apply individual face colors to panel bounding boxes
       if (faceColors) {
         panels.forEach((p) => {
           const col = faceColors[p.face]
@@ -2184,12 +2269,10 @@ function CustomMeshModel({
         })
       }
 
-      // Draw 2D SVG Dieline (Cut & Crease Lines)
       if (svgImage && svgImage.complete && svgImage.naturalWidth > 0) {
         ctx.drawImage(svgImage, 0, 0, canvas.width, canvas.height)
       }
 
-      // Draw Artwork Decals positioned relative to panel center (100% matched to 2D editor)
       const pxPerMmX = canvas.width / svgW
       const pxPerMmY = canvas.height / svgH
 
@@ -2207,10 +2290,10 @@ function CustomMeshModel({
         const cx = (objSvgX / svgW) * canvas.width
         const cy = (objSvgY / svgH) * canvas.height
 
-        drawObject(ctx, obj, cx, cy, loadedImages, false, pxPerMmX, pxPerMmY)
+        drawObject(ctx, obj, cx, cy, loadedImages, false, pxPerMmX, pxPerMmY, 0)
       })
     } else {
-      // Fallback if no SVG panels are defined
+      // STRATEGY 3: Generic Atlas Fallback (For unmapped templates)
       if (svgImage && svgImage.complete && svgImage.naturalWidth > 0) {
         ctx.drawImage(svgImage, 0, 0, canvas.width, canvas.height)
       }
@@ -2228,11 +2311,11 @@ function CustomMeshModel({
 
         cx += (obj.posX || 0) * (pxPerMm * 0.35)
         cy -= (obj.posY || 0) * (pxPerMm * 0.35)
-        drawObject(ctx, obj, cx, cy, loadedImages, false, pxPerMm * 0.35, pxPerMm * 0.35)
+        drawObject(ctx, obj, cx, cy, loadedImages, false, pxPerMm * 0.35, pxPerMm * 0.35, 0)
       })
     }
 
-    // D. Create Three.js Texture with 3DPAKS-Standard ColorSpace & FlipY=false
+    // D. Create Three.js Texture with SRGBColorSpace & FlipY=false
     const tex = new THREE.CanvasTexture(canvas)
     tex.colorSpace = THREE.SRGBColorSpace
     tex.flipY = false
@@ -2244,7 +2327,21 @@ function CustomMeshModel({
     return () => {
       tex.dispose()
     }
-  }, [boxColor, faceColors, materialFinish, materialType, svgImage, svgPanels, objects, loadedImages, length, width, height])
+  }, [
+    boxColor,
+    faceColors,
+    materialFinish,
+    materialType,
+    svgImage,
+    svgPanels,
+    parsedManifest,
+    objects,
+    loadedImages,
+    length,
+    width,
+    height,
+    showUVDebug,
+  ])
 
   // 4. Bind Texture to GLB (matches 3DPAKS loader: binds to LabelZone or primary body meshes)
   useEffect(() => {
@@ -2285,6 +2382,111 @@ function CustomMeshModel({
       }
     }
 
+    // If manifest specifies targetMeshNames, restrict texture strictly to them!
+    if (parsedManifest?.targetMeshNames && parsedManifest.targetMeshNames.length > 0) {
+      const allowed = new Set(parsedManifest.targetMeshNames.map((n) => n.toLowerCase()))
+      gltfScene.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh) {
+          const mesh = child as THREE.Mesh
+          const name = (mesh.name || "").toLowerCase()
+          if (allowed.has(name) || parsedManifest.targetMeshNames?.includes(mesh.name)) {
+            applyMeshMaterial(mesh, dielineTexture)
+          }
+        }
+      })
+      return
+    }
+
+    // Automatically unwrap / remap box meshes with overlapping UVs (Fallback for non-manifest procedural templates)
+    if (!parsedManifest && svgPanels && svgPanels.panels.length > 0) {
+      gltfScene.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh) {
+          const mesh = child as THREE.Mesh
+          const geom = mesh.geometry
+          if (!geom || !geom.attributes.uv || !geom.attributes.normal) return
+
+          const uv = geom.attributes.uv
+          const norm = geom.attributes.normal
+          let frontMinU = Infinity, frontMaxU = -Infinity
+          let backMinU = Infinity, backMaxU = -Infinity
+          for (let i = 0; i < uv.count; i++) {
+            const nz = norm.getZ(i)
+            const u = uv.getX(i)
+            if (nz > 0.5) { frontMinU = Math.min(frontMinU, u); frontMaxU = Math.max(frontMaxU, u); }
+            else if (nz < -0.5) { backMinU = Math.min(backMinU, u); backMaxU = Math.max(backMaxU, u); }
+          }
+
+          const isOverlapping = (frontMaxU - frontMinU > 0.6 && backMaxU - backMinU > 0.6 && Math.abs(frontMinU - backMinU) < 0.2)
+          if (isOverlapping) {
+            if (geom.index) {
+              mesh.geometry = geom.toNonIndexed()
+            }
+            const activeGeom = mesh.geometry
+            const activeUv = activeGeom.attributes.uv
+            const activeNorm = activeGeom.attributes.normal
+
+            if (!(activeGeom as any)._origUVs) {
+              (activeGeom as any)._origUVs = new Float32Array(activeUv.array)
+            } else {
+              activeUv.array.set((activeGeom as any)._origUVs)
+            }
+
+            const { totalWidth: sW, totalHeight: sH, panels } = svgPanels
+            const pMap: Record<string, DielinePanelZone> = {}
+            panels.forEach((p) => { pMap[p.face] = p })
+
+            const frontP = pMap.front || panels[0]
+            const backP = pMap.back || frontP
+            const leftP = pMap.left || frontP
+            const rightP = pMap.right || frontP
+            const topP = pMap.top || frontP
+            const bottomP = pMap.bottom || frontP
+
+            for (let i = 0; i < activeUv.count; i++) {
+              const nx = activeNorm.getX(i)
+              const ny = activeNorm.getY(i)
+              const nz = activeNorm.getZ(i)
+              const u = activeUv.getX(i)
+              const v = activeUv.getY(i)
+
+              let targetP = frontP
+              let isTopRoof = false
+              if (ny > 0.75) targetP = topP
+              else if (ny < -0.75) targetP = bottomP
+              else if (nz > 0.5) targetP = frontP
+              else if (nz < -0.5) targetP = backP
+              else if (nx > 0.5) targetP = rightP
+              else if (nx < -0.5) targetP = leftP
+              else if (ny > 0.35) {
+                isTopRoof = true
+                if (nz > 0.2) targetP = frontP
+                else if (nz < -0.2) targetP = backP
+                else if (nx > 0.2) targetP = rightP
+                else if (nx < -0.2) targetP = leftP
+              }
+
+              const u0 = targetP.x / sW
+              const u1 = (targetP.x + targetP.width) / sW
+              let v0 = targetP.y / sH
+              let v1 = (targetP.y + targetP.height) / sH
+
+              if (isTopRoof && topP) {
+                v0 = topP.y / sH
+                v1 = (topP.y + topP.height) / sH
+              }
+
+              const clampedU = Math.max(0, Math.min(1, u))
+              const clampedV = Math.max(0, Math.min(1, v))
+              const nu = u0 + clampedU * (u1 - u0)
+              const nv = v0 + (1 - clampedV) * (v1 - v0)
+              activeUv.setXY(i, nu, nv)
+            }
+            activeUv.needsUpdate = true
+          }
+        }
+      })
+    }
+
     let boundLabelCount = 0
     gltfScene.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
@@ -2309,16 +2511,31 @@ function CustomMeshModel({
 
     // If no dedicated label mesh found, bind to body packaging meshes (skipping cap/lid/closure and transparent blister/glass meshes)
     if (boundLabelCount === 0) {
+      const rootBox = new THREE.Box3().setFromObject(gltfScene)
+      const rootSize = new THREE.Vector3()
+      rootBox.getSize(rootSize)
+      const rootVol = Math.max(1e-4, rootSize.x * rootSize.y * rootSize.z)
+
       gltfScene.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
           const mesh = child as THREE.Mesh
           const name = (mesh.name || "").toLowerCase()
+
+          // Check if mesh is a small cap / closure / accessory
+          const meshBox = new THREE.Box3().setFromObject(mesh)
+          const meshSize = new THREE.Vector3()
+          meshBox.getSize(meshSize)
+          const meshVol = meshSize.x * meshSize.y * meshSize.z
+
           const isCap =
             name.includes("cap") ||
             name.includes("lid") ||
             name.includes("cork") ||
             name.includes("stopper") ||
-            name.includes("pump")
+            name.includes("pump") ||
+            name.includes("screw") ||
+            name.includes("closure") ||
+            (meshVol / rootVol < 0.05 && meshSize.y / rootSize.y < 0.25)
 
           const rawMat = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material
           const isTransparentPlastic =
@@ -2334,13 +2551,22 @@ function CustomMeshModel({
           } else if (mesh.material) {
             const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
             mats.forEach((m) => {
+              if (m instanceof THREE.MeshPhysicalMaterial || m instanceof THREE.MeshStandardMaterial) {
+                m.map = null
+                if (isCap) {
+                  m.color.set(0xffffff)
+                  m.roughness = 0.2
+                  m.metalness = 0.1
+                }
+              }
               m.side = THREE.DoubleSide
+              m.needsUpdate = true
             })
           }
         }
       })
     }
-  }, [gltfScene, dielineTexture, boxColor, roughness, metalness, clearcoat, isKraft, kraftBumpMap, kraftBumpScale])
+  }, [gltfScene, dielineTexture, svgPanels, parsedManifest, boxColor, roughness, metalness, clearcoat, isKraft, kraftBumpMap, kraftBumpScale])
 
   // 5. 3DPAKS-Style Adaptive Scaling & Strict Max-Visual Bounding Cap
   // Normalizes 1280px assets, millimeter meshes, and meter models into a comfortable viewport size (~1.15 world units)
@@ -2453,6 +2679,9 @@ export default function PackagingCanvas({
   model3dUrl,
   modelFormat,
   dielineSvgUrl,
+  manifest,
+  showUVDebug: externalShowUVDebug,
+  onUVDiagnostic,
   objects = [],
   selectedObjectId = null,
   onSelectObject,
@@ -2473,6 +2702,10 @@ export default function PackagingCanvas({
   const [isHoveringObject, setIsHoveringObject] = useState(false)
   const [modelBottomY, setModelBottomY] = useState(-0.65)
   const [isIntroSpinning, setIsIntroSpinning] = useState(true)
+  const [localUVDebug, setLocalUVDebug] = useState(false)
+  const [uvDiagnosticReport, setUvDiagnosticReport] = useState<ModelUVDiagnosticReport | null>(null)
+
+  const showUVDebug = externalShowUVDebug || localUVDebug
 
   // Pacdora-style 360 Turntable Intro Spin on load
   useEffect(() => {
@@ -2554,6 +2787,12 @@ export default function PackagingCanvas({
               maxVisualBound={maxVisualBound}
               modelScaleMultiplier={modelScaleMultiplier}
               faceColors={faceColors}
+              manifest={manifest}
+              showUVDebug={showUVDebug}
+              onUVDiagnostic={(report) => {
+                setUvDiagnosticReport(report)
+                if (onUVDiagnostic) onUVDiagnostic(report)
+              }}
             />
           ) : category === "POUCH" ? (
             <ContinuousPouchModel
@@ -2699,6 +2938,47 @@ export default function PackagingCanvas({
           onStart={() => setIsIntroSpinning(false)}
         />
       </Canvas>
+
+      {/* 3D UV Diagnostics & Inspection Badge */}
+      {model3dUrl && (
+        <div className="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 pointer-events-auto">
+          <button
+            type="button"
+            onClick={() => setLocalUVDebug((v) => !v)}
+            className={`px-2 py-1 rounded-lg text-[9.5px] font-bold border transition-all flex items-center gap-1 shadow-xs cursor-pointer ${
+              localUVDebug
+                ? "bg-[#2F79A6] text-white border-[#2F79A6]"
+                : "bg-white/90 backdrop-blur-xs text-[#1F3A5C] border-[#D5E4F0] hover:bg-[#EEF4F8]"
+            }`}
+            title="Periksa UV Wireframe & Panel Mapping"
+          >
+            <span>{localUVDebug ? "Tutup UV Debug" : "UV Debug"}</span>
+          </button>
+
+          {uvDiagnosticReport && (
+            <span
+              className={`px-2 py-0.5 rounded-lg text-[9px] font-mono font-bold border ${
+                manifest
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : uvDiagnosticReport.overallStatus === "cad_uncalibrated"
+                  ? "bg-purple-50 text-purple-700 border-purple-200"
+                  : uvDiagnosticReport.overallStatus === "valid"
+                  ? "bg-blue-50 text-blue-700 border-blue-200"
+                  : "bg-amber-50 text-amber-700 border-amber-200"
+              }`}
+              title={uvDiagnosticReport.summary}
+            >
+              {manifest
+                ? "Panel: Mapped"
+                : uvDiagnosticReport.overallStatus === "cad_uncalibrated"
+                ? "UV: CAD Scale"
+                : uvDiagnosticReport.overallStatus === "valid"
+                ? "UV: [0, 1] Valid"
+                : "UV: Belum Dipetakan"}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   )
 }

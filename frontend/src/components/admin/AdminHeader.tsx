@@ -9,6 +9,8 @@ export default function AdminHeader() {
   const pathname = usePathname()
 
   const getPageTitle = () => {
+    if (pathname.includes("/admin/svg-to-model")) return "SVG to 3D Model Template Generator"
+    if (pathname.includes("/admin/studio")) return "3D Packaging Studio"
     if (pathname.includes("/admin/categories")) return "Master Kategori Kemasan"
     if (pathname.includes("/admin/umkm")) return "Validasi & Mitra UMKM"
     if (pathname.includes("/admin/templates")) return "Kelola Model Kemasan"

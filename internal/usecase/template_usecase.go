@@ -163,25 +163,35 @@ type TemplateUsecase interface {
 }
 
 type templateUsecase struct {
+	repo      domain.TemplateRepository
 	generator parametric.Generator
-	templates []domain.PackagingTemplate
 }
 
-func NewTemplateUsecase(generator parametric.Generator) TemplateUsecase {
-	initial := make([]domain.PackagingTemplate, len(StandardPackagingCatalog))
-	copy(initial, StandardPackagingCatalog)
+func NewTemplateUsecase(repo domain.TemplateRepository, generator parametric.Generator) TemplateUsecase {
 	return &templateUsecase{
+		repo:      repo,
 		generator: generator,
-		templates: initial,
 	}
 }
 
 func (u *templateUsecase) GetCatalog() []domain.PackagingTemplate {
-	return u.templates
+	if u.repo != nil {
+		templates, err := u.repo.List()
+		if err == nil && len(templates) > 0 {
+			return templates
+		}
+	}
+	return StandardPackagingCatalog
 }
 
 func (u *templateUsecase) GetByID(id string) (*domain.PackagingTemplate, error) {
-	for _, t := range u.templates {
+	if u.repo != nil {
+		t, err := u.repo.GetByID(id)
+		if err == nil && t != nil {
+			return t, nil
+		}
+	}
+	for _, t := range StandardPackagingCatalog {
 		if t.ID == id {
 			return &t, nil
 		}
@@ -191,36 +201,32 @@ func (u *templateUsecase) GetByID(id string) (*domain.PackagingTemplate, error) 
 
 func (u *templateUsecase) CreateTemplate(tmpl domain.PackagingTemplate) (*domain.PackagingTemplate, error) {
 	if tmpl.ID == "" {
-		tmpl.ID = fmt.Sprintf("custom_%s_%d", tmpl.Category, len(u.templates)+1)
+		tmpl.ID = fmt.Sprintf("custom_%s", tmpl.Name)
 	}
-	for _, t := range u.templates {
-		if t.ID == tmpl.ID {
-			return nil, errors.New("ID template sudah digunakan")
+	if u.repo != nil {
+		if err := u.repo.Upsert(&tmpl); err != nil {
+			return nil, err
 		}
 	}
-	u.templates = append(u.templates, tmpl)
 	return &tmpl, nil
 }
 
 func (u *templateUsecase) UpdateTemplate(id string, tmpl domain.PackagingTemplate) (*domain.PackagingTemplate, error) {
-	for i, t := range u.templates {
-		if t.ID == id {
-			tmpl.ID = id
-			u.templates[i] = tmpl
-			return &tmpl, nil
+	tmpl.ID = id
+	if u.repo != nil {
+		if err := u.repo.Upsert(&tmpl); err != nil {
+			return nil, err
 		}
+		return &tmpl, nil
 	}
-	return nil, errors.New("template kemasan tidak ditemukan")
+	return nil, errors.New("template repository tidak tersedia")
 }
 
 func (u *templateUsecase) DeleteTemplate(id string) error {
-	for i, t := range u.templates {
-		if t.ID == id {
-			u.templates = append(u.templates[:i], u.templates[i+1:]...)
-			return nil
-		}
+	if u.repo != nil {
+		return u.repo.Delete(id)
 	}
-	return errors.New("template kemasan tidak ditemukan")
+	return errors.New("template repository tidak tersedia")
 }
 
 func (u *templateUsecase) GenerateSTL(templateID string, dims map[string]float64) ([]byte, *stl.MeshStats, string, error) {

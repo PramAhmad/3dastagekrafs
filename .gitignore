@@ -20,7 +20,8 @@ tmp/
 *.db
 *.sqlite
 *.sqlite3
-/data/
+frontend/public/data/*.json
+uploads/data/
 !frontend/public/data/.gitkeep
 !frontend/public/uploads/.gitkeep
 
