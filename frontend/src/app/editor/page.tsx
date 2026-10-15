@@ -89,6 +89,7 @@ export interface TemplateItem {
   model_3d_url?: string
   model_format?: string
   dieline_svg_url?: string
+  manifest_json?: any
   available_materials?: string[]
 }
 
@@ -108,6 +109,7 @@ const TEMPLATES: TemplateItem[] = DEFAULT_PACKAGING_TEMPLATES.map((t) => ({
   model_3d_url: t.model_3d_url,
   model_format: t.model_format,
   dieline_svg_url: t.dieline_svg_url,
+  manifest_json: t.manifest_json,
   available_materials: t.available_materials,
 }))
 
@@ -346,6 +348,7 @@ function EditorComponent() {
             model_3d_url: t.model_3d_url || undefined,
             model_format: t.model_format || (t.model_3d_url ? "glb" : undefined),
             dieline_svg_url: t.dieline_svg_url || undefined,
+            manifest_json: t.manifest_json || undefined,
             defaultDims: {
               length: t.defaultDims?.length ?? t.default_dimensions?.length_mm ?? 65,
               width: t.defaultDims?.width ?? t.default_dimensions?.width_mm ?? 45,
@@ -1442,6 +1445,7 @@ function EditorComponent() {
                     model3dUrl={selectedTemplate.model_3d_url}
                     modelFormat={selectedTemplate.model_format}
                     dielineSvgUrl={selectedTemplate.dieline_svg_url}
+                    manifest={selectedTemplate.manifest_json}
                     objects={objects}
                     selectedObjectId={selectedObjectId}
                     showGrid={false}
@@ -1629,6 +1633,7 @@ function EditorComponent() {
           model3dUrl={selectedTemplate.model_3d_url}
           modelFormat={selectedTemplate.model_format}
           dielineSvgUrl={selectedTemplate.dieline_svg_url}
+          manifest={selectedTemplate.manifest_json}
           objects={objects}
           selectedObjectId={selectedObjectId}
           showGrid={showGrid}

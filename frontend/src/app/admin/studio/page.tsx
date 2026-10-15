@@ -1196,6 +1196,7 @@ function AdminStudioContent() {
             model3dUrl={model3dUrl}
             modelFormat={modelFormat}
             dielineSvgUrl={activeDielineSvgUrl}
+            manifest={manifestJson}
             objects={objects}
             selectedObjectId={selectedObjectId}
             showGrid={false}
