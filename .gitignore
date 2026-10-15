@@ -17,6 +17,10 @@ bin/
 uploads/*
 !uploads/.gitkeep
 tmp/
+*.db
+*.sqlite
+*.sqlite3
+data/
 
 # OS and IDE files
 .DS_Store

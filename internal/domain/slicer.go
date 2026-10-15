@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type SlicerJobStatus string
@@ -42,16 +43,23 @@ type SlicingResult struct {
 }
 
 type SlicerJob struct {
-	ID         uuid.UUID       `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	TenantID   uuid.UUID       `gorm:"type:uuid;index;not null" json:"tenant_id"`
-	Model3DID  uuid.UUID       `gorm:"type:uuid;index;not null" json:"model_3d_id"`
+	ID         uuid.UUID       `gorm:"primaryKey" json:"id"`
+	TenantID   uuid.UUID       `gorm:"index;not null" json:"tenant_id"`
+	Model3DID  uuid.UUID       `gorm:"index;not null" json:"model_3d_id"`
 	Status     SlicerJobStatus `gorm:"type:varchar(20);default:'QUEUED'" json:"status"`
 	ProgressPct int            `gorm:"default:0" json:"progress_pct"` // 0 - 100%
 	
-	Params     SlicingParams   `gorm:"type:jsonb;serializer:json" json:"params"`
-	Result     *SlicingResult  `gorm:"type:jsonb;serializer:json" json:"result,omitempty"`
+	Params     SlicingParams   `gorm:"serializer:json" json:"params"`
+	Result     *SlicingResult  `gorm:"serializer:json" json:"result,omitempty"`
 	
 	ErrorMessage *string       `json:"error_message,omitempty"`
 	CreatedAt    time.Time     `json:"created_at"`
 	UpdatedAt    time.Time     `json:"updated_at"`
+}
+
+func (s *SlicerJob) BeforeCreate(tx *gorm.DB) error {
+	if s.ID == uuid.Nil {
+		s.ID = uuid.New()
+	}
+	return nil
 }

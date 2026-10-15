@@ -23,8 +23,8 @@ type PackagingDimensions struct {
 }
 
 type Model3D struct {
-	ID            uuid.UUID           `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	TenantID      uuid.UUID           `gorm:"type:uuid;index;not null" json:"tenant_id"`
+	ID            uuid.UUID           `gorm:"primaryKey" json:"id"`
+	TenantID      uuid.UUID           `gorm:"index;not null" json:"tenant_id"`
 	Name          string              `gorm:"type:varchar(150);not null" json:"name"`
 	Description   string              `gorm:"type:text" json:"description"`
 	SourceType    ModelSourceType     `gorm:"type:varchar(30);not null" json:"source_type"`
@@ -35,7 +35,7 @@ type Model3D struct {
 	ThumbnailURL  string              `gorm:"type:text" json:"thumbnail_url"`
 	
 	// Dimensions & Packaging params
-	Dimensions    PackagingDimensions `gorm:"type:jsonb;serializer:json" json:"dimensions"`
+	Dimensions    PackagingDimensions `gorm:"serializer:json" json:"dimensions"`
 	
 	// Slicing pre-calculated cache
 	EstimatedVolumeCm3 float64        `json:"estimated_volume_cm3"`
@@ -46,6 +46,13 @@ type Model3D struct {
 	CreatedAt     time.Time           `json:"created_at"`
 	UpdatedAt     time.Time           `json:"updated_at"`
 	DeletedAt     gorm.DeletedAt      `gorm:"index" json:"-"`
+}
+
+func (m *Model3D) BeforeCreate(tx *gorm.DB) error {
+	if m.ID == uuid.Nil {
+		m.ID = uuid.New()
+	}
+	return nil
 }
 
 type Model3DRepository interface {

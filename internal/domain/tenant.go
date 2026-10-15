@@ -32,7 +32,7 @@ type TenantPricingConfig struct {
 }
 
 type Tenant struct {
-	ID            uuid.UUID           `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	ID            uuid.UUID           `gorm:"primaryKey" json:"id"`
 	Name          string              `gorm:"type:varchar(100);not null" json:"name"`
 	Slug          string              `gorm:"type:varchar(100);uniqueIndex;not null" json:"slug"` // subdomain: {slug}.kemasan3d.id
 	CustomDomain  *string             `gorm:"type:varchar(255);uniqueIndex" json:"custom_domain,omitempty"` // e.g. store.brand.com
@@ -40,13 +40,20 @@ type Tenant struct {
 	Email         string              `gorm:"type:varchar(150);not null" json:"email"`
 	Phone         string              `gorm:"type:varchar(30)" json:"phone"`
 	
-	// Configuration (stored as JSONB in PostgreSQL)
-	Branding      TenantBranding      `gorm:"type:jsonb;serializer:json" json:"branding"`
-	PricingConfig TenantPricingConfig `gorm:"type:jsonb;serializer:json" json:"pricing_config"`
+	// Configuration (stored as JSON)
+	Branding      TenantBranding      `gorm:"serializer:json" json:"branding"`
+	PricingConfig TenantPricingConfig `gorm:"serializer:json" json:"pricing_config"`
 	
 	CreatedAt     time.Time           `json:"created_at"`
 	UpdatedAt     time.Time           `json:"updated_at"`
 	DeletedAt     gorm.DeletedAt      `gorm:"index" json:"-"`
+}
+
+func (t *Tenant) BeforeCreate(tx *gorm.DB) error {
+	if t.ID == uuid.Nil {
+		t.ID = uuid.New()
+	}
+	return nil
 }
 
 type TenantRepository interface {

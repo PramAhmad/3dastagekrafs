@@ -102,6 +102,27 @@ export interface DimensionConstraint {
   step_mm: number
 }
 
+export interface AvailableMaterialOption {
+  id: string
+  name: string
+  subtitle: string
+  color: string
+}
+
+export const MASTER_MATERIAL_OPTIONS: AvailableMaterialOption[] = [
+  { id: "corrugated", name: "Corrugated Cardboard", subtitle: "Karton Gelombang Cokelat", color: "#ba8b57" },
+  { id: "kraft", name: "Brown Kraft Paper", subtitle: "Kertas Kraft Natural", color: "#ca9a66" },
+  { id: "matte_art", name: "Matte Art Paper", subtitle: "Putih Halus Doff", color: "#f4f4f5" },
+  { id: "glossy", name: "Glossy Coated UV", subtitle: "Putih Mengkilap High Gloss", color: "#ffffff" },
+  { id: "metallic_gold", name: "Metallic Gold Foil", subtitle: "Hot Stamping Emas Mewah", color: "#d4af37" },
+  { id: "metallic_silver", name: "Metallic Silver Foil", subtitle: "Perak Foil / Chrome", color: "#cbd5e1" },
+  { id: "black_matte", name: "Navy Matte Soft-Touch", subtitle: "Navy Doff Premium", color: "#1F3A5C" },
+  { id: "frosted", name: "Frosted Translucent", subtitle: "Mika / Kaca Buram", color: "#e2e8f0" },
+  { id: "metallic", name: "Tinplate Metal", subtitle: "Kaleng Logam Metalik", color: "#94a3b8" },
+  { id: "ivory", name: "Ivory Paperboard", subtitle: "Ivory Putih Premium", color: "#faf8f5" },
+  { id: "duplex", name: "Duplex Board", subtitle: "Karton Duplex Abu-Putih", color: "#d1d5db" },
+]
+
 export interface PackagingTemplate {
   id: string
   name: string
@@ -124,7 +145,131 @@ export interface PackagingTemplate {
     wall_thickness_mm?: number
   }
   badge?: string
+  available_materials?: string[] // IDs of materials selectable for this model
 }
+
+export const DEFAULT_PACKAGING_TEMPLATES: PackagingTemplate[] = [
+  {
+    id: "box_rectangular_v1",
+    name: "Kotak Persegi (Mailer Box)",
+    category: "BOX",
+    description: "Kemasan kotak kardus corrugated & art paper universal untuk e-commerce, sabun, parfum, dan gift box.",
+    is_printable: true,
+    default_dimensions: { length_mm: 65, width_mm: 45, height_mm: 35, wall_thickness_mm: 1.6 },
+    badge: "Terpopuler",
+    available_materials: ["corrugated", "kraft", "matte_art", "glossy", "black_matte", "ivory", "duplex"],
+  },
+  {
+    id: "pouch_standing_v1",
+    name: "Standing Pouch Zipper",
+    category: "POUCH",
+    description: "Kantong kemasan fleksibel berdiri dengan segel zipper kedap udara untuk kopi, keripik, dan snack UMKM.",
+    is_printable: true,
+    default_dimensions: { length_mm: 90, width_mm: 40, height_mm: 130, wall_thickness_mm: 1.6 },
+    badge: "Favorit Makanan",
+    available_materials: ["kraft", "glossy", "matte_art", "metallic_gold", "metallic_silver"],
+  },
+  {
+    id: "jar_cosmetic_v1",
+    name: "Toples Kosmetik Silinder (Jar)",
+    category: "JAR",
+    description: "Wadah silinder mulus dengan tutup ulir rapat untuk krim wajah, skincare, lulur, atau pomade.",
+    is_printable: true,
+    default_dimensions: { radius_mm: 25, height_mm: 35, wall_thickness_mm: 1.8 },
+    badge: "Skincare & Beauty",
+    available_materials: ["frosted", "glossy", "matte_art", "metallic_gold", "black_matte"],
+  },
+  {
+    id: "bottle_pump_v1",
+    name: "Botol Pump Kosmetik (Bottle)",
+    category: "BOTTLE",
+    description: "Botol silinder modern dengan dispenser head pump untuk serum kecantikan, sabun cair, dan lotion.",
+    is_printable: true,
+    default_dimensions: { radius_mm: 20, height_mm: 110, wall_thickness_mm: 1.8 },
+    badge: "Botol Cairan",
+    available_materials: ["frosted", "glossy", "matte_art", "black_matte"],
+  },
+  {
+    id: "can_tin_v1",
+    name: "Kaleng Tin Canister",
+    category: "CAN",
+    description: "Tabung kaleng metalik vintage dengan tutup timbul untuk teh artisan, kopi kaleng, dan biskuit.",
+    is_printable: true,
+    default_dimensions: { radius_mm: 30, height_mm: 80, wall_thickness_mm: 1.8 },
+    badge: "Vintage Metal",
+    available_materials: ["metallic", "metallic_gold", "metallic_silver", "glossy", "matte_art"],
+  },
+  {
+    id: "box_triangle_v1",
+    name: "Kotak Prisma Segitiga (Toblerone)",
+    category: "TRIANGLE",
+    description: "Kemasan prisma 3 sisi geometris untuk cokelat batangan, slice cake, dan souvenir unik.",
+    is_printable: true,
+    default_dimensions: { length_mm: 80, width_mm: 45, height_mm: 40, wall_thickness_mm: 1.6 },
+    badge: "Bentuk Unik",
+    available_materials: ["ivory", "matte_art", "kraft", "glossy", "metallic_gold"],
+  },
+  {
+    id: "cup_coffee_v1",
+    name: "Paper Cup Minuman & Kopi",
+    category: "CUP",
+    description: "Gelas kertas kerucut dengan tutup plastik lid untuk kafe, boba, kopi susu, dan take-away.",
+    is_printable: true,
+    default_dimensions: { radius_mm: 35, height_mm: 100, wall_thickness_mm: 1.6 },
+    badge: "F&B Kafe",
+    available_materials: ["kraft", "matte_art", "glossy", "ivory"],
+  },
+  {
+    id: "box_pillow_v1",
+    name: "Pillow Box Bantal (Hijab & Aksesoris)",
+    category: "PILLOW",
+    description: "Kotak lengkung bentuk bantal elegan yang mudah dilipat untuk hijab, perhiasan, dan gift.",
+    is_printable: true,
+    default_dimensions: { length_mm: 100, width_mm: 60, height_mm: 25, wall_thickness_mm: 1.6 },
+    badge: "Fashion & Gift",
+    available_materials: ["kraft", "ivory", "matte_art", "glossy", "metallic_gold", "black_matte"],
+  },
+  {
+    id: "pouch_sealer_clip_v1",
+    name: "Klip Segel Kemasan (Clip)",
+    category: "CLIP",
+    description: "Klip pengunci kedap udara untuk kemasan plastik snack, keripik, dan biji kopi UMKM.",
+    is_printable: true,
+    default_dimensions: { length_mm: 90, width_mm: 15, height_mm: 12, wall_thickness_mm: 1.6 },
+    badge: "Aksesoris",
+    available_materials: ["glossy", "matte_art", "black_matte"],
+  },
+  {
+    id: "box_sleeve_drawer_v1",
+    name: "Kotak Geser Laci (Slide Drawer Box)",
+    category: "BOX",
+    description: "Kemasan slide box tarik dua lapis (outer sleeve + inner tray) mewah untuk hampers, bakery, dan gadget.",
+    is_printable: true,
+    default_dimensions: { length_mm: 80, width_mm: 60, height_mm: 30, wall_thickness_mm: 1.6 },
+    badge: "Premium Hampers",
+    available_materials: ["corrugated", "kraft", "ivory", "matte_art", "black_matte", "metallic_gold"],
+  },
+  {
+    id: "box_tuck_end_v1",
+    name: "Kotak Lipat Standar (Straight Tuck End)",
+    category: "BOX",
+    description: "Kotak karton lipat vertikal klasik dengan lid flap atas-bawah untuk obat sirup, kosmetik kecil, dan pasta gigi.",
+    is_printable: true,
+    default_dimensions: { length_mm: 40, width_mm: 40, height_mm: 110, wall_thickness_mm: 1.6 },
+    badge: "Farmasi & Skincare",
+    available_materials: ["ivory", "duplex", "matte_art", "glossy", "kraft"],
+  },
+  {
+    id: "bottle_dropper_v1",
+    name: "Botol Pipet Serum (Dropper Bottle)",
+    category: "BOTTLE",
+    description: "Botol silinder kaca amber / bening dengan pipet tetes karet untuk serum anti-aging dan essential oil.",
+    is_printable: true,
+    default_dimensions: { radius_mm: 22, height_mm: 85, wall_thickness_mm: 1.8 },
+    badge: "Essential Oil",
+    available_materials: ["frosted", "glossy", "black_matte", "metallic_gold"],
+  },
+]
 
 export interface PricingConfig {
   machineRate: number // Rp per hour

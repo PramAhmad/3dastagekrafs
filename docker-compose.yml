@@ -1,0 +1,36 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: astakraf-backend
+    restart: always
+    environment:
+      - APP_PORT=8080
+      - APP_ENV=production
+      - BASE_DOMAIN=kemasan3d.id
+      - DATABASE_DRIVER=sqlite
+      - DATABASE_URL=/app/data/asta.db
+      - JWT_SECRET=change-this-to-a-strong-secret-in-production-2026
+    volumes:
+      - backend_data:/app/data
+      - backend_uploads:/app/uploads
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        - NEXT_PUBLIC_API_URL=http://localhost:8080
+    container_name: astakraf-frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  backend_data:
+  backend_uploads:

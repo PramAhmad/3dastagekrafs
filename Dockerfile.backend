@@ -1,0 +1,39 @@
+# Stage 1: Build binary
+FROM golang:1.24-alpine AS builder
+
+WORKDIR /app
+
+# Copy go module files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Compile binary (Pure Go SQLite, no CGO required)
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /app/api ./cmd/api
+
+# Stage 2: Minimal runtime image
+FROM alpine:3.20
+
+WORKDIR /app
+
+# Install certificates and tzdata
+RUN apk --no-cache add ca-certificates tzdata
+
+# Copy binary from builder
+COPY --from=builder /app/api /app/api
+
+# Create directory for uploads and sqlite database
+RUN mkdir -p /app/data /app/uploads
+
+ENV APP_PORT=8080
+ENV APP_ENV=production
+ENV DATABASE_DRIVER=sqlite
+ENV DATABASE_URL=/app/data/asta.db
+
+EXPOSE 8080
+
+VOLUME ["/app/data", "/app/uploads"]
+
+CMD ["/app/api"]

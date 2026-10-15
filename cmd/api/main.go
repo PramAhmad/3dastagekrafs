@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"3dkemasansaas/internal/config"
 	deliveryHttp "3dkemasansaas/internal/delivery/http"
@@ -18,6 +20,7 @@ import (
 	"3dkemasansaas/pkg/response"
 
 	"github.com/gin-gonic/gin"
+	"github.com/glebarez/sqlite"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -25,19 +28,43 @@ import (
 func main() {
 	cfg := config.LoadConfig()
 
-	// 1. Connect Database
-	db, err := gorm.Open(postgres.Open(cfg.DatabaseURL), &gorm.Config{})
-	if err != nil {
-		log.Printf("[WARN] Tidak dapat terhubung ke database postgres: %v. (Gunakan docker-compose untuk DB lokal)", err)
+	// 1. Connect Database (SQLite default or PostgreSQL)
+	var db *gorm.DB
+	var err error
+
+	if cfg.DatabaseDriver == "postgres" {
+		db, err = gorm.Open(postgres.Open(cfg.DatabaseURL), &gorm.Config{})
+		if err != nil {
+			log.Printf("[WARN] Tidak dapat terhubung ke PostgreSQL: %v", err)
+		} else {
+			log.Println("[INFO] Terhubung ke PostgreSQL Database")
+		}
 	} else {
-		log.Println("[INFO] Terhubung ke PostgreSQL Database")
+		// Ensure directory exists if DatabaseURL contains a folder path
+		dbDir := filepath.Dir(cfg.DatabaseURL)
+		if dbDir != "" && dbDir != "." {
+			_ = os.MkdirAll(dbDir, 0755)
+		}
+		db, err = gorm.Open(sqlite.Open(cfg.DatabaseURL), &gorm.Config{})
+		if err != nil {
+			log.Printf("[WARN] Tidak dapat membuka SQLite database (%s): %v", cfg.DatabaseURL, err)
+		} else {
+			log.Printf("[INFO] Terhubung ke SQLite Database: %s", cfg.DatabaseURL)
+		}
+	}
+
+	if db != nil {
 		// Auto-migrate domain models
-		_ = db.AutoMigrate(
+		if err := db.AutoMigrate(
 			&domain.Tenant{},
 			&domain.User{},
 			&domain.Model3D{},
 			&domain.SlicerJob{},
-		)
+		); err != nil {
+			log.Printf("[WARN] Gagal auto-migrate database: %v", err)
+		} else {
+			log.Println("[INFO] Berhasil migrasi schema database")
+		}
 	}
 
 	// 2. Initialize Services, Generators & Security
@@ -66,6 +93,21 @@ func main() {
 
 	// 6. Initialize Gin Router
 	router := gin.Default()
+
+	// CORS Middleware
+	router.Use(func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	})
 
 	// Serve uploaded static files
 	router.Static("/uploads", "./uploads")

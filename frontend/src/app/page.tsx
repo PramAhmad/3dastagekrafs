@@ -37,7 +37,12 @@ import {
   HelpCircle,
   Flame,
 } from "lucide-react"
-import { CategoryMaster, DEFAULT_MASTER_CATEGORIES } from "@/types/admin"
+import {
+  CategoryMaster,
+  DEFAULT_MASTER_CATEGORIES,
+  DEFAULT_PACKAGING_TEMPLATES,
+  MASTER_MATERIAL_OPTIONS,
+} from "@/types/admin"
 import { getCurrentUser, logoutUser } from "@/lib/auth"
 import { UserSession } from "@/types/auth"
 
@@ -51,82 +56,28 @@ export interface TemplateItem {
   preview_url?: string
   model_3d_url?: string
   model_format?: string
+  dieline_svg_url?: string
+  available_materials?: string[]
 }
 
-const TEMPLATES: TemplateItem[] = [
-  {
-    id: "box_rectangular_v1",
-    name: "Kotak Persegi (Mailer Box)",
-    category: "BOX",
-    description: "Kemasan kotak kardus / art paper universal untuk e-commerce, sabun, parfum, dan gift box.",
-    defaultDims: { length: 65, width: 45, height: 35, radius: 25 },
-    badge: "Terpopuler",
+const TEMPLATES: TemplateItem[] = DEFAULT_PACKAGING_TEMPLATES.map((t) => ({
+  id: t.id,
+  name: t.name,
+  category: t.category,
+  description: t.description,
+  defaultDims: {
+    length: t.default_dimensions?.length_mm ?? 65,
+    width: t.default_dimensions?.width_mm ?? 45,
+    height: t.default_dimensions?.height_mm ?? 35,
+    radius: t.default_dimensions?.radius_mm ?? 25,
   },
-  {
-    id: "pouch_standing_v1",
-    name: "Standing Pouch Zipper",
-    category: "POUCH",
-    description: "Kantong kemasan fleksibel berdiri dengan segel zipper kedap udara untuk kopi dan snack.",
-    defaultDims: { length: 90, width: 40, height: 130, radius: 20 },
-    badge: "Favorit Makanan",
-  },
-  {
-    id: "jar_cosmetic_v1",
-    name: "Toples Kosmetik Silinder (Jar)",
-    category: "JAR",
-    description: "Wadah silinder mulus dengan tutup ulir rapat untuk krim wajah, skincare, lulur, atau pomade.",
-    defaultDims: { length: 50, width: 50, height: 35, radius: 25 },
-    badge: "Skincare & Beauty",
-  },
-  {
-    id: "bottle_pump_v1",
-    name: "Botol Pump Kosmetik (Bottle)",
-    category: "BOTTLE",
-    description: "Botol silinder modern dengan dispenser head untuk serum kecantikan, sabun cair, dan lotion.",
-    defaultDims: { length: 40, width: 40, height: 110, radius: 20 },
-    badge: "Botol Cairan",
-  },
-  {
-    id: "can_tin_v1",
-    name: "Kaleng Tin Canister",
-    category: "CAN",
-    description: "Tabung kaleng metalik vintage dengan tutup timbul untuk teh artisan, kopi kaleng, dan biskuit.",
-    defaultDims: { length: 60, width: 60, height: 80, radius: 30 },
-    badge: "Vintage Metal",
-  },
-  {
-    id: "box_triangle_v1",
-    name: "Kotak Prisma Segitiga (Toblerone)",
-    category: "TRIANGLE",
-    description: "Kemasan prisma 3 sisi geometris untuk cokelat batangan, slice cake, dan souvenir premium.",
-    defaultDims: { length: 80, width: 45, height: 40, radius: 25 },
-    badge: "Bentuk Unik",
-  },
-  {
-    id: "cup_coffee_v1",
-    name: "Paper Cup Minuman & Kopi",
-    category: "CUP",
-    description: "Gelas kertas kerucut dengan tutup plastik lid untuk kafe, boba, kopi susu, dan minuman take-away.",
-    defaultDims: { length: 70, width: 70, height: 100, radius: 35 },
-    badge: "F&B Kafe",
-  },
-  {
-    id: "box_pillow_v1",
-    name: "Pillow Box Bantal (Hijab & Aksesoris)",
-    category: "PILLOW",
-    description: "Kotak lengkung bentuk bantal elegan yang mudah dilipat untuk hijab, perhiasan, dan gift.",
-    defaultDims: { length: 100, width: 60, height: 25, radius: 30 },
-    badge: "Fashion & Gift",
-  },
-  {
-    id: "pouch_sealer_clip_v1",
-    name: "Klip Segel Kemasan (Clip)",
-    category: "CLIP",
-    description: "Klip pengunci kedap udara untuk kemasan plastik snack dan biji kopi UMKM.",
-    defaultDims: { length: 90, width: 15, height: 12, radius: 10 },
-    badge: "Aksesoris",
-  },
-]
+  badge: t.badge,
+  preview_url: t.preview_url,
+  model_3d_url: t.model_3d_url,
+  model_format: t.model_format,
+  dieline_svg_url: t.dieline_svg_url,
+  available_materials: t.available_materials,
+}))
 
 function useDraggableScroll() {
   const ref = useRef<HTMLDivElement>(null)
@@ -199,6 +150,7 @@ export default function LandingPage() {
   const [templateList, setTemplateList] = useState<TemplateItem[]>(TEMPLATES)
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL")
   const [searchQuery, setSearchQuery] = useState<string>("")
+  const [visibleModelCount, setVisibleModelCount] = useState<number>(8)
 
   // Dynamic Mascot Animation State (Auto-cycle poses & position swap)
   const [mascotPoseIndex, setMascotPoseIndex] = useState(0)
@@ -304,6 +256,9 @@ export default function LandingPage() {
     return matchCat && matchSearch
   })
 
+  const displayedTemplates = filteredTemplates.slice(0, visibleModelCount)
+  const hasMoreModels = visibleModelCount < filteredTemplates.length
+
   // Category filter tabs list
   const categoryMap = new Map(masterCategories.map((c) => [c.id.toUpperCase(), c]))
   const distinctCategoryIds = Array.from(
@@ -356,10 +311,10 @@ export default function LandingPage() {
               Kategori Kemasan
             </a>
             <a
-              href="#featured-models"
+              href="/kemasan"
               className="hover:text-[#1F3A5C] hover:bg-[#EEF4F8] px-2.5 py-1 rounded-lg transition-all"
             >
-              Katalog Model
+              Katalog Model (12 Model)
             </a>
             <a
               href="#kontak"
@@ -514,11 +469,11 @@ export default function LandingPage() {
               </button>
 
               <a
-                href="#kategori"
+                href="/kemasan"
                 className="px-5 py-3.5 rounded-xl bg-white hover:bg-[#EEF4F8] text-[#1F3A5C] font-bold text-xs border border-white transition-all shadow-md active:scale-95 flex items-center gap-1.5"
               >
                 <Package className="w-3.5 h-3.5 text-[#2F79A6]" />
-                <span>Lihat Model Kemasan</span>
+                <span>Lihat 12 Model Kemasan</span>
               </a>
             </div>
           </div>
@@ -786,7 +741,7 @@ export default function LandingPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-            {filteredTemplates.map((tmpl) => (
+            {displayedTemplates.map((tmpl) => (
               <div
                 key={tmpl.id}
                 onClick={() => handleSelectTemplateAndStart(tmpl)}
@@ -904,6 +859,36 @@ export default function LandingPage() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Load More Controls & Full Catalog Link */}
+        {filteredTemplates.length > 0 && (
+          <div className="pt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+            {hasMoreModels ? (
+              <button
+                onClick={() => setVisibleModelCount((prev) => prev + 4)}
+                className="px-6 py-3 rounded-2xl bg-[#1F3A5C] hover:bg-[#2F79A6] text-white font-extrabold text-xs shadow-lg transition-all flex items-center gap-2 active:scale-95 group"
+              >
+                <span>Muat Lebih Banyak Model Kemasan</span>
+                <span className="px-2 py-0.5 rounded-full bg-white/20 text-[#F7CB45] text-[10px] font-mono">
+                  +{Math.min(4, filteredTemplates.length - visibleModelCount)} Model
+                </span>
+              </button>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-white/90 text-[#1F3A5C] font-bold text-xs shadow-xs">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>Menampilkan seluruh {filteredTemplates.length} model kemasan</span>
+              </span>
+            )}
+
+            <a
+              href="/kemasan"
+              className="px-5 py-3 rounded-2xl bg-white hover:bg-[#EEF4F8] text-[#1F3A5C] font-extrabold text-xs border border-white transition-all shadow-md active:scale-95 flex items-center gap-1.5"
+            >
+              <span>Halaman Katalog Lengkap (12 Model)</span>
+              <ArrowRight className="w-3.5 h-3.5 text-[#2F79A6]" />
+            </a>
           </div>
         )}
       </section>

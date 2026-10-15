@@ -3,29 +3,40 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	AppPort     string
-	AppEnv      string
-	BaseDomain  string
-	DatabaseURL string
-	RedisURL    string
-	JWTSecret   string
+	AppPort        string
+	AppEnv         string
+	BaseDomain     string
+	DatabaseDriver string
+	DatabaseURL    string
+	RedisURL       string
+	JWTSecret      string
 }
 
 func LoadConfig() *Config {
 	_ = godotenv.Load() // load from .env if present
 
+	driver := getEnv("DATABASE_DRIVER", "sqlite")
+	dbURL := getEnv("DATABASE_URL", "asta.db")
+
+	// If DATABASE_URL starts with postgres scheme, auto-detect postgres driver
+	if strings.HasPrefix(dbURL, "postgres://") || strings.HasPrefix(dbURL, "postgresql://") {
+		driver = "postgres"
+	}
+
 	return &Config{
-		AppPort:     getEnv("APP_PORT", "8080"),
-		AppEnv:      getEnv("APP_ENV", "development"),
-		BaseDomain:  getEnv("BASE_DOMAIN", "kemasan3d.id"),
-		DatabaseURL: getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/kemasan3d_saas?sslmode=disable"),
-		RedisURL:    getEnv("REDIS_URL", "localhost:6379"),
-		JWTSecret:   getEnv("JWT_SECRET", "super-secret-key-3dkemasan"),
+		AppPort:        getEnv("APP_PORT", "8080"),
+		AppEnv:         getEnv("APP_ENV", "development"),
+		BaseDomain:     getEnv("BASE_DOMAIN", "kemasan3d.id"),
+		DatabaseDriver: driver,
+		DatabaseURL:    dbURL,
+		RedisURL:       getEnv("REDIS_URL", "localhost:6379"),
+		JWTSecret:      getEnv("JWT_SECRET", "super-secret-key-3dkemasan"),
 	}
 }
 

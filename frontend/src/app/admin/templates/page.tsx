@@ -25,75 +25,18 @@ import {
   FileText,
   Scissors,
   FileCheck,
+  Palette,
 } from "lucide-react"
-import { PackagingTemplate, CategoryMaster, DEFAULT_MASTER_CATEGORIES } from "@/types/admin"
+import {
+  PackagingTemplate,
+  CategoryMaster,
+  DEFAULT_MASTER_CATEGORIES,
+  DEFAULT_PACKAGING_TEMPLATES,
+  MASTER_MATERIAL_OPTIONS,
+} from "@/types/admin"
 
-const DEFAULT_TEMPLATES: PackagingTemplate[] = [
-  {
-    id: "box_rectangular_v1",
-    name: "Kotak Persegi (Mailer Box)",
-    category: "BOX",
-    description: "Kemasan kotak kardus / art paper universal untuk e-commerce, sabun, dan parfum.",
-    is_printable: true,
-    default_dimensions: { length_mm: 65, width_mm: 45, height_mm: 35, wall_thickness_mm: 1.6 },
-  },
-  {
-    id: "pouch_standing_v1",
-    name: "Standing Pouch Zipper",
-    category: "POUCH",
-    description: "Kantong kemasan fleksibel berdiri dengan segel zipper kedap udara untuk kopi dan snack.",
-    is_printable: true,
-    default_dimensions: { length_mm: 90, width_mm: 40, height_mm: 130, wall_thickness_mm: 1.6 },
-  },
-  {
-    id: "jar_cosmetic_v1",
-    name: "Toples Kosmetik Silinder (Jar)",
-    category: "JAR",
-    description: "Wadah silinder mulus dengan tutup ulir rapat untuk krim wajah, skincare, dan lulur.",
-    is_printable: true,
-    default_dimensions: { radius_mm: 25, height_mm: 35, wall_thickness_mm: 1.8 },
-  },
-  {
-    id: "bottle_pump_v1",
-    name: "Botol Pump Kosmetik (Bottle)",
-    category: "BOTTLE",
-    description: "Botol silinder modern dengan dispenser head untuk serum dan lotion.",
-    is_printable: true,
-    default_dimensions: { radius_mm: 20, height_mm: 110, wall_thickness_mm: 1.8 },
-  },
-  {
-    id: "can_tin_v1",
-    name: "Kaleng Tin Canister",
-    category: "CAN",
-    description: "Tabung kaleng metalik vintage dengan tutup timbul untuk teh artisan dan biskuit.",
-    is_printable: true,
-    default_dimensions: { radius_mm: 30, height_mm: 80, wall_thickness_mm: 1.8 },
-  },
-  {
-    id: "box_triangle_v1",
-    name: "Kotak Prisma Segitiga (Toblerone)",
-    category: "TRIANGLE",
-    description: "Kemasan prisma 3 sisi geometris untuk cokelat batangan dan slice cake.",
-    is_printable: true,
-    default_dimensions: { length_mm: 80, width_mm: 45, height_mm: 40, wall_thickness_mm: 1.6 },
-  },
-  {
-    id: "cup_coffee_v1",
-    name: "Paper Cup Minuman & Kopi",
-    category: "CUP",
-    description: "Gelas kertas kerucut dengan tutup plastik lid untuk kafe dan minuman.",
-    is_printable: true,
-    default_dimensions: { radius_mm: 35, height_mm: 100, wall_thickness_mm: 1.6 },
-  },
-  {
-    id: "box_pillow_v1",
-    name: "Pillow Box Bantal (Hijab & Aksesoris)",
-    category: "PILLOW",
-    description: "Kotak lengkung bentuk bantal elegan yang mudah dilipat untuk hijab dan gift.",
-    is_printable: true,
-    default_dimensions: { length_mm: 100, width_mm: 60, height_mm: 25, wall_thickness_mm: 1.6 },
-  },
-]
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+const DEFAULT_TEMPLATES: PackagingTemplate[] = DEFAULT_PACKAGING_TEMPLATES
 
 export default function AdminTemplatesPage() {
   const [templates, setTemplates] = useState<PackagingTemplate[]>(DEFAULT_TEMPLATES)
@@ -135,7 +78,7 @@ export default function AdminTemplatesPage() {
 
   const fetchTemplatesFromBackend = async () => {
     try {
-      const res = await fetch("http://localhost:8080/api/v1/templates")
+      const res = await fetch(`${API_URL}/api/v1/templates`)
       if (res.ok) {
         const json = await res.json()
         if (json.data && Array.isArray(json.data) && json.data.length > 0) {
@@ -275,8 +218,8 @@ export default function AdminTemplatesPage() {
     // 2. Sync to Backend API
     try {
       const url = isEdit
-        ? `http://localhost:8080/api/v1/templates/${editingTemplate.id}`
-        : "http://localhost:8080/api/v1/templates"
+        ? `${API_URL}/api/v1/templates/${editingTemplate.id}`
+        : `${API_URL}/api/v1/templates`
       const method = isEdit ? "PUT" : "POST"
 
       await fetch(url, {
@@ -301,7 +244,7 @@ export default function AdminTemplatesPage() {
     localStorage.setItem("kemasan3d_custom_templates", JSON.stringify(updatedList))
 
     try {
-      await fetch(`http://localhost:8080/api/v1/templates/${id}`, {
+      await fetch(`${API_URL}/api/v1/templates/${id}`, {
         method: "DELETE",
       })
     } catch (e) {}
@@ -380,6 +323,7 @@ export default function AdminTemplatesPage() {
                 uv_template_url: "",
                 is_printable: true,
                 default_dimensions: { length_mm: 65, width_mm: 45, height_mm: 35, wall_thickness_mm: 1.6 },
+                available_materials: ["corrugated", "kraft", "matte_art", "glossy", "black_matte"],
               })
               setUploadFileName(null)
               setUploadDielineName(null)
@@ -417,13 +361,14 @@ export default function AdminTemplatesPage() {
                 <th className="p-3.5">Kategori</th>
                 <th className="p-3.5">Dimensi Bawaan</th>
                 <th className="p-3.5">Tipe 3D</th>
+                <th className="p-3.5">Bahan Tersedia</th>
                 <th className="p-3.5 text-right">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#D5E4F0] text-[#1F3A5C]">
               {filteredTemplates.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-[#718BAA]">
+                  <td colSpan={8} className="p-8 text-center text-[#718BAA]">
                     Tidak ada model kemasan yang cocok.
                   </td>
                 </tr>
@@ -501,10 +446,36 @@ export default function AdminTemplatesPage() {
                         )}
                       </div>
                     </td>
+
+                    {/* Available Materials Column */}
+                    <td className="p-3.5">
+                      <div className="flex flex-wrap items-center gap-1 max-w-[160px]">
+                        {tmpl.available_materials && tmpl.available_materials.length > 0 ? (
+                          tmpl.available_materials.map((matId) => {
+                            const matObj = MASTER_MATERIAL_OPTIONS.find((m) => m.id === matId)
+                            return (
+                              <span
+                                key={matId}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8.5px] font-semibold bg-[#EEF4F8] text-[#1F3A5C] border border-[#D5E4F0]"
+                                title={matObj ? `${matObj.name} (${matObj.subtitle})` : matId}
+                              >
+                                <span
+                                  className="w-1.5 h-1.5 rounded-full shrink-0"
+                                  style={{ backgroundColor: matObj?.color || "#94a3b8" }}
+                                />
+                                <span className="truncate max-w-[65px]">{matObj?.name.split(" ")[0] || matId}</span>
+                              </span>
+                            )
+                          })
+                        ) : (
+                          <span className="text-[9.5px] text-[#718BAA] italic">Semua Bahan</span>
+                        )}
+                      </div>
+                    </td>
                     <td className="p-3.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <a
-                          href={`http://localhost:8080/api/v1/templates/${tmpl.id}/export-stl?download=true`}
+                          href={`${API_URL}/api/v1/templates/${tmpl.id}/export-stl?download=true`}
                           className="px-2.5 py-1 rounded-lg bg-white hover:bg-[#EEF4F8] text-[#1F3A5C] hover:text-[#2F79A6] transition-all flex items-center gap-1 text-[10px] font-bold border border-[#D5E4F0] shadow-2xs"
                           title="Download STL Hasil Generate"
                         >
@@ -902,6 +873,86 @@ export default function AdminTemplatesPage() {
                   className="w-full bg-[#EEF4F8] border border-[#D5E4F0] rounded-xl p-2.5 text-[#1F3A5C] focus:bg-white focus:outline-none focus:border-[#4394C3]"
                   placeholder="Deskripsi fungsi kemasan dan produk yang cocok..."
                 />
+              </div>
+
+              {/* Pilihan Material yang Tersedia (Available Materials Selection) */}
+              <div className="p-3.5 rounded-xl bg-[#EEF4F8] border border-[#D5E4F0] space-y-2.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                  <div>
+                    <span className="font-bold text-[#1F3A5C] flex items-center gap-1.5 text-xs">
+                      <Palette className="w-4 h-4 text-[#2F79A6]" />
+                      Pilihan Material yang Tersedia pada Model Ini
+                    </span>
+                    <span className="text-[10px] text-[#4B6B94] block mt-0.5">
+                      Pilih bahan kemasan yang valid untuk model ini. Opsi bahan di 3D Editor akan disesuaikan dengan pilihan ini.
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEditingTemplate({
+                          ...editingTemplate,
+                          available_materials: MASTER_MATERIAL_OPTIONS.map((m) => m.id),
+                        })
+                      }
+                      className="px-2 py-0.5 rounded text-[10px] font-bold bg-white hover:bg-[#D5E4F0] text-[#1F3A5C] border border-[#D5E4F0]"
+                    >
+                      Pilih Semua
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEditingTemplate({
+                          ...editingTemplate,
+                          available_materials: [],
+                        })
+                      }
+                      className="px-2 py-0.5 rounded text-[10px] font-bold bg-white hover:bg-red-50 text-red-600 border border-[#D5E4F0]"
+                    >
+                      Hapus Semua
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1 max-h-48 overflow-y-auto pr-1">
+                  {MASTER_MATERIAL_OPTIONS.map((mat) => {
+                    const currentList = editingTemplate.available_materials || []
+                    const isChecked = currentList.includes(mat.id)
+                    return (
+                      <button
+                        key={mat.id}
+                        type="button"
+                        onClick={() => {
+                          const updated = isChecked
+                            ? currentList.filter((id) => id !== mat.id)
+                            : [...currentList, mat.id]
+                          setEditingTemplate({
+                            ...editingTemplate,
+                            available_materials: updated,
+                          })
+                        }}
+                        className={`flex items-center gap-2 p-2 rounded-xl border text-left transition-all ${
+                          isChecked
+                            ? "bg-white border-[#1F3A5C] shadow-xs text-[#1F3A5C]"
+                            : "bg-white/60 border-neutral-200 text-neutral-400 opacity-60 hover:opacity-100"
+                        }`}
+                      >
+                        <div
+                          className="w-4 h-4 rounded-full border border-neutral-300 shrink-0 shadow-2xs"
+                          style={{ backgroundColor: mat.color }}
+                        />
+                        <div className="truncate flex-1">
+                          <span className="text-[10px] font-bold block truncate leading-tight">
+                            {mat.name}
+                          </span>
+                          <span className="text-[8.5px] text-[#718BAA] block truncate">{mat.subtitle}</span>
+                        </div>
+                        {isChecked && <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
 
               {/* Default Dimensions */}

@@ -17,8 +17,8 @@ const (
 )
 
 type User struct {
-	ID           uuid.UUID      `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	TenantID     *uuid.UUID     `gorm:"type:uuid;index" json:"tenant_id,omitempty"` // Nullable for SuperAdmin
+	ID           uuid.UUID      `gorm:"primaryKey" json:"id"`
+	TenantID     *uuid.UUID     `gorm:"index" json:"tenant_id,omitempty"` // Nullable for SuperAdmin
 	Name         string         `gorm:"type:varchar(100);not null" json:"name"`
 	Email        string         `gorm:"type:varchar(150);not null;index" json:"email"`
 	PasswordHash string         `gorm:"type:varchar(255);not null" json:"-"`
@@ -28,6 +28,13 @@ type User struct {
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+func (u *User) BeforeCreate(tx *gorm.DB) error {
+	if u.ID == uuid.Nil {
+		u.ID = uuid.New()
+	}
+	return nil
 }
 
 type UserRepository interface {

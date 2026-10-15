@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useRef, Suspense } from "react"
+import React, { useState, useEffect, useRef, useMemo, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import PackagingCanvas, {
   DecalType,
@@ -12,6 +12,7 @@ import { formatRupiah } from "@/lib/utils"
 import { getCurrentUser, getProjectById, saveProjectToHistory, getUserSavedProjects, logoutUser } from "@/lib/auth"
 import { UserSession, SavedProject } from "@/types/auth"
 import { BRAND_COLORS } from "@/lib/theme"
+import { DEFAULT_PACKAGING_TEMPLATES } from "@/types/admin"
 import jsPDF from "jspdf"
 import {
   Box,
@@ -86,82 +87,27 @@ export interface TemplateItem {
   model_3d_url?: string
   model_format?: string
   dieline_svg_url?: string
+  available_materials?: string[]
 }
 
-const TEMPLATES: TemplateItem[] = [
-  {
-    id: "box_rectangular_v1",
-    name: "Kotak Persegi (Mailer Box)",
-    category: "BOX",
-    description: "Kemasan kotak kardus / art paper universal untuk e-commerce, sabun, parfum, dan gift box.",
-    defaultDims: { length: 65, width: 45, height: 35, radius: 25 },
-    badge: "Terpopuler",
+const TEMPLATES: TemplateItem[] = DEFAULT_PACKAGING_TEMPLATES.map((t) => ({
+  id: t.id,
+  name: t.name,
+  category: t.category,
+  description: t.description,
+  defaultDims: {
+    length: t.default_dimensions?.length_mm ?? 65,
+    width: t.default_dimensions?.width_mm ?? 45,
+    height: t.default_dimensions?.height_mm ?? 35,
+    radius: t.default_dimensions?.radius_mm ?? 25,
   },
-  {
-    id: "pouch_standing_v1",
-    name: "Standing Pouch Zipper",
-    category: "POUCH",
-    description: "Kantong kemasan fleksibel berdiri dengan segel zipper kedap udara untuk kopi dan snack.",
-    defaultDims: { length: 90, width: 40, height: 130, radius: 20 },
-    badge: "Favorit Makanan",
-  },
-  {
-    id: "jar_cosmetic_v1",
-    name: "Toples Kosmetik Silinder (Jar)",
-    category: "JAR",
-    description: "Wadah silinder mulus dengan tutup ulir rapat untuk krim wajah, skincare, lulur, atau pomade.",
-    defaultDims: { length: 50, width: 50, height: 35, radius: 25 },
-    badge: "Skincare & Beauty",
-  },
-  {
-    id: "bottle_pump_v1",
-    name: "Botol Pump Kosmetik (Bottle)",
-    category: "BOTTLE",
-    description: "Botol silinder modern dengan dispenser head untuk serum kecantikan, sabun cair, dan lotion.",
-    defaultDims: { length: 40, width: 40, height: 110, radius: 20 },
-    badge: "Botol Cairan",
-  },
-  {
-    id: "can_tin_v1",
-    name: "Kaleng Tin Canister",
-    category: "CAN",
-    description: "Tabung kaleng metalik vintage dengan tutup timbul untuk teh artisan, kopi kaleng, dan biskuit.",
-    defaultDims: { length: 60, width: 60, height: 80, radius: 30 },
-    badge: "Vintage Metal",
-  },
-  {
-    id: "box_triangle_v1",
-    name: "Kotak Prisma Segitiga (Toblerone)",
-    category: "TRIANGLE",
-    description: "Kemasan prisma 3 sisi geometris untuk cokelat batangan, slice cake, dan souvenir premium.",
-    defaultDims: { length: 80, width: 45, height: 40, radius: 25 },
-    badge: "Bentuk Unik",
-  },
-  {
-    id: "cup_coffee_v1",
-    name: "Paper Cup Minuman & Kopi",
-    category: "CUP",
-    description: "Gelas kertas kerucut dengan tutup plastik lid untuk kafe, boba, kopi susu, dan minuman take-away.",
-    defaultDims: { length: 70, width: 70, height: 100, radius: 35 },
-    badge: "F&B Kafe",
-  },
-  {
-    id: "box_pillow_v1",
-    name: "Pillow Box Bantal (Hijab & Aksesoris)",
-    category: "PILLOW",
-    description: "Kotak lengkung bentuk bantal elegan yang mudah dilipat untuk hijab, perhiasan, dan gift.",
-    defaultDims: { length: 100, width: 60, height: 25, radius: 30 },
-    badge: "Fashion & Gift",
-  },
-  {
-    id: "pouch_sealer_clip_v1",
-    name: "Klip Segel Kemasan (Clip)",
-    category: "CLIP",
-    description: "Klip pengunci kedap udara untuk kemasan plastik snack dan biji kopi UMKM.",
-    defaultDims: { length: 90, width: 15, height: 12, radius: 10 },
-    badge: "Aksesoris",
-  },
-]
+  badge: t.badge,
+  preview_url: t.preview_url,
+  model_3d_url: t.model_3d_url,
+  model_format: t.model_format,
+  dieline_svg_url: t.dieline_svg_url,
+  available_materials: t.available_materials,
+}))
 
 const BOX_COLORS = [
   { name: "Biru Brand Kemasan", hex: BRAND_COLORS.primary },
@@ -247,6 +193,42 @@ const MATERIALS: MaterialOption[] = [
     textureType: "matte",
     defaultColor: BRAND_COLORS.navy,
     previewSwatch: BRAND_COLORS.navy,
+  },
+  {
+    id: "frosted",
+    name: "Frosted Glass & Translucent",
+    subtitle: "Mika / Kaca Buram",
+    finish: "frosted",
+    textureType: "matte",
+    defaultColor: "#e2e8f0",
+    previewSwatch: "#e2e8f0",
+  },
+  {
+    id: "metallic",
+    name: "Tinplate Metal",
+    subtitle: "Kaleng Logam Metalik",
+    finish: "metallic",
+    textureType: "metallic",
+    defaultColor: "#94a3b8",
+    previewSwatch: "#94a3b8",
+  },
+  {
+    id: "ivory",
+    name: "Ivory Paperboard",
+    subtitle: "Ivory Putih Premium",
+    finish: "matte",
+    textureType: "matte",
+    defaultColor: "#faf8f5",
+    previewSwatch: "#faf8f5",
+  },
+  {
+    id: "duplex",
+    name: "Duplex Board",
+    subtitle: "Karton Duplex Abu-Putih",
+    finish: "kraft",
+    textureType: "kraft",
+    defaultColor: "#d1d5db",
+    previewSwatch: "#d1d5db",
   },
 ]
 
@@ -366,6 +348,7 @@ function EditorComponent() {
               radius: t.defaultDims?.radius ?? t.default_dimensions?.radius_mm ?? 25,
             },
             badge: t.badge || (t.model_3d_url ? "3D Mesh" : undefined),
+            available_materials: t.available_materials || undefined,
           }))
           const idSet = new Set(normalized.map((n) => n.id))
           combinedTemplates = [...normalized, ...TEMPLATES.filter((tpl) => !idSet.has(tpl.id))]
@@ -387,6 +370,7 @@ function EditorComponent() {
           defaultDims: { ...savedProj.dimensions, radius: savedProj.dimensions.radius || 25 },
           model_3d_url: savedProj.model3dUrl,
           model_format: savedProj.modelFormat,
+          available_materials: undefined,
         }
         setSelectedTemplate(matchedTpl as TemplateItem)
         setLength(savedProj.dimensions.length)
@@ -416,6 +400,26 @@ function EditorComponent() {
       }
     }
   }, [router, templateParam, projectIdParam])
+
+  // Filter materials available specifically for the active packaging template
+  const activeMaterials = useMemo(() => {
+    if (selectedTemplate.available_materials && selectedTemplate.available_materials.length > 0) {
+      const filtered = MATERIALS.filter((m) => selectedTemplate.available_materials?.includes(m.id))
+      return filtered.length > 0 ? filtered : MATERIALS
+    }
+    return MATERIALS
+  }, [selectedTemplate])
+
+  // If currently selected material is not in active template's allowed materials, switch to first allowed
+  useEffect(() => {
+    if (!activeMaterials.some((m) => m.id === selectedMaterial.id)) {
+      const first = activeMaterials[0]
+      if (first) {
+        setSelectedMaterial(first)
+        setBoxColor(first.defaultColor)
+      }
+    }
+  }, [activeMaterials, selectedMaterial])
 
   // 2. Real-time Pricing Calculator
   useEffect(() => {
@@ -1440,7 +1444,7 @@ function EditorComponent() {
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-1.5 pt-0.5">
-                  {MATERIALS.map((mat) => {
+                  {activeMaterials.map((mat) => {
                     const isSelected = selectedMaterial.id === mat.id
                     return (
                       <button
@@ -1703,7 +1707,7 @@ function EditorComponent() {
               </div>
 
               <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                {MATERIALS.map((mat) => {
+                {activeMaterials.map((mat) => {
                   const isSelected = selectedMaterial.id === mat.id
                   return (
                     <button
