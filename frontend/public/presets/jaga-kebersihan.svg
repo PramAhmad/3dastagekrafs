@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240">
+  <rect width="240" height="240" rx="24" fill="#ffffff" />
+  <rect x="10" y="10" width="220" height="220" rx="18" fill="none" stroke="#1F3A5C" stroke-width="4" />
+  <g transform="translate(100, 100)" fill="#1F3A5C">
+    <circle cx="0" cy="-45" r="12" />
+    <path d="M -5 -30 L 5 -30 L 10 15 L -2 15 Z" />
+    <path d="M 5 -25 L 30 -5 L 45 -15" stroke="#1F3A5C" stroke-width="6" stroke-linecap="round" fill="none" />
+    <rect x="42" y="-5" width="8" height="8" rx="2" fill="#F7CB45" transform="rotate(25 46 -1)" />
+    <path d="M -2 15 L -10 55 M 8 15 L 18 55" stroke="#1F3A5C" stroke-width="6" stroke-linecap="round" />
+    <path d="M 38 10 L 62 10 L 58 55 L 42 55 Z" fill="none" stroke="#1F3A5C" stroke-width="4" />
+    <line x1="34" y1="10" x2="66" y2="10" stroke="#1F3A5C" stroke-width="4" stroke-linecap="round" />
+    <line x1="46" y1="18" x2="46" y2="48" stroke="#1F3A5C" stroke-width="2" />
+    <line x1="54" y1="18" x2="54" y2="48" stroke="#1F3A5C" stroke-width="2" />
+  </g>
+  <text x="120" y="195" font-family="Arial, sans-serif" font-weight="bold" font-size="12" fill="#1F3A5C" text-anchor="middle" letter-spacing="0.5">JAGA KEBERSIHAN</text>
+  <text x="120" y="215" font-family="Arial, sans-serif" font-weight="bold" font-size="9" fill="#718BAA" text-anchor="middle">BUANG SAMPAH PADA TEMPATNYA</text>
+</svg>

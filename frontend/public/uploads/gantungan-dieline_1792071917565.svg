@@ -1,0 +1,86 @@
+<svg 
+  xmlns="http://www.w3.org/2000/svg" 
+  viewBox="0 0 845 703" 
+  width="845mm" 
+  height="703mm"
+  data-generator="astakraf-dieline-engine"
+  data-style="fefco-0427"
+  data-width="129"
+  data-depth="27"
+  data-height="193"
+  data-unit="mm"
+>
+  <defs>
+    <!-- AstaKraf Packaging Technical Metadata -->
+    <metadata>
+      <astakraf:packaging
+        xmlns:astakraf="https://kemasan3d.id/schema/dieline/v1"
+        style="fefco-0427"
+        length="129"
+        width="27"
+        height="193"
+        caliper="1.5"
+        unit="mm"
+      />
+    </metadata>
+
+    <style>
+      .cut-line { stroke: #e11d48; stroke-width: 1.2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .crease-line { stroke: #10b981; stroke-width: 1.0; stroke-dasharray: 4 3; fill: none; }
+      .perf-line { stroke: #8b5cf6; stroke-width: 0.8; stroke-dasharray: 1.5 2; fill: none; }
+      .bleed-line { stroke: #ec4899; stroke-width: 0.5; stroke-dasharray: 2 2; fill: none; }
+      .safe-line { stroke: #06b6d4; stroke-width: 0.5; stroke-dasharray: 1 2; fill: none; }
+      .dim-label { font-family: monospace; font-size: 8px; font-weight: bold; fill: #2563eb; }
+      .title-label { font-family: sans-serif; font-size: 9px; font-weight: bold; fill: #0f172a; }
+      .panel-label { font-family: sans-serif; font-size: 7px; font-weight: bold; fill: #64748b; text-anchor: middle; }
+    </style>
+  </defs>
+
+  <!-- Layer 1: Sheet Background -->
+  <g id="layer-sheet">
+    <rect width="845" height="703" fill="#ffffff" />
+  </g>
+
+  <!-- Layer 2: Semantic Panels (3D Face UV Mapping) -->
+  <g id="layer-panels">
+    
+    <rect id="face-front" data-face="front" x="357.75" y="213" width="129" height="193" fill="rgba(37,99,235,0.02)" stroke="rgba(37,99,235,0.2)" stroke-width="0.4" />
+    <text x="422.25" y="312" class="panel-label">DEPAN (FRONT)</text>
+    <rect id="face-bottom" data-face="bottom" x="357.75" y="406" width="129" height="27" fill="rgba(37,99,235,0.02)" stroke="rgba(37,99,235,0.2)" stroke-width="0.4" />
+    <text x="422.25" y="422" class="panel-label">ALAS (BOTTOM)</text>
+    <rect id="face-back" data-face="back" x="357.75" y="433" width="129" height="193" fill="rgba(37,99,235,0.02)" stroke="rgba(37,99,235,0.2)" stroke-width="0.4" />
+    <text x="422.25" y="532" class="panel-label">BELAKANG (BACK)</text>
+    <rect id="face-top" data-face="top" x="357.75" y="626" width="129" height="27" fill="rgba(37,99,235,0.02)" stroke="rgba(37,99,235,0.2)" stroke-width="0.4" />
+    <text x="422.25" y="642" class="panel-label">TUTUP (TOP LID)</text>
+    <rect id="face-left" data-face="left" x="164.75" y="406" width="193" height="27" fill="rgba(37,99,235,0.02)" stroke="rgba(37,99,235,0.2)" stroke-width="0.4" />
+    <text x="261.25" y="422" class="panel-label">KIRI (LEFT)</text>
+    <rect id="face-right" data-face="right" x="486.75" y="406" width="193" height="27" fill="rgba(37,99,235,0.02)" stroke="rgba(37,99,235,0.2)" stroke-width="0.4" />
+    <text x="583.25" y="422" class="panel-label">KANAN (RIGHT)</text>
+  </g>
+
+  <!-- Layer 3: Artwork (Designers place custom graphics/stickers here) -->
+  <g id="layer-artwork">
+  </g>
+
+  <!-- Layer 4: Crease / Fold Lines -->
+  <g id="layer-crease" class="crease-line">
+    <line x1="357.75" y1="213" x2="486.75" y2="213" />
+    <line x1="357.75" y1="406" x2="486.75" y2="406" />
+    <line x1="357.75" y1="433" x2="486.75" y2="433" />
+    <line x1="357.75" y1="626" x2="486.75" y2="626" />
+    <line x1="357.75" y1="653" x2="486.75" y2="653" />
+    <line x1="357.75" y1="406" x2="357.75" y2="433" />
+    <line x1="486.75" y1="406" x2="486.75" y2="433" />
+  </g>
+
+  <!-- Layer 5: Cut Lines (Pisau Potong Luar) -->
+  <g id="layer-cut" class="cut-line">
+    <path d="M 357.75,213 L 361.75,24 Q 367.75,20 377.75,20 L 466.75,20 Q 476.75,20 482.75,24 L 486.75,213 L 679.75,213 L 872.75,406 L 872.75,433 L 679.75,433 L 486.75,433 L 631.5,626 L 631.5,645 L 486.75,653 L 486.75,653 L 480.75,679 Q 474.75,683 466.75,683 L 377.75,683 Q 369.75,683 363.75,679 L 357.75,653 L 357.75,653 L 213,645 L 213,626 L 357.75,433 L 164.75,433 L -28.25,433 L -28.25,406 L 164.75,213 Z" />
+  </g>
+
+  <!-- Layer 6: Technical Annotations & Legend -->
+  <g id="layer-annotations">
+    <text x="15" y="15" class="title-label">FEFCO 0427 (Roll-End Tuck Top Mailer Box) — 129 × 27 × 193 mm (Caliper: 1.5 mm)</text>
+    <text x="15" y="25" class="dim-label" fill="#64748b">150 DPI: 4990 × 4152 px | Solid Red = Cut | Dashed Green = Crease</text>
+  </g>
+</svg>

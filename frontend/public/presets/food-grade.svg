@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240">
+  <rect width="240" height="240" rx="24" fill="#ffffff" />
+  <rect x="10" y="10" width="220" height="220" rx="18" fill="none" stroke="#2563eb" stroke-width="4" />
+  <g transform="translate(120, 105)" fill="none" stroke="#2563eb" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M -50 -45 L -10 -45 C -10 -20 -20 0 -30 15 L -30 45 L -15 45 L -45 45 L -30 45 C -40 0 -50 -20 -50 -45 Z" fill="#2563eb" />
+    <path d="M 15 -45 L 15 -15 C 15 5 25 15 35 15 L 35 45" />
+    <path d="M 25 -45 L 25 -15" />
+    <path d="M 35 -45 L 35 -15" />
+    <path d="M 45 -45 L 45 -15 C 45 5 35 15 35 15" />
+  </g>
+  <text x="120" y="195" font-family="Arial, sans-serif" font-weight="bold" font-size="14" fill="#2563eb" text-anchor="middle" letter-spacing="1">FOOD GRADE</text>
+  <text x="120" y="215" font-family="Arial, sans-serif" font-weight="bold" font-size="10" fill="#64748b" text-anchor="middle">AMAN UNTUK MAKANAN</text>
+</svg>

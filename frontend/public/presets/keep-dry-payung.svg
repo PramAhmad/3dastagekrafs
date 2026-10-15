@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240">
+  <rect width="240" height="240" rx="24" fill="#ffffff" />
+  <rect x="10" y="10" width="220" height="220" rx="18" fill="none" stroke="#0284c7" stroke-width="4" />
+  <g transform="translate(120, 105)" fill="#0284c7">
+    <path d="M -50 -10 C -50 -45 50 -45 50 -10 C 35 -15 20 -15 0 -10 C -20 -15 -35 -15 -50 -10 Z" />
+    <path d="M -3 -10 L -3 35 C -3 45 -18 45 -18 35" fill="none" stroke="#0284c7" stroke-width="6" stroke-linecap="round" />
+    <rect x="-2" y="-20" width="4" height="10" rx="2" />
+    <path d="M -35 -55 C -35 -58 -30 -65 -30 -65 C -30 -65 -25 -58 -25 -55 C -25 -52 -27 -50 -30 -50 C -33 -50 -35 -52 -35 -55 Z" />
+    <path d="M 0 -60 C 0 -63 5 -70 5 -70 C 5 -70 10 -63 10 -60 C 10 -57 8 -55 5 -55 C 2 -55 0 -57 0 -60 Z" />
+    <path d="M 30 -55 C 30 -58 35 -65 35 -65 C 35 -65 40 -58 40 -55 C 40 -52 38 -50 35 -50 C 32 -50 30 -52 30 -55 Z" />
+  </g>
+  <text x="120" y="190" font-family="Arial, sans-serif" font-weight="bold" font-size="14" fill="#0284c7" text-anchor="middle" letter-spacing="1">KEEP DRY</text>
+  <text x="120" y="210" font-family="Arial, sans-serif" font-weight="bold" font-size="10" fill="#64748b" text-anchor="middle">HINDARI TEMPAT LEMBAB</text>
+</svg>

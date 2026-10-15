@@ -137,6 +137,17 @@ export default function DielineCanvas({
           const autoFix = autoFixDielineSvg(svgText)
           const parser = new DOMParser()
           const doc = parser.parseFromString(autoFix.fixedSvg, "image/svg+xml")
+
+          // Make sheet background and base color rect transparent so custom boxColor and faceColors show through
+          const sheet = doc.querySelector("#layer-sheet, #Sheet-Background")
+          if (sheet) {
+            sheet.querySelectorAll("rect").forEach((r) => r.setAttribute("fill", "none"))
+          }
+          const baseColor = doc.querySelector("#base-face-color")
+          if (baseColor) {
+            baseColor.setAttribute("fill", "none")
+          }
+
           const svgEl = doc.querySelector("svg")
           if (svgEl) {
             // Extract inner elements (excluding outer <svg>)
@@ -647,21 +658,32 @@ export default function DielineCanvas({
   // Calculate pixel position of an object on 2D dieline
   const getObject2DPosition = useCallback(
     (obj: CanvasObject) => {
-      const targetFace = dieline.faceMap[obj.surfaceTarget] || dieline.faceMap.front
-      const faceCenterMmX = targetFace.x + targetFace.w / 2
-      const faceCenterMmY = targetFace.y + targetFace.h / 2
+      const targetFace =
+        dieline.faceMap[obj.surfaceTarget] ||
+        dieline.faceMap.front ||
+        dieline.faces[0]
 
-      const objMmX = faceCenterMmX + obj.posX
-      const objMmY = faceCenterMmY - obj.posY
+      const faceCenterMmX = targetFace ? targetFace.x + targetFace.w / 2 : dieline.totalW / 2
+      const faceCenterMmY = targetFace ? targetFace.y + targetFace.h / 2 : dieline.totalH / 2
+
+      const objMmX = faceCenterMmX + (obj.posX || 0)
+      const objMmY = faceCenterMmY - (obj.posY || 0)
 
       const x = objMmX * activeScale
       const y = objMmY * activeScale
-      const w = (obj.widthMm || (isCustomSvg ? 45 : 18)) * (obj.scale || 1.0) * activeScale
-      const h = (obj.heightMm || (isCustomSvg ? 45 : 18)) * (obj.scale || 1.0) * activeScale
+
+      // Ensure objects have an aesthetically pleasing visible dimension
+      const faceMinDim = targetFace ? Math.min(targetFace.w, targetFace.h) : 60
+      const defaultSizeMm = isCustomSvg ? Math.max(30, Math.min(faceMinDim * 0.45, 70)) : 22
+      const wMm = obj.widthMm || defaultSizeMm
+      const hMm = obj.heightMm || defaultSizeMm
+
+      const w = wMm * (obj.scale || 1.0) * activeScale
+      const h = hMm * (obj.scale || 1.0) * activeScale
 
       return { x, y, w, h }
     },
-    [dieline.faceMap, activeScale, isCustomSvg]
+    [dieline.faceMap, dieline.faces, dieline.totalW, dieline.totalH, activeScale, isCustomSvg]
   )
 
   const activeFace = dieline.faces.find((f) => f.id === selectedFaceId) || dieline.faces[0]
@@ -746,6 +768,16 @@ export default function DielineCanvas({
           {/* 1. CUSTOM UPLOADED VECTOR SVG DIELINE (PACDORA REVERSE SYSTEM) */}
           {svgMeta && (
             <>
+              {/* Base packaging sheet background colored with boxColor */}
+              <rect
+                x={0}
+                y={0}
+                width={dieline.totalW * activeScale}
+                height={dieline.totalH * activeScale}
+                fill={boxColor}
+                rx={4}
+              />
+
               {/* Interactive Face Panels underneath custom vector paths */}
               {dieline.faces.map((face) => {
                 const isSelected = selectedFaceId === face.id
@@ -766,16 +798,16 @@ export default function DielineCanvas({
                       width={face.w * activeScale}
                       height={face.h * activeScale}
                       fill={faceFill}
-                      fillOpacity={isSelected ? 0.35 : 0.15}
-                      stroke={isSelected ? "#2563eb" : "rgba(37,99,235,0.4)"}
-                      strokeWidth={isSelected ? 2 : 1}
+                      fillOpacity={1.0}
+                      stroke={isSelected ? "#2563eb" : "rgba(37,99,235,0.3)"}
+                      strokeWidth={isSelected ? 2.5 : 1}
                       strokeDasharray={isSelected ? undefined : "3,2"}
                     />
                     <text
                       x={(face.x + face.w / 2) * activeScale}
                       y={(face.y + face.h / 2) * activeScale + 3}
                       textAnchor="middle"
-                      className="fill-slate-500 font-mono text-[9px] font-bold pointer-events-none select-none opacity-60"
+                      className="fill-slate-600 font-mono text-[9.5px] font-bold pointer-events-none select-none opacity-80"
                     >
                       {face.name}
                     </text>
@@ -973,15 +1005,13 @@ export default function DielineCanvas({
                 onMouseDown={(e) => handleMouseDownObject(e, obj)}
                 className="cursor-move"
                 opacity={obj.visible ? (obj.opacity ?? 1.0) : 0}
-                style={{
-                  transform: `translate(${pos.x}px, ${pos.y}px) rotate(${obj.rotation || 0}deg)`,
-                  transformOrigin: "0px 0px",
-                }}
+                transform={`translate(${pos.x}, ${pos.y}) rotate(${obj.rotation || 0})`}
               >
                 {/* Object Shape / Image */}
                 {obj.type === "image" && obj.imageUrl ? (
                   <image
                     href={obj.imageUrl}
+                    xlinkHref={obj.imageUrl}
                     x={-pos.w / 2}
                     y={-pos.h / 2}
                     width={pos.w}

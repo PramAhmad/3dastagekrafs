@@ -1,5 +1,48 @@
 [
   {
+    "id": "template_1792071917512",
+    "name": "gantungan",
+    "category": "BOX",
+    "description": "Kemasan gantungan kalibrasi presisi 129×27×193 mm (FEFCO fefco-0427).",
+    "preview_url": "/placeholder-box.png",
+    "model_3d_url": "/uploads/3dpaks-card-1792071844180_1792071869838.glb",
+    "model_format": "glb",
+    "dieline_svg_url": "/uploads/gantungan-dieline_1792071917565.svg",
+    "default_dimensions": {
+      "length_mm": 129,
+      "width_mm": 27,
+      "height_mm": 193,
+      "radius_mm": 2
+    },
+    "is_printable": true,
+    "is_custom_mesh": true
+  },
+  {
+    "id": "model_1792071856221",
+    "name": "gantungan",
+    "category": "BOX",
+    "description": "Kemasan custom siap produksi untuk produk UMKM.",
+    "preview_url": "",
+    "model_3d_url": "/uploads/3dpaks-card-1792071844180_1792071869838.glb",
+    "model_format": "glb",
+    "is_custom_mesh": true,
+    "dieline_svg_url": "/uploads/blister-card-parametric-dieline_1792071880712.svg",
+    "manifest_json": "",
+    "uv_template_url": "",
+    "is_printable": true,
+    "default_dimensions": {
+      "length_mm": 65,
+      "width_mm": 45,
+      "height_mm": 35,
+      "wall_thickness_mm": 1.6
+    },
+    "available_materials": [
+      "matte_art",
+      "glossy",
+      "black_matte"
+    ]
+  },
+  {
     "id": "model_1792055549795",
     "name": "Kemasan Kustom Baru",
     "category": "BOX",

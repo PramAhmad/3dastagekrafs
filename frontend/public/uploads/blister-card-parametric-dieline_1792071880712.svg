@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="273mm" height="255mm" viewBox="0 0 273 255">
+  <defs>
+    <style>
+      .txt-title { font-family: 'Barlow', 'Helvetica Neue', Arial, sans-serif; font-weight: 700; font-size: 4.5px; fill: #111827; }
+      .txt-meta { font-family: 'Barlow', 'Helvetica Neue', Arial, sans-serif; font-size: 2.8px; fill: #4b5563; }
+      .txt-dim { font-family: 'Barlow', 'Helvetica Neue', Arial, sans-serif; font-size: 2.6px; font-weight: 600; fill: #1f2937; text-anchor: middle; }
+      .dim-line { stroke: #6b7280; stroke-width: 0.25; fill: none; }
+      .cut-line { stroke: #ff007f; stroke-width: 0.45; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .crease-line { stroke: #00a651; stroke-width: 0.45; stroke-dasharray: 2 1.5; fill: none; stroke-linecap: round; }
+      .bleed-line { stroke: #00a0e9; stroke-width: 0.35; stroke-dasharray: 1.5 1.5; fill: none; }
+      .safe-line { stroke: #2e7d32; stroke-width: 0.25; stroke-dasharray: 0.8 1.2; fill: none; }
+    </style>
+  </defs>
+  <!-- ARTWORK DESIGN LAYER (Place graphics here) -->
+  <g id="Artwork-Layer" />
+  <!-- 3MM SAFE MARGIN -->
+  <g id="Safe-Zone" class="safe-line">
+    <path d="M 34 33 L 199 33 Q 200 33 200 34 L 200 156 Q 200 157 199 157 L 34 157 Q 33 157 33 156 L 33 34 Q 33 33 34 33 Z"/>
+  </g>
+  <!-- 3MM BLEED OUTLINE -->
+  <g id="Bleed-3mm" class="bleed-line">
+    <path d="M 32 27 L 201 27 Q 206 27 206 32 L 206 158 Q 206 163 201 163 L 32 163 Q 27 163 27 158 L 27 32 Q 27 27 32 27 Z"/>
+  </g>
+  <!-- DIE CUT LINE (Spot Magenta #ff007f) -->
+  <g id="Dieline-Cut" class="cut-line">
+    <path d="M 32 30 L 201 30 Q 203 30 203 32 L 203 158 Q 203 160 201 160 L 32 160 Q 30 160 30 158 L 30 32 Q 30 30 32 30 Z"/>
+  </g>
+  <!-- CREASE / SCORE LINES (Green Dashed #00a651) -->
+  <g id="Crease-Score" class="crease-line">
+
+  </g>
+  <!-- TECHNICAL DIMENSIONS & REGISTRATION -->
+  <g id="Technical-Annotations">
+    <!-- Registration Crosshairs -->
+    <g stroke="#222222" stroke-width="0.3" fill="none"><circle cx="10" cy="10" r="3"/><line x1="5" y1="10" x2="15" y2="10"/><line x1="10" y1="5" x2="10" y2="15"/></g>
+    <g stroke="#222222" stroke-width="0.3" fill="none"><circle cx="263" cy="10" r="3"/><line x1="258" y1="10" x2="268" y2="10"/><line x1="263" y1="5" x2="263" y2="15"/></g>
+    <g stroke="#222222" stroke-width="0.3" fill="none"><circle cx="10" cy="245" r="3"/><line x1="5" y1="245" x2="15" y2="245"/><line x1="10" y1="240" x2="10" y2="250"/></g>
+    <g stroke="#222222" stroke-width="0.3" fill="none"><circle cx="263" cy="245" r="3"/><line x1="258" y1="245" x2="268" y2="245"/><line x1="263" y1="240" x2="263" y2="250"/></g>
+    <!-- Dimension Lines -->
+<line x1="30" y1="172" x2="203" y2="172" class="dim-line"/><circle cx="30" cy="172" r="0.6" fill="#6b7280"/><circle cx="203" cy="172" r="0.6" fill="#6b7280"/><text x="116.5" y="170.5" class="txt-dim">173 mm Wrap</text>
+<line x1="215" y1="30" x2="215" y2="160" class="dim-line"/><circle cx="215" cy="30" r="0.6" fill="#6b7280"/><circle cx="215" cy="160" r="0.6" fill="#6b7280"/><text x="215" y="93.5" class="txt-dim">130 mm Height</text>
+    <!-- Title Block & Specifications Header -->
+    <g transform="translate(10, 231)">
+      <rect x="0" y="0" width="253" height="18" fill="#f9fafb" stroke="#e5e7eb" stroke-width="0.3" rx="1.5"/>
+      <text x="5" y="5.5" class="txt-title">Blister Pack on Backing Card — Production Dieline</text>
+      <text x="5" y="10" class="txt-meta">Finished Size: 173 x 130 mm | Bleed: +3.0 mm | Scale: 100% 1:1</text>
+      <text x="5" y="14.5" class="txt-meta">Shape: Cylindrical Body Wrap Label (173 x 130 mm) | Material: Pressure Sensitive Label (PSL) / Wet-Glue Paper / BOPP Film</text>
+      <!-- Legend -->
+      <g transform="translate(153, 4)">
+        <line x1="0" y1="2" x2="10" y2="2" class="cut-line"/>
+        <text x="12" y="3" class="txt-meta">Cut Line</text>
+        <line x1="45" y1="2" x2="55" y2="2" class="bleed-line"/>
+        <text x="57" y="3" class="txt-meta">Bleed (3mm)</text>
+        <line x1="0" y1="8.5" x2="10" y2="8.5" class="crease-line"/>
+        <text x="12" y="9.5" class="txt-meta">Crease Line</text>
+        <line x1="45" y1="8.5" x2="55" y2="8.5" class="safe-line"/>
+        <text x="57" y="9.5" class="txt-meta">Safe Zone</text>
+      </g>
+    </g>
+  </g>
+</svg>

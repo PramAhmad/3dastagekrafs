@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240">
+  <rect width="240" height="240" rx="24" fill="#ffffff" />
+  <rect x="10" y="10" width="220" height="220" rx="18" fill="none" stroke="#1F3A5C" stroke-width="5" />
+  <circle cx="120" cy="120" r="90" fill="none" stroke="#1F3A5C" stroke-width="3" stroke-dasharray="6 3" />
+  <text x="120" y="135" font-family="Arial, sans-serif" font-weight="900" font-size="52" fill="#1F3A5C" text-anchor="middle" letter-spacing="2">SNI</text>
+  <text x="120" y="165" font-family="Arial, sans-serif" font-weight="bold" font-size="10" fill="#2F79A6" text-anchor="middle" letter-spacing="1.5">STANDAR NASIONAL INDONESIA</text>
+  <text x="120" y="80" font-family="Arial, sans-serif" font-weight="bold" font-size="9" fill="#718BAA" text-anchor="middle">TERSERTIFIKASI MUTU</text>
+</svg>

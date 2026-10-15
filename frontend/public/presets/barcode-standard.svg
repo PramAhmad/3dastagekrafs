@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 160" width="260" height="160">
+  <rect width="260" height="160" rx="16" fill="#ffffff" />
+  <g fill="#1F3A5C">
+    <rect x="25" y="25" width="5" height="90" />
+    <rect x="33" y="25" width="3" height="90" />
+    <rect x="40" y="25" width="7" height="90" />
+    <rect x="52" y="25" width="3" height="90" />
+    <rect x="58" y="25" width="9" height="90" />
+    <rect x="71" y="25" width="4" height="90" />
+    <rect x="78" y="25" width="6" height="90" />
+    <rect x="88" y="25" width="3" height="90" />
+    <rect x="94" y="25" width="8" height="90" />
+    <rect x="105" y="25" width="5" height="90" />
+    <rect x="114" y="25" width="3" height="90" />
+    <rect x="120" y="25" width="4" height="100" />
+    <rect x="126" y="25" width="3" height="100" />
+    <rect x="133" y="25" width="8" height="90" />
+    <rect x="145" y="25" width="4" height="90" />
+    <rect x="152" y="25" width="6" height="90" />
+    <rect x="162" y="25" width="3" height="90" />
+    <rect x="168" y="25" width="9" height="90" />
+    <rect x="180" y="25" width="4" height="90" />
+    <rect x="188" y="25" width="7" height="90" />
+    <rect x="198" y="25" width="3" height="90" />
+    <rect x="204" y="25" width="8" height="90" />
+    <rect x="216" y="25" width="4" height="90" />
+    <rect x="224" y="25" width="5" height="90" />
+    <rect x="232" y="25" width="3" height="90" />
+  </g>
+  <text x="130" y="138" font-family="'Courier New', monospace" font-weight="bold" font-size="16" fill="#1F3A5C" text-anchor="middle" letter-spacing="4">8 991234 567890</text>
+</svg>

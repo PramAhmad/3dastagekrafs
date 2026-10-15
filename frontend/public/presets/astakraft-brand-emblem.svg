@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240">
+  <rect width="240" height="240" rx="24" fill="#1F3A5C" />
+  <g transform="translate(120, 100)">
+    <path d="M 0 -45 L 45 -20 L 0 5 L -45 -20 Z" fill="#F7CB45" stroke="#1F3A5C" stroke-width="2" />
+    <path d="M -45 -20 L 0 5 L 0 50 L -45 25 Z" fill="#2F79A6" stroke="#1F3A5C" stroke-width="2" />
+    <path d="M 0 5 L 45 -20 L 45 25 L 0 50 Z" fill="#4394C3" stroke="#1F3A5C" stroke-width="2" />
+    <circle cx="0" cy="5" r="4" fill="#ffffff" />
+  </g>
+  <text x="120" y="185" font-family="Arial, sans-serif" font-weight="900" font-size="20" fill="#ffffff" text-anchor="middle" letter-spacing="1.5">ASTAKRAFT</text>
+  <text x="120" y="208" font-family="Arial, sans-serif" font-weight="bold" font-size="10.5" fill="#F7CB45" text-anchor="middle" letter-spacing="1.5">3D PACKAGING STUDIO</text>
+</svg>

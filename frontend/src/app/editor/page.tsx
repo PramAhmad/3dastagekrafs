@@ -9,6 +9,7 @@ import PackagingCanvas, {
 } from "@/components/3d/PackagingCanvas"
 import DielineCanvas from "@/components/2d/DielineCanvas"
 import PacdoraLoadingScreen from "@/components/ui/PacdoraLoadingScreen"
+import UserImageLibrary from "@/components/editor/UserImageLibrary"
 import { formatRupiah } from "@/lib/utils"
 import { getCurrentUser, getProjectById, saveProjectToHistory, getUserSavedProjects, logoutUser } from "@/lib/auth"
 import { UserSession, SavedProject } from "@/types/auth"
@@ -294,6 +295,8 @@ function EditorComponent() {
   const [undoStack, setUndoStack] = useState<CanvasObject[][]>([])
   const [redoStack, setRedoStack] = useState<CanvasObject[][]>([])
   const [showShortcutsModal, setShowShortcutsModal] = useState(false)
+  const [showImageLibraryModal, setShowImageLibraryModal] = useState(false)
+  const [replacingObjectId, setReplacingObjectId] = useState<string | null>(null)
 
   // Camera Orbit & Grid
   const [cameraView, setCameraView] = useState<"iso" | "front" | "back" | "top" | "side">("iso")
@@ -519,6 +522,7 @@ function EditorComponent() {
   // Object manipulations
   const addObject = (type: DecalType, color: string = BRAND_COLORS.navy, imageUrl?: string) => {
     pushToUndo(objects)
+    const isImage = type === "image"
     const newObj: CanvasObject = {
       id: "obj_" + Math.random().toString(36).substring(2, 9),
       name: `${type.toUpperCase()} #${objects.length + 1}`,
@@ -529,8 +533,8 @@ function EditorComponent() {
       posX: 0,
       posY: 0,
       scale: 1,
-      widthMm: 22,
-      heightMm: 22,
+      widthMm: isImage ? 45 : 22,
+      heightMm: isImage ? 45 : 22,
       rotation: 0,
       opacity: 1,
       visible: true,
@@ -741,17 +745,57 @@ function EditorComponent() {
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [selectedObjectId, objects, undoStack, redoStack, showShortcutsModal, length, width, height, radius, wallThickness, selectedTemplate, selectedMaterial, boxColor, projectName, currentProjectId, currentUser])
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      const url = event.target?.result as string
-      if (url) {
-        addObject("image", "#ffffff", url)
+
+    let finalUrl = ""
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
+      if (res.ok) {
+        const json = await res.json()
+        if (json.url) finalUrl = json.url
       }
+    } catch (err) {
+      console.warn("Upload fallback to data URL:", err)
     }
-    reader.readAsDataURL(file)
+
+    if (!finalUrl) {
+      finalUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader()
+        reader.onload = (event) => resolve((event.target?.result as string) || "")
+        reader.readAsDataURL(file)
+      })
+    }
+
+    if (finalUrl) {
+      if (replacingObjectId) {
+        updateObject(replacingObjectId, { imageUrl: finalUrl })
+        setReplacingObjectId(null)
+      } else {
+        addObject("image", "#ffffff", finalUrl)
+      }
+
+      // Save to user library in background
+      try {
+        const cleanName = file.name.replace(/\.[^/.]+$/, "")
+        await fetch("/api/user-library", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: cleanName,
+            url: finalUrl,
+            category: "upload",
+            userId: currentUser?.id,
+          }),
+        })
+      } catch (e) {}
+    }
   }
 
   // Download STL export
@@ -1072,6 +1116,37 @@ function EditorComponent() {
     }
   }
 
+  const renderImageLibraryModal = () => {
+    if (!showImageLibraryModal) return null
+    return (
+      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+        <div className="bg-white rounded-3xl border border-[#D5E4F0] shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden animate-scale-up">
+          <div className="p-5 flex-1 overflow-y-auto">
+            <UserImageLibrary
+              compact={false}
+              activeSurface={activeSurface}
+              onSurfaceChange={setActiveSurface}
+              currentUserId={currentUser?.id}
+              onSelectImage={(url, name) => {
+                if (replacingObjectId) {
+                  updateObject(replacingObjectId, { imageUrl: url, name })
+                  setReplacingObjectId(null)
+                } else {
+                  addObject("image", "#ffffff", url)
+                }
+                setShowImageLibraryModal(false)
+              }}
+              onCloseModal={() => {
+                setShowImageLibraryModal(false)
+                setReplacingObjectId(null)
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const selectedObject = objects.find((o) => o.id === selectedObjectId)
 
   if (authChecking || isStudioLoading) {
@@ -1181,7 +1256,7 @@ function EditorComponent() {
               className={`w-8.5 h-8.5 rounded-xl flex items-center justify-center transition-all ${
                 studioTab === "uploads" ? "bg-[#1F3A5C] text-[#F7CB45] shadow-sm" : "text-[#4B6B94] hover:text-[#1F3A5C] hover:bg-[#EEF4F8]"
               }`}
-              title="Uploads"
+              title="Pustaka Gambar & Upload (Logo, Sertifikasi)"
             >
               <UploadCloud className="w-4 h-4" />
             </button>
@@ -1218,20 +1293,31 @@ function EditorComponent() {
           </nav>
 
           {/* Left Feature Panel */}
-          <div className="w-60 shrink-0 bg-white/90 backdrop-blur-md border border-[#D5E4F0] rounded-2xl p-4 flex flex-col justify-between overflow-y-auto shadow-lg shadow-[#1F3A5C]/5 pointer-events-auto">
+          <div
+            className={`${
+              studioTab === "uploads" ? "w-80" : "w-64"
+            } shrink-0 bg-white/90 backdrop-blur-md border border-[#D5E4F0] rounded-2xl p-4 flex flex-col justify-between overflow-y-auto shadow-lg shadow-[#1F3A5C]/5 pointer-events-auto transition-all duration-200`}
+          >
             <div className="space-y-4">
               {studioTab === "uploads" && (
-                <div className="space-y-3">
-                  <span className="font-extrabold text-[#1F3A5C] text-xs block">Upload Logo / Label</span>
-                  <label className="border-2 border-dashed border-[#4394C3]/40 hover:border-[#4394C3] rounded-2xl p-5 flex flex-col items-center justify-center cursor-pointer transition-all bg-[#EEF4F8] hover:bg-[#E2EDF5] group">
-                    <UploadCloud className="w-7 h-7 text-[#2F79A6] group-hover:scale-110 mb-1.5 transition-all" />
-                    <span className="text-[10.5px] font-bold text-[#1F3A5C]">
-                      Pilih File Gambar
-                    </span>
-                    <span className="text-[8.5px] text-[#718BAA] mt-0.5">PNG / JPG Transparan</span>
-                    <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-                  </label>
-                </div>
+                <UserImageLibrary
+                  compact={true}
+                  activeSurface={activeSurface}
+                  onSurfaceChange={setActiveSurface}
+                  currentUserId={currentUser?.id}
+                  onSelectImage={(url, name) => {
+                    if (replacingObjectId) {
+                      updateObject(replacingObjectId, { imageUrl: url, name })
+                      setReplacingObjectId(null)
+                    } else {
+                      addObject("image", "#ffffff", url)
+                    }
+                  }}
+                  onExpandModal={() => {
+                    setReplacingObjectId(null)
+                    setShowImageLibraryModal(true)
+                  }}
+                />
               )}
 
               {studioTab === "elements" && (
@@ -1279,14 +1365,32 @@ function EditorComponent() {
                         <div
                           key={obj.id}
                           onClick={() => setSelectedObjectId(obj.id)}
-                          className={`p-2.5 rounded-xl border text-xs flex items-center justify-between cursor-pointer transition-all ${
+                          className={`p-2 rounded-xl border text-xs flex items-center justify-between cursor-pointer transition-all ${
                             selectedObjectId === obj.id
                               ? "bg-[#EEF4F8] border-[#4394C3] font-bold text-[#1F3A5C] shadow-xs"
                               : "bg-white border-[#D5E4F0] text-[#1F3A5C]/80 hover:bg-[#EEF4F8]"
                           }`}
                         >
-                          <span className="truncate max-w-[120px]">{obj.name}</span>
+                          <div className="flex items-center gap-1.5 truncate">
+                            {obj.type === "image" && obj.imageUrl ? (
+                              <img src={obj.imageUrl} alt="" className="w-4 h-4 rounded-sm object-contain shrink-0 border border-[#D5E4F0]" />
+                            ) : null}
+                            <span className="truncate max-w-[110px]">{obj.name}</span>
+                          </div>
                           <div className="flex items-center gap-1">
+                            {obj.type === "image" && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setReplacingObjectId(obj.id)
+                                  setShowImageLibraryModal(true)
+                                }}
+                                className="text-[#718BAA] hover:text-[#2F79A6] p-1 transition-colors"
+                                title="Ganti Gambar dari Pustaka"
+                              >
+                                <FolderOpen className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -1498,7 +1602,9 @@ function EditorComponent() {
               <span>Selesai & Ke 3D</span>
             </button>
           </div>
-        </div>
+
+        {renderImageLibraryModal()}
+      </div>
     )
   }
 
@@ -1887,14 +1993,46 @@ function EditorComponent() {
                       className="px-2 py-1.5 rounded-lg bg-white border border-[#D5E4F0] flex items-center justify-between text-[10px]"
                     >
                       <div className="flex items-center gap-1.5 truncate">
-                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: obj.color || "#1F3A5C" }} />
-                        <span className="font-bold text-[#1F3A5C] truncate max-w-[120px]">{obj.name}</span>
+                        {obj.type === "image" && obj.imageUrl ? (
+                          <img src={obj.imageUrl} alt="" className="w-3.5 h-3.5 rounded-xs object-contain shrink-0 border border-[#D5E4F0]" />
+                        ) : (
+                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: obj.color || "#1F3A5C" }} />
+                        )}
+                        <span className="font-bold text-[#1F3A5C] truncate max-w-[100px]">{obj.name}</span>
                       </div>
-                      <span className="text-[8.5px] text-[#718BAA] uppercase font-mono">{obj.surfaceTarget}</span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[8.5px] text-[#718BAA] uppercase font-mono">{obj.surfaceTarget}</span>
+                        {obj.type === "image" && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReplacingObjectId(obj.id)
+                              setShowImageLibraryModal(true)
+                            }}
+                            className="text-[#718BAA] hover:text-[#2F79A6] p-0.5 transition-colors"
+                            title="Ganti Gambar dari Pustaka"
+                          >
+                            <FolderOpen className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
+
+              {/* Quick Image Library Attach in 3D Mode */}
+              <button
+                type="button"
+                onClick={() => {
+                  setReplacingObjectId(null)
+                  setShowImageLibraryModal(true)
+                }}
+                className="w-full py-2 px-3 rounded-xl bg-white hover:bg-[#EEF4F8] border border-[#4394C3]/40 hover:border-[#2F79A6] text-[#1F3A5C] font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-2xs mt-2 active:scale-98"
+              >
+                <FolderOpen className="w-3.5 h-3.5 text-[#2F79A6]" />
+                <span>Pustaka Gambar &amp; Logo</span>
+              </button>
             </div>
           </div>
 
@@ -2116,6 +2254,8 @@ function EditorComponent() {
             </div>
           </div>
         )}
+
+        {renderImageLibraryModal()}
       </div>
   )
 }

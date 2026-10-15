@@ -153,6 +153,35 @@ function GLBExportController({
   return null
 }
 
+// Normalize UV coordinates for packaging 3D meshes (fixes models authored in mm or outside [0, 1])
+function normalizeMeshUVs(geometry: THREE.BufferGeometry) {
+  const uv = geometry.attributes.uv
+  if (!uv) return
+  let minU = Infinity, maxU = -Infinity
+  let minV = Infinity, maxV = -Infinity
+  for (let i = 0; i < uv.count; i++) {
+    const u = uv.getX(i)
+    const v = uv.getY(i)
+    if (u < minU) minU = u
+    if (u > maxU) maxU = u
+    if (v < minV) minV = v
+    if (v > maxV) maxV = v
+  }
+  const spanU = maxU - minU
+  const spanV = maxV - minV
+  // If UV coordinates are unnormalized (e.g. authored in millimeters like [-98.5, 98.5], [-100, 100])
+  if (spanU > 1.5 || minU < -0.1 || minV < -0.1 || spanV > 1.5) {
+    for (let i = 0; i < uv.count; i++) {
+      const u = uv.getX(i)
+      const v = uv.getY(i)
+      const nu = spanU > 0 ? (u - minU) / spanU : 0.5
+      const nv = spanV > 0 ? (v - minV) / spanV : 0.5
+      uv.setXY(i, nu, nv)
+    }
+    uv.needsUpdate = true
+  }
+}
+
 // Helper to draw single object onto 2D canvas with exact mm / px physical bounds matching 2D dieline
 function drawObject(
   ctx: CanvasRenderingContext2D,
@@ -179,7 +208,11 @@ function drawObject(
   ctx.rotate((obj.rotation * Math.PI) / 180)
 
   if (obj.type === "image") {
-    const img = obj.imageUrl ? loadedImages.get(obj.imageUrl) : null
+    let img = obj.imageUrl ? loadedImages.get(obj.imageUrl) : null
+    if (!img && obj.imageUrl) {
+      img = new Image()
+      img.src = obj.imageUrl
+    }
     if (img && img.complete && img.naturalWidth > 0) {
       ctx.drawImage(img, -widthPx / 2, -heightPx / 2, widthPx, heightPx)
     } else {
@@ -287,23 +320,33 @@ function useImageCache(objects: CanvasObject[]) {
     const urls = objects.filter((o) => o.type === "image" && o.imageUrl).map((o) => o.imageUrl!)
     const uniqueUrls = Array.from(new Set(urls))
     const map = new Map<string, HTMLImageElement>()
-    let count = 0
-
-    if (uniqueUrls.length === 0) {
-      setLoadedImages(map)
-      return
+    let resolvedCount = 0
+    const onDone = (url: string, img: HTMLImageElement) => {
+      map.set(url, img)
+      resolvedCount++
+      if (resolvedCount === uniqueUrls.length) {
+        setLoadedImages(new Map(map))
+      }
     }
 
     uniqueUrls.forEach((url) => {
+      let isHandled = false
       const img = new Image()
-      img.crossOrigin = "anonymous"
+      const handleLoad = () => {
+        if (isHandled) return
+        isHandled = true
+        onDone(url, img)
+      }
+
+      if (!url.startsWith("data:")) {
+        img.crossOrigin = "anonymous"
+      }
+      img.onload = handleLoad
+      img.onerror = handleLoad
       img.src = url
-      img.onload = img.onerror = () => {
-        map.set(url, img)
-        count++
-        if (count === uniqueUrls.length) {
-          setLoadedImages(new Map(map))
-        }
+
+      if (img.complete && img.naturalWidth > 0) {
+        handleLoad()
       }
     })
   }, [objects])
@@ -1961,14 +2004,31 @@ function CustomMeshModel({
             totalHeight: autoFixed.totalHeight,
             panels: autoFixed.panels,
           })
-          if (autoFixed.fixesApplied.length > 0) {
-            const fixedImg = new Image()
-            fixedImg.crossOrigin = "anonymous"
-            fixedImg.onload = () => {
-              if (isMounted) setSvgImage(fixedImg)
+
+          // Strip opaque white sheet background so boxColor and faceColors show through
+          let transparentSvg = autoFixed.fixedSvg
+          try {
+            const parser = new DOMParser()
+            const doc = parser.parseFromString(autoFixed.fixedSvg, "image/svg+xml")
+            const sheet = doc.querySelector("#layer-sheet, #Sheet-Background")
+            if (sheet) {
+              sheet.querySelectorAll("rect").forEach((r) => r.setAttribute("fill", "none"))
             }
-            fixedImg.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(autoFixed.fixedSvg)}`
+            const baseColor = doc.querySelector("#base-face-color")
+            if (baseColor) {
+              baseColor.setAttribute("fill", "none")
+            }
+            transparentSvg = new XMLSerializer().serializeToString(doc)
+          } catch (e) {
+            console.warn("Could not strip opaque background for 3D overlay:", e)
           }
+
+          const fixedImg = new Image()
+          fixedImg.crossOrigin = "anonymous"
+          fixedImg.onload = () => {
+            if (isMounted) setSvgImage(fixedImg)
+          }
+          fixedImg.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(transparentSvg)}`
         }
       } catch (err) {
         console.error("Failed to parse dieline panels in 3D viewer:", err)
@@ -2031,6 +2091,16 @@ function CustomMeshModel({
         (gltf) => {
           if (!isMounted) return
           const scene = gltf.scene.clone()
+
+          // Normalize UV coordinates for meshes where UVs were authored in mm or outside [0, 1]
+          scene.traverse((child) => {
+            if ((child as THREE.Mesh).isMesh) {
+              const mesh = child as THREE.Mesh
+              if (mesh.geometry && mesh.geometry.attributes.uv) {
+                normalizeMeshUVs(mesh.geometry)
+              }
+            }
+          })
 
           // Pacdora & Standard packaging calibration:
           // Measure true bounding box (e.g. 200mm height or 1280px mesh)
@@ -2193,6 +2263,7 @@ function CustomMeshModel({
         }
         if (tex) {
           mat.map = tex
+          mat.color.set(0xffffff)
         } else {
           mat.color.set(boxColor)
         }
@@ -2239,7 +2310,7 @@ function CustomMeshModel({
       }
     })
 
-    // If no dedicated label mesh found, bind to body packaging meshes (skipping cap/lid/closure)
+    // If no dedicated label mesh found, bind to body packaging meshes (skipping cap/lid/closure and transparent blister/glass meshes)
     if (boundLabelCount === 0) {
       gltfScene.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
@@ -2252,7 +2323,16 @@ function CustomMeshModel({
             name.includes("stopper") ||
             name.includes("pump")
 
-          if (!isCap) {
+          const rawMat = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material
+          const isTransparentPlastic =
+            (rawMat && ((rawMat as any).transmission > 0.1 || rawMat.transparent || (rawMat.opacity !== undefined && rawMat.opacity < 0.85))) ||
+            name.includes("blister") ||
+            name.includes("plastic") ||
+            name.includes("cover") ||
+            name.includes("window") ||
+            name.includes("glass")
+
+          if (!isCap && !isTransparentPlastic) {
             applyMeshMaterial(mesh, dielineTexture)
           } else if (mesh.material) {
             const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]

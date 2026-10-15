@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 280" width="240" height="280">
+  <rect width="240" height="280" rx="20" fill="#ffffff" />
+  <rect x="8" y="8" width="224" height="264" rx="16" fill="none" stroke="#672076" stroke-width="4" />
+  <g transform="translate(120, 115)">
+    <path d="M 0 -85 C 35 -60 65 -20 65 30 C 65 65 40 75 0 75 C -40 75 -65 65 -65 30 C -65 -20 -35 -60 0 -85 Z" fill="#672076" />
+    <path d="M 0 -75 C 28 -52 52 -18 52 26 C 52 56 32 65 0 65 C -32 65 -52 56 -52 26 C -52 -18 -28 -52 0 -75 Z" fill="#ffffff" />
+    <path d="M 0 -60 C 18 -40 38 -10 38 22 C 38 48 24 55 0 55 C -24 55 -38 48 -38 22 C -38 -10 -18 -40 0 -60 Z" fill="#672076" />
+    <path d="M 0 -45 L 0 45" stroke="#ffffff" stroke-width="4" stroke-linecap="round" />
+    <circle cx="0" cy="-20" r="8" fill="#ffffff" />
+    <circle cx="0" cy="15" r="10" fill="#ffffff" />
+  </g>
+  <text x="120" y="222" font-family="Arial, sans-serif" font-weight="900" font-size="20" fill="#672076" text-anchor="middle" letter-spacing="1">HALAL</text>
+  <text x="120" y="244" font-family="Arial, sans-serif" font-weight="bold" font-size="11" fill="#672076" text-anchor="middle" letter-spacing="2">INDONESIA</text>
+  <text x="120" y="260" font-family="Arial, sans-serif" font-size="8.5" fill="#888888" text-anchor="middle">ID00110000000001021</text>
+</svg>

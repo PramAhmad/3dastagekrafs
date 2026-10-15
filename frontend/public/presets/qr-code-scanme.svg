@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 260" width="240" height="260">
+  <rect width="240" height="260" rx="20" fill="#ffffff" />
+  <rect x="8" y="8" width="224" height="244" rx="16" fill="none" stroke="#1F3A5C" stroke-width="3" />
+  <rect x="35" y="35" width="45" height="45" rx="8" fill="#1F3A5C" />
+  <rect x="43" y="43" width="29" height="29" rx="4" fill="#ffffff" />
+  <rect x="49" y="49" width="17" height="17" rx="2" fill="#1F3A5C" />
+  <rect x="160" y="35" width="45" height="45" rx="8" fill="#1F3A5C" />
+  <rect x="168" y="43" width="29" height="29" rx="4" fill="#ffffff" />
+  <rect x="174" y="49" width="17" height="17" rx="2" fill="#1F3A5C" />
+  <rect x="35" y="145" width="45" height="45" rx="8" fill="#1F3A5C" />
+  <rect x="43" y="153" width="29" height="29" rx="4" fill="#ffffff" />
+  <rect x="49" y="159" width="17" height="17" rx="2" fill="#1F3A5C" />
+  <g fill="#1F3A5C">
+    <rect x="95" y="35" width="15" height="15" />
+    <rect x="125" y="35" width="15" height="15" />
+    <rect x="95" y="65" width="30" height="15" />
+    <rect x="135" y="65" width="15" height="25" />
+    <rect x="35" y="95" width="25" height="15" />
+    <rect x="75" y="95" width="20" height="20" />
+    <rect x="110" y="95" width="20" height="15" />
+    <rect x="145" y="105" width="20" height="20" />
+    <rect x="180" y="95" width="25" height="15" />
+    <rect x="95" y="125" width="25" height="25" />
+    <rect x="130" y="135" width="25" height="15" />
+    <rect x="170" y="125" width="15" height="30" />
+    <rect x="95" y="165" width="20" height="25" />
+    <rect x="130" y="165" width="35" height="15" />
+    <rect x="180" y="165" width="25" height="25" />
+  </g>
+  <rect x="50" y="210" width="140" height="28" rx="8" fill="#F7CB45" />
+  <text x="120" y="229" font-family="Arial, sans-serif" font-weight="900" font-size="12" fill="#1F3A5C" text-anchor="middle" letter-spacing="1">SCAN ME / INFO</text>
+</svg>
