@@ -55,26 +55,20 @@ export function getCardboardBumpTexture(isCorrugated: boolean = true): THREE.Can
 
   // 2. Corrugated fluting waves (soft sinusoidal ridges & valleys of flute B/E)
   if (isCorrugated) {
-    const flutePitch = 32
+    const flutePitch = 28
     for (let x = 0; x < canvas.width; x += flutePitch) {
-      // Valley groove (darker = indented into cardboard surface)
-      const valleyGrad = ctx.createLinearGradient(x, 0, x + flutePitch * 0.45, 0)
-      valleyGrad.addColorStop(0, "rgba(35, 35, 35, 0.50)")
-      valleyGrad.addColorStop(1, "rgba(128, 128, 128, 0.0)")
-      ctx.fillStyle = valleyGrad
-      ctx.fillRect(x, 0, flutePitch * 0.45, canvas.height)
-
-      // Crest ridge (lighter = raised above cardboard surface)
-      const crestGrad = ctx.createLinearGradient(x + flutePitch * 0.45, 0, x + flutePitch, 0)
-      crestGrad.addColorStop(0, "rgba(128, 128, 128, 0.0)")
-      crestGrad.addColorStop(0.5, "rgba(225, 225, 225, 0.48)")
-      crestGrad.addColorStop(1, "rgba(128, 128, 128, 0.0)")
-      ctx.fillStyle = crestGrad
-      ctx.fillRect(x + flutePitch * 0.45, 0, flutePitch * 0.55, canvas.height)
+      const fluteGrad = ctx.createLinearGradient(x, 0, x + flutePitch, 0)
+      fluteGrad.addColorStop(0.0, "rgb(75, 75, 75)") // Valley depression
+      fluteGrad.addColorStop(0.25, "rgb(128, 128, 128)") // Zero inflection
+      fluteGrad.addColorStop(0.5, "rgb(180, 180, 180)") // Crest ridge
+      fluteGrad.addColorStop(0.75, "rgb(128, 128, 128)") // Zero inflection
+      fluteGrad.addColorStop(1.0, "rgb(75, 75, 75)") // Next valley
+      ctx.fillStyle = fluteGrad
+      ctx.fillRect(x, 0, flutePitch, canvas.height)
 
       // Fine linear press groove along the flute root
-      ctx.fillStyle = "rgba(30, 30, 30, 0.35)"
-      ctx.fillRect(x, 0, 1.5, canvas.height)
+      ctx.fillStyle = "rgba(45, 45, 45, 0.35)"
+      ctx.fillRect(x, 0, 1.2, canvas.height)
     }
   }
 
@@ -223,47 +217,37 @@ export function applyCardboardBackground(
   // 3. Corrugated cardboard fluting ridges (Gelombang Karton)
   if (isCorrugated) {
     const isVertical = options.orientation !== "horizontal"
-    const flutePitch = 32 // ~3.2mm in physical scale at 150-300 DPI
+    const flutePitch = 28 // ~2.8mm - 3.2mm in physical scale
 
     if (isVertical) {
       for (let x = 0; x < w; x += flutePitch) {
-        // Flute shadow valley (left side of flute rib)
-        const shadowGrad = ctx.createLinearGradient(x, 0, x + flutePitch * 0.45, 0)
-        shadowGrad.addColorStop(0, "rgba(38, 18, 5, 0.16)")
-        shadowGrad.addColorStop(1, "rgba(38, 18, 5, 0.0)")
-        ctx.fillStyle = shadowGrad
-        ctx.fillRect(x, 0, flutePitch * 0.45, h)
-
-        // Flute crest highlight (right side of flute rib)
-        const highlightGrad = ctx.createLinearGradient(x + flutePitch * 0.45, 0, x + flutePitch, 0)
-        highlightGrad.addColorStop(0, "rgba(255, 250, 225, 0.18)")
-        highlightGrad.addColorStop(0.5, "rgba(255, 250, 225, 0.09)")
-        highlightGrad.addColorStop(1, "rgba(255, 250, 225, 0.0)")
-        ctx.fillStyle = highlightGrad
-        ctx.fillRect(x + flutePitch * 0.45, 0, flutePitch * 0.55, h)
+        const fluteGrad = ctx.createLinearGradient(x, 0, x + flutePitch, 0)
+        fluteGrad.addColorStop(0.0, "rgba(42, 22, 6, 0.12)") // Soft valley shadow
+        fluteGrad.addColorStop(0.25, "rgba(42, 22, 6, 0.0)")
+        fluteGrad.addColorStop(0.5, "rgba(255, 248, 220, 0.14)") // Soft crest highlight
+        fluteGrad.addColorStop(0.75, "rgba(42, 22, 6, 0.0)")
+        fluteGrad.addColorStop(1.0, "rgba(42, 22, 6, 0.12)")
+        ctx.fillStyle = fluteGrad
+        ctx.fillRect(x, 0, flutePitch, h)
 
         // Fine linear indentation press line along flute crease root
-        ctx.fillStyle = "rgba(42, 19, 5, 0.14)"
-        ctx.fillRect(x, 0, 1.5, h)
+        ctx.fillStyle = "rgba(42, 20, 6, 0.08)"
+        ctx.fillRect(x, 0, 1.2, h)
       }
     } else {
       // Horizontal flutes
       for (let y = 0; y < h; y += flutePitch) {
-        const shadowGrad = ctx.createLinearGradient(0, y, 0, y + flutePitch * 0.45)
-        shadowGrad.addColorStop(0, "rgba(38, 18, 5, 0.16)")
-        shadowGrad.addColorStop(1, "rgba(38, 18, 5, 0.0)")
-        ctx.fillStyle = shadowGrad
-        ctx.fillRect(0, y, w, flutePitch * 0.45)
+        const fluteGrad = ctx.createLinearGradient(0, y, 0, y + flutePitch)
+        fluteGrad.addColorStop(0.0, "rgba(42, 22, 6, 0.12)")
+        fluteGrad.addColorStop(0.25, "rgba(42, 22, 6, 0.0)")
+        fluteGrad.addColorStop(0.5, "rgba(255, 248, 220, 0.14)")
+        fluteGrad.addColorStop(0.75, "rgba(42, 22, 6, 0.0)")
+        fluteGrad.addColorStop(1.0, "rgba(42, 22, 6, 0.12)")
+        ctx.fillStyle = fluteGrad
+        ctx.fillRect(0, y, w, flutePitch)
 
-        const highlightGrad = ctx.createLinearGradient(0, y + flutePitch * 0.45, 0, y + flutePitch)
-        highlightGrad.addColorStop(0, "rgba(255, 250, 225, 0.18)")
-        highlightGrad.addColorStop(0.5, "rgba(255, 250, 225, 0.09)")
-        highlightGrad.addColorStop(1, "rgba(255, 250, 225, 0.0)")
-        ctx.fillStyle = highlightGrad
-        ctx.fillRect(0, y + flutePitch * 0.45, w, flutePitch * 0.55)
-
-        ctx.fillStyle = "rgba(42, 19, 5, 0.14)"
-        ctx.fillRect(0, y, w, 1.5)
+        ctx.fillStyle = "rgba(42, 20, 6, 0.08)"
+        ctx.fillRect(0, y, w, 1.2)
       }
     }
   }

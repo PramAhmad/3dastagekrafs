@@ -5,6 +5,7 @@ import { CanvasObject, DecalType, SurfaceTarget } from "@/components/3d/Packagin
 import { BRAND_COLORS } from "@/lib/theme"
 import { parseSvgDielinePanels, DielinePanelZone } from "@/lib/dielineGenerator"
 import { autoFixDielineSvg } from "@/lib/dielineAutoFixer"
+import { applyCardboardBackground } from "@/lib/cardboardTexture"
 import {
   RotateCw,
   ZoomIn,
@@ -639,6 +640,49 @@ export default function DielineCanvas({
     }
   }, [svgMeta, category, length, width, height, scaleMmToPx])
 
+  // Photorealistic Cardboard & Kraft Pattern Generators for 2D Dieline Sheet
+  const cardboardDataUrl = useMemo(() => {
+    if (typeof document === "undefined") return ""
+    const canvas = document.createElement("canvas")
+    canvas.width = 512
+    canvas.height = 512
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return ""
+    applyCardboardBackground(ctx, 512, 512, {
+      baseColor: boxColor,
+      materialFinish: "kraft",
+      materialType: "corrugated",
+      isCorrugated: true,
+      seed: 8888,
+    })
+    return canvas.toDataURL("image/jpeg", 0.90)
+  }, [boxColor])
+
+  const kraftDataUrl = useMemo(() => {
+    if (typeof document === "undefined") return ""
+    const canvas = document.createElement("canvas")
+    canvas.width = 512
+    canvas.height = 512
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return ""
+    applyCardboardBackground(ctx, 512, 512, {
+      baseColor: boxColor,
+      materialFinish: "kraft",
+      materialType: "kraft",
+      isCorrugated: false,
+      seed: 9999,
+    })
+    return canvas.toDataURL("image/jpeg", 0.90)
+  }, [boxColor])
+
+  const sheetFill = useMemo(() => {
+    if (materialType === "corrugated") return "url(#corrugatedPattern)"
+    if (materialType === "kraft") return "url(#kraftPattern)"
+    if (materialType === "gold_foil") return "url(#goldGradient)"
+    if (materialType === "silver_foil") return "url(#silverGradient)"
+    return boxColor
+  }, [materialType, boxColor])
+
   // Get color fill for a specific face (custom face color or general boxColor)
   const getFaceFill = useCallback(
     (faceId: string) => {
@@ -790,24 +834,22 @@ export default function DielineCanvas({
         }}
       >
         <defs>
-          {/* Real Corrugated Cardboard Pattern with flutes */}
-          <pattern id="corrugatedPattern" width="24" height="24" patternUnits="userSpaceOnUse">
-            <rect width="24" height="24" fill={boxColor} />
-            <rect x="0" y="0" width="10" height="24" fill="rgba(35, 18, 5, 0.08)" />
-            <rect x="10" y="0" width="14" height="24" fill="rgba(255, 250, 240, 0.09)" />
-            <line x1="0" y1="0" x2="0" y2="24" stroke="rgba(30, 15, 5, 0.07)" strokeWidth="1.5" />
-            <line x1="3" y1="4" x2="8" y2="6" stroke="rgba(40, 20, 8, 0.12)" strokeWidth="0.8" strokeLinecap="round" />
-            <line x1="14" y1="15" x2="19" y2="13" stroke="rgba(40, 20, 8, 0.10)" strokeWidth="0.7" strokeLinecap="round" />
-            <line x1="7" y1="18" x2="11" y2="22" stroke="rgba(255, 255, 255, 0.15)" strokeWidth="0.8" strokeLinecap="round" />
+          {/* Photorealistic Seamless Corrugated Cardboard Pattern */}
+          <pattern id="corrugatedPattern" width="256" height="256" patternUnits="userSpaceOnUse">
+            {cardboardDataUrl ? (
+              <image href={cardboardDataUrl} width="256" height="256" preserveAspectRatio="none" />
+            ) : (
+              <rect width="256" height="256" fill={boxColor} />
+            )}
           </pattern>
 
-          {/* Real Natural Kraft Paper Pattern */}
-          <pattern id="kraftPattern" width="36" height="36" patternUnits="userSpaceOnUse">
-            <rect width="36" height="36" fill={boxColor} />
-            <line x1="4" y1="8" x2="12" y2="10" stroke="rgba(50, 25, 10, 0.12)" strokeWidth="0.8" strokeLinecap="round" />
-            <line x1="20" y1="26" x2="28" y2="24" stroke="rgba(50, 25, 10, 0.10)" strokeWidth="0.7" strokeLinecap="round" />
-            <circle cx="8" cy="18" r="0.9" fill="rgba(40, 20, 8, 0.14)" />
-            <circle cx="26" cy="12" r="1.1" fill="rgba(40, 20, 8, 0.10)" />
+          {/* Photorealistic Seamless Natural Kraft Paper Pattern */}
+          <pattern id="kraftPattern" width="256" height="256" patternUnits="userSpaceOnUse">
+            {kraftDataUrl ? (
+              <image href={kraftDataUrl} width="256" height="256" preserveAspectRatio="none" />
+            ) : (
+              <rect width="256" height="256" fill={boxColor} />
+            )}
           </pattern>
 
           {/* Foil Gradients */}
@@ -842,13 +884,13 @@ export default function DielineCanvas({
           {/* 1. CUSTOM UPLOADED VECTOR SVG DIELINE (PACDORA REVERSE SYSTEM) */}
           {svgMeta && (
             <>
-              {/* Base packaging sheet background colored with boxColor */}
+              {/* Base packaging sheet background colored with authentic material texture */}
               <rect
                 x={0}
                 y={0}
                 width={dieline.totalW * activeScale}
                 height={dieline.totalH * activeScale}
-                fill={boxColor}
+                fill={sheetFill}
                 rx={4}
               />
 

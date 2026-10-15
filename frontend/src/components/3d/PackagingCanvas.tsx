@@ -692,6 +692,12 @@ function ContinuousBoxModel({
 
   // 4. Materials array: [Right, Left, Top, Bottom, Front, Back]
   const materials = useMemo(() => {
+    if (isKraft && kraftBumpMap) {
+      kraftBumpMap.wrapS = THREE.RepeatWrapping
+      kraftBumpMap.wrapT = THREE.RepeatWrapping
+      kraftBumpMap.repeat.set(Math.max(2, Math.round(perimeter / 60)), Math.max(1, Math.round(height / 30)))
+    }
+
     const wrapMat = new THREE.MeshPhysicalMaterial({
       map: wrapTexture || null,
       color: wrapTexture ? 0xffffff : boxColor,
@@ -699,6 +705,9 @@ function ContinuousBoxModel({
       metalness,
       clearcoat,
       clearcoatRoughness: 0.1,
+      sheen: isKraft ? 0.38 : 0.0,
+      sheenRoughness: 0.72,
+      sheenColor: new THREE.Color("#d4aa73"),
       bumpMap: isKraft ? kraftBumpMap : null,
       bumpScale: isKraft ? kraftBumpScale : 0,
     })
@@ -710,6 +719,9 @@ function ContinuousBoxModel({
       metalness,
       clearcoat,
       clearcoatRoughness: 0.1,
+      sheen: isKraft ? 0.38 : 0.0,
+      sheenRoughness: 0.72,
+      sheenColor: new THREE.Color("#d4aa73"),
       bumpMap: isKraft ? kraftBumpMap : null,
       bumpScale: isKraft ? kraftBumpScale : 0,
     })
@@ -720,14 +732,20 @@ function ContinuousBoxModel({
       metalness,
       clearcoat,
       clearcoatRoughness: 0.1,
+      sheen: isKraft ? 0.38 : 0.0,
+      sheenRoughness: 0.72,
+      sheenColor: new THREE.Color("#d4aa73"),
       bumpMap: isKraft ? kraftBumpMap : null,
       bumpScale: isKraft ? kraftBumpScale : 0,
     })
 
     const insideMat = new THREE.MeshPhysicalMaterial({
       color: faceColors?.inside || (isKraft ? "#b88959" : "#e8dfd5"),
-      roughness: 0.92,
+      roughness: 0.90,
       metalness: 0.0,
+      sheen: isKraft ? 0.35 : 0.0,
+      sheenRoughness: 0.75,
+      sheenColor: new THREE.Color("#d4aa73"),
       side: THREE.DoubleSide,
       bumpMap: isKraft ? kraftBumpMap : null,
       bumpScale: isKraft ? kraftBumpScale * 0.7 : 0,
@@ -1942,7 +1960,7 @@ function CustomMeshModel({
 
   // Dynamic Material Properties
   const roughness =
-    isKraft ? 0.92 : materialFinish === "glossy" ? 0.08 : materialFinish === "metallic" ? 0.15 : materialFinish === "frosted" ? 0.4 : 0.65
+    isKraft ? 0.88 : materialFinish === "glossy" ? 0.08 : materialFinish === "metallic" ? 0.15 : materialFinish === "frosted" ? 0.4 : 0.65
   const metalness = isKraft ? 0.0 : materialFinish === "metallic" ? 0.88 : 0.04
   const clearcoat = isKraft ? 0.0 : materialFinish === "glossy" ? 0.95 : 0.0
 
@@ -1967,16 +1985,16 @@ function CustomMeshModel({
     if (!ctx) return
 
     // B. Base Material Finish & Color
-    applyMaterialBackground(ctx, canvas.width, canvas.height, boxColor, materialFinish, materialType)
+    applyMaterialBackground(ctx, canvas.width, canvas.height, boxColor, materialFinish, materialType, "vertical", 2001)
 
     // C. Panel Mapping Strategy
     if (parsedManifest && parsedManifest.panels && Object.keys(parsedManifest.panels).length > 0) {
       // STRATEGY 1: Explicit Calibrated Panel Mapping Manifest
       const manifestPanels = Object.values(parsedManifest.panels)
 
-      // 1. Draw individual face colors onto calibrated UV island regions
+      // 1. Draw individual face colors onto calibrated UV island regions (Preserves cardboard fiber texture!)
       if (faceColors) {
-        manifestPanels.forEach((p) => {
+        manifestPanels.forEach((p, idx) => {
           const col = faceColors[p.face] || (faceColors as any)[p.panelId]
           if (col) {
             const uv = p.uvRegion
@@ -1985,8 +2003,24 @@ function CustomMeshModel({
               const py = uv.vMin * canvas.height
               const pw = (uv.uMax - uv.uMin) * canvas.width
               const ph = (uv.vMax - uv.vMin) * canvas.height
-              ctx.fillStyle = col
-              ctx.fillRect(px, py, pw, ph)
+              if (isKraft) {
+                ctx.save()
+                ctx.beginPath()
+                ctx.rect(px, py, pw, ph)
+                ctx.clip()
+                applyCardboardBackground(ctx, canvas.width, canvas.height, {
+                  baseColor: col,
+                  materialFinish,
+                  materialType,
+                  isCorrugated,
+                  orientation: "vertical",
+                  seed: 7000 + idx * 100,
+                })
+                ctx.restore()
+              } else {
+                ctx.fillStyle = col
+                ctx.fillRect(px, py, pw, ph)
+              }
             }
           }
         })
@@ -2059,16 +2093,31 @@ function CustomMeshModel({
       const { totalWidth: svgW, totalHeight: svgH, panels } = svgPanels
 
       if (faceColors) {
-        panels.forEach((p) => {
+        panels.forEach((p, idx) => {
           const col = faceColors[p.face]
           if (col) {
-            ctx.fillStyle = col
-            ctx.fillRect(
-              (p.x / svgW) * canvas.width,
-              (p.y / svgH) * canvas.height,
-              (p.width / svgW) * canvas.width,
-              (p.height / svgH) * canvas.height
-            )
+            const px = (p.x / svgW) * canvas.width
+            const py = (p.y / svgH) * canvas.height
+            const pw = (p.width / svgW) * canvas.width
+            const ph = (p.height / svgH) * canvas.height
+            if (isKraft) {
+              ctx.save()
+              ctx.beginPath()
+              ctx.rect(px, py, pw, ph)
+              ctx.clip()
+              applyCardboardBackground(ctx, canvas.width, canvas.height, {
+                baseColor: col,
+                materialFinish,
+                materialType,
+                isCorrugated,
+                orientation: "vertical",
+                seed: 8000 + idx * 100,
+              })
+              ctx.restore()
+            } else {
+              ctx.fillStyle = col
+              ctx.fillRect(px, py, pw, ph)
+            }
           }
         })
       }
@@ -2169,7 +2218,13 @@ function CustomMeshModel({
         mat.roughness = roughness
         mat.metalness = metalness
         mat.clearcoat = clearcoat
+        mat.sheen = isKraft ? 0.38 : 0.0
+        mat.sheenRoughness = 0.72
+        mat.sheenColor = new THREE.Color("#d4aa73")
         if (isKraft && kraftBumpMap) {
+          kraftBumpMap.wrapS = THREE.RepeatWrapping
+          kraftBumpMap.wrapT = THREE.RepeatWrapping
+          kraftBumpMap.repeat.set(4, 4)
           mat.bumpMap = kraftBumpMap
           mat.bumpScale = kraftBumpScale
         } else {
@@ -2540,19 +2595,19 @@ export default function PackagingCanvas({
 
         <CameraController view={cameraView} controlsRef={controlsRef} />
 
-        {/* Realistic Studio Lighting & Procedural Environment Reflections (100% Offline / Zero Network Fetch) */}
-        <ambientLight intensity={0.7} />
-        <hemisphereLight args={["#ffffff", "#cbd5e1", 0.6]} />
+        {/* Realistic Studio Lighting & Procedural Environment Reflections (Tuned for tactile PBR relief) */}
+        <ambientLight intensity={0.42} />
+        <hemisphereLight args={["#ffffff", "#cbd5e1", 0.42]} />
         <directionalLight
           position={[6, 10, 6]}
-          intensity={1.2}
+          intensity={1.38}
           castShadow
           shadow-mapSize-width={1024}
           shadow-mapSize-height={1024}
           shadow-bias={-0.0001}
         />
-        <directionalLight position={[-6, 6, -4]} intensity={0.6} color="#e0f2fe" />
-        <directionalLight position={[0, -4, 2]} intensity={0.2} color="#f8fafc" />
+        <directionalLight position={[-6, 6, -4]} intensity={0.58} color="#e0f2fe" />
+        <directionalLight position={[0, -4, 2]} intensity={0.25} color="#f8fafc" />
 
         {/* Procedural Lightformer reflections for glossy & metallic materials without downloading external HDR files */}
         <Environment resolution={256}>
