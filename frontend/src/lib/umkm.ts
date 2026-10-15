@@ -1,5 +1,7 @@
 import { UmkmRegistration, UmkmStatus } from "@/types/umkm"
 
+export type { UmkmRegistration, UmkmStatus }
+
 const UMKM_STORAGE_KEY = "kemasan3d_umkm_registrations"
 
 export const INITIAL_UMKM_REGISTRATIONS: UmkmRegistration[] = [
@@ -80,6 +82,22 @@ export function getAllUmkm(): UmkmRegistration[] {
   }
 }
 
+export async function fetchUmkmList(): Promise<UmkmRegistration[]> {
+  try {
+    const res = await fetch("/api/umkm")
+    if (res.ok) {
+      const json = await res.json()
+      if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem(UMKM_STORAGE_KEY, JSON.stringify(json.data))
+        }
+        return json.data
+      }
+    }
+  } catch (e) {}
+  return getAllUmkm()
+}
+
 export function registerNewUmkm(
   data: Omit<UmkmRegistration, "id" | "status" | "registeredAt" | "reviewedAt">
 ): UmkmRegistration {
@@ -95,6 +113,16 @@ export function registerNewUmkm(
   if (typeof window !== "undefined") {
     localStorage.setItem(UMKM_STORAGE_KEY, JSON.stringify(all))
   }
+
+  // Sync to server API in background
+  if (typeof window !== "undefined") {
+    fetch("/api/umkm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newUmkm),
+    }).catch(() => {})
+  }
+
   return newUmkm
 }
 
@@ -118,6 +146,16 @@ export function updateUmkmStatus(
   if (typeof window !== "undefined") {
     localStorage.setItem(UMKM_STORAGE_KEY, JSON.stringify(all))
   }
+
+  // Sync to server API in background
+  if (typeof window !== "undefined") {
+    fetch("/api/umkm", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, status, adminNotes: updated.adminNotes }),
+    }).catch(() => {})
+  }
+
   return updated
 }
 

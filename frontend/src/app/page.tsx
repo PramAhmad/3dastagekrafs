@@ -182,7 +182,7 @@ export default function LandingPage() {
   useEffect(() => {
     setCurrentUser(getCurrentUser())
 
-    // Load custom categories from LocalStorage
+    // 1. Load custom categories (Local first, then fresh from API)
     const savedCategories = localStorage.getItem("kemasan3d_master_categories")
     if (savedCategories) {
       try {
@@ -193,7 +193,46 @@ export default function LandingPage() {
       } catch (err) {}
     }
 
-    // Load custom templates from LocalStorage (check both custom and admin keys)
+    fetch("/api/categories")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (json?.data && Array.isArray(json.data) && json.data.length > 0) {
+          setMasterCategories(json.data)
+          localStorage.setItem("kemasan3d_master_categories", JSON.stringify(json.data))
+        }
+      })
+      .catch(() => {})
+
+    // 2. Load custom templates (Local first, then fresh from API)
+    const applyTemplatesData = (rawList: any[]) => {
+      const mapped: TemplateItem[] = rawList.map((t: any) => ({
+        id: t.id,
+        name: t.name,
+        category: t.category,
+        description: t.description || "Kemasan produk UMKM.",
+        preview_url: t.preview_url || undefined,
+        model_3d_url: t.model_3d_url || undefined,
+        model_format: t.model_format || (t.model_3d_url ? "glb" : undefined),
+        dieline_svg_url: t.dieline_svg_url || undefined,
+        defaultDims: {
+          length: t.default_dimensions?.length_mm || 65,
+          width: t.default_dimensions?.width_mm || 45,
+          height: t.default_dimensions?.height_mm || 35,
+          radius: t.default_dimensions?.radius_mm || 25,
+        },
+        badge: t.model_3d_url
+          ? `3D Mesh (${(t.model_format || "GLB").toUpperCase()})`
+          : t.is_custom_mesh
+          ? "3D Mesh"
+          : undefined,
+      }))
+      setTemplateList((prev) => {
+        const ids = new Set(mapped.map((m) => m.id))
+        const rest = prev.filter((p) => !ids.has(p.id))
+        return [...mapped, ...rest]
+      })
+    }
+
     const savedCustomTemplates = localStorage.getItem("kemasan3d_custom_templates")
     const savedAdminTemplates = localStorage.getItem("kemasan3d_admin_templates")
     const rawTemplatesString = savedCustomTemplates || savedAdminTemplates
@@ -202,35 +241,20 @@ export default function LandingPage() {
       try {
         const parsed = JSON.parse(rawTemplatesString)
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const mapped: TemplateItem[] = parsed.map((t: any) => ({
-            id: t.id,
-            name: t.name,
-            category: t.category,
-            description: t.description || "Kemasan produk UMKM.",
-            preview_url: t.preview_url || undefined,
-            model_3d_url: t.model_3d_url || undefined,
-            model_format: t.model_format || (t.model_3d_url ? "glb" : undefined),
-            dieline_svg_url: t.dieline_svg_url || undefined,
-            defaultDims: {
-              length: t.default_dimensions?.length_mm || 65,
-              width: t.default_dimensions?.width_mm || 45,
-              height: t.default_dimensions?.height_mm || 35,
-              radius: t.default_dimensions?.radius_mm || 25,
-            },
-            badge: t.model_3d_url
-              ? `3D Mesh (${(t.model_format || "GLB").toUpperCase()})`
-              : t.is_custom_mesh
-              ? "3D Mesh"
-              : undefined,
-          }))
-          setTemplateList((prev) => {
-            const ids = new Set(mapped.map((m) => m.id))
-            const rest = prev.filter((p) => !ids.has(p.id))
-            return [...mapped, ...rest]
-          })
+          applyTemplatesData(parsed)
         }
       } catch (e) {}
     }
+
+    fetch("/api/templates")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (json?.data && Array.isArray(json.data) && json.data.length > 0) {
+          applyTemplatesData(json.data)
+          localStorage.setItem("kemasan3d_custom_templates", JSON.stringify(json.data))
+        }
+      })
+      .catch(() => {})
   }, [])
 
   const handleSelectTemplateAndStart = (tmpl: TemplateItem) => {

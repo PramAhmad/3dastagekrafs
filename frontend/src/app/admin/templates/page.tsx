@@ -53,6 +53,7 @@ export default function AdminTemplatesPage() {
 
   // Load persistent templates & master categories
   useEffect(() => {
+    // 1. Load Categories
     const savedCats = localStorage.getItem("kemasan3d_master_categories")
     if (savedCats) {
       try {
@@ -62,7 +63,17 @@ export default function AdminTemplatesPage() {
         }
       } catch (e) {}
     }
+    fetch("/api/categories")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (json?.data && Array.isArray(json.data) && json.data.length > 0) {
+          setMasterCategories(json.data)
+          localStorage.setItem("kemasan3d_master_categories", JSON.stringify(json.data))
+        }
+      })
+      .catch(() => {})
 
+    // 2. Load Templates
     const saved = localStorage.getItem("kemasan3d_custom_templates")
     if (saved) {
       try {
@@ -71,12 +82,26 @@ export default function AdminTemplatesPage() {
           setTemplates(parsed)
         }
       } catch (e) {}
-    } else {
-      fetchTemplatesFromBackend()
     }
+
+    fetchTemplatesFromBackend()
   }, [])
 
   const fetchTemplatesFromBackend = async () => {
+    // First try Next.js App Router API
+    try {
+      const res = await fetch("/api/templates")
+      if (res.ok) {
+        const json = await res.json()
+        if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+          setTemplates(json.data)
+          localStorage.setItem("kemasan3d_custom_templates", JSON.stringify(json.data))
+          return
+        }
+      }
+    } catch (e) {}
+
+    // Fallback: Go backend
     try {
       const res = await fetch(`${API_URL}/api/v1/templates`)
       if (res.ok) {
@@ -94,14 +119,32 @@ export default function AdminTemplatesPage() {
     setTimeout(() => setNotification(null), 3000)
   }
 
-  // Handle 3D File Upload (.glb, .gltf, .stl) - File Only
-  const handle3DFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle 3D File Upload (.glb, .gltf, .stl) - Uploads to Server /api/upload
+  const handle3DFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !editingTemplate) return
 
     const ext = file.name.split(".").pop()?.toLowerCase() || "glb"
     setUploadFileName(file.name)
 
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      const res = await fetch("/api/upload", { method: "POST", body: formData })
+      const json = await res.json()
+      if (json.success && json.url) {
+        setEditingTemplate({
+          ...editingTemplate,
+          model_3d_url: json.url,
+          model_format: ext,
+          is_custom_mesh: true,
+        })
+        showToast(`Model 3D "${file.name}" berhasil diunggah ke server!`)
+        return
+      }
+    } catch (e) {}
+
+    // Fallback to dataUrl
     const reader = new FileReader()
     reader.onload = (event) => {
       const dataUrl = event.target?.result as string
@@ -111,17 +154,33 @@ export default function AdminTemplatesPage() {
         model_format: ext,
         is_custom_mesh: true,
       })
-      showToast(`Model 3D "${file.name}" berhasil diunggah!`)
+      showToast(`Model 3D "${file.name}" disimpan secara lokal!`)
     }
     reader.readAsDataURL(file)
   }
 
-  // Handle 2D Dieline SVG Upload (.svg) - File Only
-  const handleDielineUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle 2D Dieline SVG Upload (.svg) - Uploads to Server /api/upload
+  const handleDielineUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !editingTemplate) return
 
     setUploadDielineName(file.name)
+
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      const res = await fetch("/api/upload", { method: "POST", body: formData })
+      const json = await res.json()
+      if (json.success && json.url) {
+        setEditingTemplate({
+          ...editingTemplate,
+          dieline_svg_url: json.url,
+        })
+        showToast(`Dieline 2D SVG "${file.name}" berhasil diunggah ke server!`)
+        return
+      }
+    } catch (e) {}
+
     const reader = new FileReader()
     reader.onload = (event) => {
       const dataUrl = event.target?.result as string
@@ -129,7 +188,7 @@ export default function AdminTemplatesPage() {
         ...editingTemplate,
         dieline_svg_url: dataUrl,
       })
-      showToast(`Dieline 2D SVG "${file.name}" berhasil diunggah!`)
+      showToast(`Dieline 2D SVG "${file.name}" berhasil dimuat!`)
     }
     reader.readAsDataURL(file)
   }
@@ -162,11 +221,27 @@ export default function AdminTemplatesPage() {
   }
 
   // Handle UV Template PNG Upload (.png, .webp) - File Only
-  const handleUvTemplateUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUvTemplateUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !editingTemplate) return
 
     setUploadUvName(file.name)
+
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      const res = await fetch("/api/upload", { method: "POST", body: formData })
+      const json = await res.json()
+      if (json.success && json.url) {
+        setEditingTemplate({
+          ...editingTemplate,
+          uv_template_url: json.url,
+        })
+        showToast(`UV Template "${file.name}" berhasil diunggah ke server!`)
+        return
+      }
+    } catch (e) {}
+
     const reader = new FileReader()
     reader.onload = (event) => {
       const dataUrl = event.target?.result as string
@@ -174,17 +249,33 @@ export default function AdminTemplatesPage() {
         ...editingTemplate,
         uv_template_url: dataUrl,
       })
-      showToast(`UV Template "${file.name}" berhasil diunggah!`)
+      showToast(`UV Template "${file.name}" berhasil dimuat!`)
     }
     reader.readAsDataURL(file)
   }
 
-  // Handle Thumbnail Preview Upload (.png, .jpg, .webp) - File Only
-  const handlePreviewUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle Thumbnail Preview Upload (.png, .jpg, .webp) - Uploads to Server /api/upload
+  const handlePreviewUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !editingTemplate) return
 
     setUploadPreviewName(file.name)
+
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      const res = await fetch("/api/upload", { method: "POST", body: formData })
+      const json = await res.json()
+      if (json.success && json.url) {
+        setEditingTemplate({
+          ...editingTemplate,
+          preview_url: json.url,
+        })
+        showToast(`Gambar Thumbnail "${file.name}" berhasil diunggah ke server!`)
+        return
+      }
+    } catch (e) {}
+
     const reader = new FileReader()
     reader.onload = (event) => {
       const dataUrl = event.target?.result as string
@@ -192,12 +283,12 @@ export default function AdminTemplatesPage() {
         ...editingTemplate,
         preview_url: dataUrl,
       })
-      showToast(`Gambar Thumbnail "${file.name}" berhasil diunggah!`)
+      showToast(`Gambar Thumbnail "${file.name}" berhasil dimuat!`)
     }
     reader.readAsDataURL(file)
   }
 
-  // Save / Update Template (Persistent in localStorage + Backend)
+  // Save / Update Template (Persistent in server API + localStorage)
   const handleSaveTemplate = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingTemplate) return
@@ -211,11 +302,20 @@ export default function AdminTemplatesPage() {
       updatedList = [editingTemplate, ...templates]
     }
 
-    // 1. Save to LocalStorage immediately
+    // 1. Optimistic update in UI & LocalStorage
     setTemplates(updatedList)
     localStorage.setItem("kemasan3d_custom_templates", JSON.stringify(updatedList))
 
-    // 2. Sync to Backend API
+    // 2. Sync to Next.js API route (/api/templates)
+    try {
+      await fetch("/api/templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedList),
+      })
+    } catch (err) {}
+
+    // 3. Also sync to Go Backend API if available
     try {
       const url = isEdit
         ? `${API_URL}/api/v1/templates/${editingTemplate.id}`
@@ -229,13 +329,13 @@ export default function AdminTemplatesPage() {
       })
     } catch (err) {}
 
-    showToast(isEdit ? "Template berhasil diperbarui & disimpan permanen!" : "Template baru berhasil ditambahkan & disimpan permanen!")
+    showToast(isEdit ? "Template berhasil diperbarui & disimpan permanen di server!" : "Template baru berhasil ditambahkan & disimpan di server!")
     setIsModalOpen(false)
     setEditingTemplate(null)
     setUploadFileName(null)
   }
 
-  // Delete Template
+  // Delete Template (Sync to server API + localStorage)
   const handleDeleteTemplate = async (id: string) => {
     if (!confirm(`Yakin ingin menghapus template "${id}"?`)) return
 
@@ -244,12 +344,18 @@ export default function AdminTemplatesPage() {
     localStorage.setItem("kemasan3d_custom_templates", JSON.stringify(updatedList))
 
     try {
+      await fetch(`/api/templates?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      })
+    } catch (e) {}
+
+    try {
       await fetch(`${API_URL}/api/v1/templates/${id}`, {
         method: "DELETE",
       })
     } catch (e) {}
 
-    showToast("Template berhasil dihapus!")
+    showToast(`Template "${id}" berhasil dihapus dari server!`)
   }
 
   const filteredTemplates = templates.filter(

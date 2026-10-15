@@ -1,5 +1,7 @@
 import { UserSession, SavedProject } from "@/types/auth"
 
+export type { UserSession, SavedProject }
+
 const AUTH_STORAGE_KEY = "kemasan3d_user_session"
 const PROJECTS_STORAGE_KEY = "kemasan3d_saved_projects"
 
@@ -123,6 +125,23 @@ export function getUserSavedProjects(userId?: string): SavedProject[] {
   return all.filter((p) => p.userId === userId || p.userId === "usr_umkm_01")
 }
 
+export async function fetchUserProjectsFromServer(userId?: string): Promise<SavedProject[]> {
+  try {
+    const url = userId ? `/api/projects?userId=${encodeURIComponent(userId)}` : "/api/projects"
+    const res = await fetch(url)
+    if (res.ok) {
+      const json = await res.json()
+      if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(json.data))
+        }
+        return json.data
+      }
+    }
+  } catch (e) {}
+  return getUserSavedProjects(userId)
+}
+
 export function saveProjectToHistory(project: Omit<SavedProject, "id" | "createdAt" | "updatedAt"> & { id?: string }): SavedProject {
   const all = getAllSavedProjects()
   const now = new Date().toISOString()
@@ -160,6 +179,12 @@ export function saveProjectToHistory(project: Omit<SavedProject, "id" | "created
 
   if (typeof window !== "undefined") {
     localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(all))
+    // Sync to server API in background
+    fetch("/api/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(savedItem),
+    }).catch(() => {})
   }
   return savedItem
 }
@@ -168,6 +193,10 @@ export function deleteSavedProject(id: string): void {
   const all = getAllSavedProjects().filter((p) => p.id !== id)
   if (typeof window !== "undefined") {
     localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(all))
+    // Sync to server API in background
+    fetch(`/api/projects?id=${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }).catch(() => {})
   }
 }
 

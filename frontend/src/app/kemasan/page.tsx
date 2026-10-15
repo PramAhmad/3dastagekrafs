@@ -54,7 +54,7 @@ export default function KemasanCatalogPage() {
   useEffect(() => {
     setCurrentUser(getCurrentUser())
 
-    // Load custom categories from LocalStorage
+    // 1. Load custom categories (Local first, then fresh from API)
     const savedCategories = localStorage.getItem("kemasan3d_master_categories")
     if (savedCategories) {
       try {
@@ -65,7 +65,23 @@ export default function KemasanCatalogPage() {
       } catch (err) {}
     }
 
-    // Load custom templates from LocalStorage
+    fetch("/api/categories")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (json?.data && Array.isArray(json.data) && json.data.length > 0) {
+          setMasterCategories(json.data)
+          localStorage.setItem("kemasan3d_master_categories", JSON.stringify(json.data))
+        }
+      })
+      .catch(() => {})
+
+    // 2. Load custom templates (Local first, then fresh from API)
+    const applyTemplatesData = (parsed: any[]) => {
+      const ids = new Set(parsed.map((p: any) => p.id))
+      const rest = DEFAULT_PACKAGING_TEMPLATES.filter((p) => !ids.has(p.id))
+      setTemplates([...parsed, ...rest])
+    }
+
     const savedCustomTemplates = localStorage.getItem("kemasan3d_custom_templates")
     const savedAdminTemplates = localStorage.getItem("kemasan3d_admin_templates")
     const rawTemplatesString = savedCustomTemplates || savedAdminTemplates
@@ -74,12 +90,20 @@ export default function KemasanCatalogPage() {
       try {
         const parsed = JSON.parse(rawTemplatesString)
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const ids = new Set(parsed.map((p: any) => p.id))
-          const rest = DEFAULT_PACKAGING_TEMPLATES.filter((p) => !ids.has(p.id))
-          setTemplates([...parsed, ...rest])
+          applyTemplatesData(parsed)
         }
       } catch (e) {}
     }
+
+    fetch("/api/templates")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (json?.data && Array.isArray(json.data) && json.data.length > 0) {
+          applyTemplatesData(json.data)
+          localStorage.setItem("kemasan3d_custom_templates", JSON.stringify(json.data))
+        }
+      })
+      .catch(() => {})
   }, [])
 
   const handleLogout = () => {

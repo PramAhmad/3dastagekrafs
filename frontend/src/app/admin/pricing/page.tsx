@@ -29,6 +29,7 @@ export default function AdminPricingPage() {
   const [notification, setNotification] = useState<string | null>(null)
 
   useEffect(() => {
+    // 1. Check local storage
     const saved = localStorage.getItem("kemasan3d_pricing_config")
     if (saved) {
       try {
@@ -42,6 +43,24 @@ export default function AdminPricingPage() {
         if (p.minOrder) setMinOrder(p.minOrder)
       } catch (e) {}
     }
+
+    // 2. Fetch from server API
+    fetch("/api/pricing")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (json?.data) {
+          const p = json.data
+          if (p.machineRate) setMachineRate(p.machineRate)
+          if (p.markupPct) setMarkupPct(p.markupPct)
+          if (p.plaRate) setPlaRate(p.plaRate)
+          if (p.petgRate) setPetgRate(p.petgRate)
+          if (p.resinRate) setResinRate(p.resinRate)
+          if (p.packagingFee) setPackagingFee(p.packagingFee)
+          if (p.minOrder) setMinOrder(p.minOrder)
+          localStorage.setItem("kemasan3d_pricing_config", JSON.stringify(p))
+        }
+      })
+      .catch(() => {})
   }, [])
 
   // Live Calculation
@@ -65,7 +84,7 @@ export default function AdminPricingPage() {
     })
   }, [calcLength, calcWidth, calcHeight, calcMaterial, machineRate, plaRate, petgRate, resinRate, packagingFee, minOrder, markupPct])
 
-  const handleSaveConfig = () => {
+  const handleSaveConfig = async () => {
     const config = {
       machineRate,
       markupPct,
@@ -75,8 +94,20 @@ export default function AdminPricingPage() {
       packagingFee,
       minOrder,
     }
+
+    // 1. LocalStorage
     localStorage.setItem("kemasan3d_pricing_config", JSON.stringify(config))
-    setNotification("Konfigurasi harga berhasil disimpan secara permanen!")
+
+    // 2. Server API
+    try {
+      await fetch("/api/pricing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(config),
+      })
+    } catch (e) {}
+
+    setNotification("Konfigurasi harga berhasil disimpan secara permanen di server!")
     setTimeout(() => setNotification(null), 3000)
   }
 

@@ -31,19 +31,61 @@ export default function AdminCategoriesPage() {
   const [notification, setNotification] = useState<string | null>(null)
   const [uploadFileName, setUploadFileName] = useState<string | null>(null)
 
-  // 1. Load Categories & Templates from LocalStorage
+  const [isLoading, setIsLoading] = useState(true)
+  const [isUploading, setIsUploading] = useState(false)
+
+  // 1. Load Categories from Backend API (with LocalStorage cache fallback)
   useEffect(() => {
+    loadCategories()
+    loadTemplates()
+  }, [])
+
+  const loadCategories = async () => {
+    setIsLoading(true)
+    try {
+      const res = await fetch("/api/categories")
+      if (res.ok) {
+        const json = await res.json()
+        if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+          setCategories(json.data)
+          localStorage.setItem("kemasan3d_master_categories", JSON.stringify(json.data))
+          setIsLoading(false)
+          return
+        }
+      }
+    } catch (e) {
+      console.warn("Gagal memuat kategori dari server, menggunakan cache lokal:", e)
+    }
+
+    // Fallback: LocalStorage
     const savedCategories = localStorage.getItem("kemasan3d_master_categories")
     if (savedCategories) {
       try {
         const parsed = JSON.parse(savedCategories)
         if (Array.isArray(parsed) && parsed.length > 0) {
           setCategories(parsed)
+          setIsLoading(false)
+          return
         }
       } catch (e) {}
-    } else {
-      localStorage.setItem("kemasan3d_master_categories", JSON.stringify(DEFAULT_MASTER_CATEGORIES))
     }
+
+    setCategories(DEFAULT_MASTER_CATEGORIES)
+    localStorage.setItem("kemasan3d_master_categories", JSON.stringify(DEFAULT_MASTER_CATEGORIES))
+    setIsLoading(false)
+  }
+
+  const loadTemplates = async () => {
+    try {
+      const res = await fetch("/api/templates")
+      if (res.ok) {
+        const json = await res.json()
+        if (json.data && Array.isArray(json.data)) {
+          setTemplates(json.data)
+          return
+        }
+      }
+    } catch (e) {}
 
     const savedTemplates = localStorage.getItem("kemasan3d_custom_templates")
     if (savedTemplates) {
@@ -54,40 +96,115 @@ export default function AdminCategoriesPage() {
         }
       } catch (e) {}
     }
-  }, [])
+  }
 
   const showToast = (msg: string) => {
     setNotification(msg)
     setTimeout(() => setNotification(null), 3000)
   }
 
-  // Handle Category Image Upload (Local File to Data URL)
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle Category Image Upload (Upload to Server /api/upload -> Real Public URL)
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !editingCategory) return
 
     setUploadFileName(file.name)
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      const dataUrl = event.target?.result as string
-      setEditingCategory({
-        ...editingCategory,
-        image_url: dataUrl,
+    setIsUploading(true)
+
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
       })
-      showToast(`Gambar "${file.name}" berhasil diunggah!`)
+
+      const json = await res.json()
+      if (json.success && json.url) {
+        setEditingCategory({
+          ...editingCategory,
+          image_url: json.url,
+        })
+        showToast(`Foto "${file.name}" berhasil diunggah ke server!`)
+      } else {
+        throw new Error(json.error || "Gagal mengunggah gambar ke server")
+      }
+    } catch (err: any) {
+      console.warn("Upload ke server gagal, fallback ke dataUrl:", err)
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        const dataUrl = event.target?.result as string
+        setEditingCategory({
+          ...editingCategory,
+          image_url: dataUrl,
+        })
+        showToast(`Disimpan lokal: ${file.name}`)
+      }
+      reader.readAsDataURL(file)
+    } finally {
+      setIsUploading(false)
     }
-    reader.readAsDataURL(file)
   }
 
-  // Save / Update Category
-  const handleSaveCategory = (e: React.FormEvent) => {
+  // Helper: Convert existing base64 image to server file URL
+  const convertBase64ToServer = async () => {
+    if (!editingCategory?.image_url?.startsWith("data:")) return
+    setIsUploading(true)
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dataUrl: editingCategory.image_url,
+          filename: `category_${editingCategory.id.toLowerCase()}.png`,
+        }),
+      })
+      const json = await res.json()
+      if (json.success && json.url) {
+        setEditingCategory({
+          ...editingCategory,
+          image_url: json.url,
+        })
+        showToast("Gambar Base64 berhasil dikonversi menjadi file server publik!")
+      }
+    } catch (e) {
+      showToast("Gagal konversi ke server")
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  // Save / Update Category (Sync to Backend API + LocalStorage)
+  const handleSaveCategory = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingCategory) return
+
+    let finalImageUrl = editingCategory.image_url || ""
+
+    // Auto-convert base64 to server file if image is still dataUrl
+    if (finalImageUrl.startsWith("data:")) {
+      try {
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            dataUrl: finalImageUrl,
+            filename: `category_${editingCategory.id.toLowerCase()}.png`,
+          }),
+        })
+        const json = await res.json()
+        if (json.success && json.url) {
+          finalImageUrl = json.url
+        }
+      } catch (e) {}
+    }
 
     const sanitizedId = editingCategory.id.trim().toUpperCase().replace(/\s+/g, "_")
     const toSave: CategoryMaster = {
       ...editingCategory,
       id: sanitizedId,
+      image_url: finalImageUrl,
     }
 
     const isEdit = categories.some((c) => c.id === toSave.id)
@@ -99,17 +216,32 @@ export default function AdminCategoriesPage() {
       updatedList = [toSave, ...categories]
     }
 
+    // 1. Optimistic update in UI and LocalStorage
     setCategories(updatedList)
     localStorage.setItem("kemasan3d_master_categories", JSON.stringify(updatedList))
 
-    showToast(isEdit ? "Kategori berhasil diperbarui!" : "Kategori baru berhasil ditambahkan!")
+    // 2. Persist to Backend API
+    try {
+      const res = await fetch("/api/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedList),
+      })
+      if (!res.ok) {
+        console.warn("Gagal simpan ke /api/categories:", await res.text())
+      }
+    } catch (err) {
+      console.warn("Gagal request ke backend /api/categories:", err)
+    }
+
+    showToast(isEdit ? "Kategori berhasil diperbarui & tersimpan di server!" : "Kategori baru berhasil ditambahkan & tersimpan di server!")
     setIsModalOpen(false)
     setEditingCategory(null)
     setUploadFileName(null)
   }
 
-  // Delete Category
-  const handleDeleteCategory = (id: string) => {
+  // Delete Category (Sync to Backend API + LocalStorage)
+  const handleDeleteCategory = async (id: string) => {
     const templateCount = templates.filter((t) => t.category.toUpperCase() === id.toUpperCase()).length
     if (templateCount > 0) {
       if (!confirm(`Peringatan: Ada ${templateCount} model kemasan yang menggunakan kategori "${id}". Tetap ingin menghapus?`)) {
@@ -122,7 +254,14 @@ export default function AdminCategoriesPage() {
     const updatedList = categories.filter((c) => c.id !== id)
     setCategories(updatedList)
     localStorage.setItem("kemasan3d_master_categories", JSON.stringify(updatedList))
-    showToast("Kategori berhasil dihapus!")
+
+    try {
+      await fetch(`/api/categories?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      })
+    } catch (e) {}
+
+    showToast("Kategori berhasil dihapus dari server!")
   }
 
   const filteredCategories = categories.filter(
@@ -375,46 +514,93 @@ export default function AdminCategoriesPage() {
 
                   <div className="flex-1 space-y-2">
                     {/* File Upload Button */}
-                    <label className="flex items-center justify-center gap-2 p-2 rounded-lg border border-dashed border-[#D5E4F0] hover:border-[#4394C3] bg-white cursor-pointer transition-colors text-[#4B6B94] text-[10.5px] font-semibold">
+                    <label className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border border-dashed transition-colors text-[10.5px] font-semibold cursor-pointer ${
+                      isUploading
+                        ? "bg-[#EEF4F8] border-[#4394C3] text-[#1F3A5C] animate-pulse"
+                        : "bg-white border-[#D5E4F0] hover:border-[#4394C3] text-[#4B6B94]"
+                    }`}>
                       <Upload className="w-3.5 h-3.5 text-[#4394C3]" />
-                      <span>{uploadFileName || "Upload Foto / Gambar (PNG, JPG, WebP)"}</span>
+                      <span>
+                        {isUploading
+                          ? "Mengunggah file ke server..."
+                          : uploadFileName || "Pilih Foto / Gambar (PNG, JPG, WebP)"}
+                      </span>
                       <input
                         type="file"
                         accept="image/*"
+                        disabled={isUploading}
                         onChange={handleImageUpload}
                         className="hidden"
                       />
                     </label>
 
                     {/* Image URL input fallback */}
-                    <input
-                      type="text"
-                      value={editingCategory.image_url?.startsWith("data:") ? "" : editingCategory.image_url || ""}
-                      onChange={(e) => {
-                        setEditingCategory({ ...editingCategory, image_url: e.target.value })
-                        setUploadFileName(e.target.value ? "URL Eksternal" : null)
-                      }}
-                      placeholder="Atau masukkan URL HTTPS gambar..."
-                      className="w-full bg-white border border-[#D5E4F0] rounded-lg p-1.5 text-[#1F3A5C] font-mono text-[10px] focus:outline-none focus:border-[#4394C3]"
-                    />
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-[9.5px] text-[#718BAA]">
+                        <span>Atau masukkan URL HTTPS:</span>
+                        {editingCategory.image_url?.startsWith("/uploads/") && (
+                          <span className="text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                            ✓ File Server Publik
+                          </span>
+                        )}
+                        {editingCategory.image_url?.startsWith("data:") && (
+                          <span className="text-amber-700 font-bold bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
+                            ⚠️ Masih Base64
+                          </span>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        value={editingCategory.image_url || ""}
+                        onChange={(e) => {
+                          setEditingCategory({ ...editingCategory, image_url: e.target.value })
+                          setUploadFileName(e.target.value ? "URL Kustom" : null)
+                        }}
+                        placeholder="https://images.unsplash.com/... atau /uploads/..."
+                        className="w-full bg-white border border-[#D5E4F0] rounded-lg p-1.5 text-[#1F3A5C] font-mono text-[10px] focus:outline-none focus:border-[#4394C3]"
+                      />
+                    </div>
                   </div>
                 </div>
 
                 {editingCategory.image_url && (
-                  <div className="flex items-center justify-between text-[10px] pt-1 border-t border-[#D5E4F0]">
-                    <span className="text-emerald-600 flex items-center gap-1 font-medium">
-                      <Check className="w-3 h-3" /> Gambar siap digunakan
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingCategory({ ...editingCategory, image_url: "" })
-                        setUploadFileName(null)
-                      }}
-                      className="text-rose-500 hover:underline font-semibold"
-                    >
-                      Hapus Gambar
-                    </button>
+                  <div className="flex flex-col gap-1.5 pt-2 border-t border-[#D5E4F0] text-[10px]">
+                    {editingCategory.image_url.startsWith("data:") && (
+                      <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-between gap-2">
+                        <span className="text-amber-800 text-[10px]">
+                          Gambar ini berupa Base64 lokal (tidak terlihat oleh orang lain).
+                        </span>
+                        <button
+                          type="button"
+                          onClick={convertBase64ToServer}
+                          disabled={isUploading}
+                          className="px-2 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white font-bold shrink-0 text-[9.5px] transition-all"
+                        >
+                          {isUploading ? "Mengunggah..." : "Konversi ke Server Sekarang"}
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-emerald-600 flex items-center gap-1 font-medium">
+                        <Check className="w-3 h-3" />
+                        {editingCategory.image_url.startsWith("/uploads/")
+                          ? "Tersimpan permanen di server & bisa dilihat semua orang"
+                          : editingCategory.image_url.startsWith("http")
+                          ? "URL Eksternal valid"
+                          : "Gambar lokal terpasang"}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingCategory({ ...editingCategory, image_url: "" })
+                          setUploadFileName(null)
+                        }}
+                        className="text-rose-500 hover:underline font-semibold"
+                      >
+                        Hapus Gambar
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

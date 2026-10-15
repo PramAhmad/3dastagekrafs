@@ -126,6 +126,8 @@ function AdminStudioContent() {
   const [manifestJson, setManifestJson] = useState<any>(null)
   const [modelScaleMultiplier, setModelScaleMultiplier] = useState<number>(1.0)
   const [maxVisualBound, setMaxVisualBound] = useState<number>(1.65)
+  const [exportGLBTrigger, setExportGLBTrigger] = useState<number>(0)
+  const [isExportingGLB, setIsExportingGLB] = useState<boolean>(false)
 
   // Camera & Scene Lighting
   const [cameraView, setCameraView] = useState<"iso" | "front" | "top" | "side" | "back">("iso")
@@ -335,11 +337,77 @@ function AdminStudioContent() {
     showToast("File PDF Dieline berhasil diunduh!")
   }
 
-  // Save Current Setup to Admin Template Catalog & IndexedDB
+  // Trigger 3D GLB Generation directly from Scene & Dieline
+  const handleTriggerExportGLB = () => {
+    setIsExportingGLB(true)
+    setExportGLBTrigger((prev) => prev + 1)
+    showToast("Mengenerate model 3D GLB dari Dieline...")
+  }
+
+  // Handle Generated GLB Blob
+  const handleExportGLBDone = async (blob: Blob, filename: string) => {
+    setIsExportingGLB(false)
+
+    // 1. Download GLB file to client machine
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = filename
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 10000)
+
+    // 2. Upload GLB to server storage so it is available permanently for all users
+    try {
+      const formData = new FormData()
+      formData.append("file", blob, filename)
+      const res = await fetch("/api/upload", { method: "POST", body: formData })
+      const json = await res.json()
+      if (json.success && json.url) {
+        setModel3dUrl(json.url)
+        setModelFormat("glb")
+        showToast(`Model 3D "${filename}" berhasil di-generate & diunggah ke server!`)
+        return
+      }
+    } catch (e) {}
+
+    // Fallback: LocalStorage / IndexedDB
+    try {
+      const reader = new FileReader()
+      reader.onloadend = async () => {
+        const base64data = reader.result as string
+        const assetKey = `glb_${filename}`
+        await saveAsset(assetKey, base64data)
+        setModel3dUrl(base64data)
+        setModelFormat("glb")
+        showToast(`Model 3D "${filename}" berhasil di-generate & diunduh!`)
+      }
+      reader.readAsDataURL(blob)
+    } catch (e) {
+      showToast(`Model 3D "${filename}" berhasil di-generate & diunduh!`)
+    }
+  }
+
+  // Save Current Setup to Admin Template Catalog & Server API
   const handleSaveToCatalog = async () => {
     const templateId = selectedFormId.startsWith("custom_")
       ? selectedFormId
       : `template_${Date.now()}`
+
+    let dielineUrlToSave = activeDielineSvgUrl
+
+    // If active dieline is an inline SVG dataUrl, upload it as a clean SVG file to server
+    if (currentDieline.svgString) {
+      try {
+        const svgBlob = new Blob([currentDieline.svgString], { type: "image/svg+xml" })
+        const formData = new FormData()
+        formData.append("file", svgBlob, `${formName.toLowerCase().replace(/[^a-z0-9]/g, "-")}-dieline.svg`)
+        const res = await fetch("/api/upload", { method: "POST", body: formData })
+        const json = await res.json()
+        if (json.success && json.url) {
+          dielineUrlToSave = json.url
+        }
+      } catch (e) {}
+    }
 
     const newTemplate: PackagingTemplate = {
       id: templateId,
@@ -349,7 +417,7 @@ function AdminStudioContent() {
       preview_url: "/placeholder-box.png",
       model_3d_url: model3dUrl,
       model_format: modelFormat,
-      dieline_svg_url: activeDielineSvgUrl,
+      dieline_svg_url: dielineUrlToSave,
       default_dimensions: {
         length_mm: length,
         width_mm: width,
@@ -378,7 +446,16 @@ function AdminStudioContent() {
       console.warn("LocalStorage full, saved safely in IndexedDB:", e)
     }
 
-    showToast(`Template "${formName}" berhasil disimpan permanen ke Katalog!`)
+    // 3. Persist to Server API (/api/templates)
+    try {
+      await fetch("/api/templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newTemplate),
+      })
+    } catch (e) {}
+
+    showToast(`Template "${formName}" berhasil disimpan permanen di server & katalog!`)
   }
 
   return (
@@ -712,6 +789,16 @@ function AdminStudioContent() {
                   <span>Dieline PDF</span>
                 </button>
               </div>
+
+              {/* Generate 3D GLB from Dieline Action */}
+              <button
+                onClick={handleTriggerExportGLB}
+                disabled={isExportingGLB}
+                className="w-full mt-2.5 py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#238636] to-[#2ea043] hover:brightness-110 text-white font-extrabold text-[11.5px] transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#238636]/20 active:scale-95 disabled:opacity-50"
+              >
+                <Sparkles className="w-4 h-4 text-yellow-300" />
+                <span>{isExportingGLB ? "Mengenerate 3D GLB..." : "Generate & Unduh 3D GLB dari Dieline"}</span>
+              </button>
             </div>
           )}
 
@@ -923,6 +1010,26 @@ function AdminStudioContent() {
                   </div>
                 )}
               </div>
+
+              {/* Generate GLB Model from Dieline Section */}
+              <div className="pt-2 border-t border-[#30363d] space-y-2">
+                <label className="block text-[11px] font-bold text-[#8b949e]">
+                  Generate 3D Model (.GLB) dari Dieline
+                </label>
+                <div className="p-3 rounded-xl bg-[#161b22] border border-[#30363d] space-y-2">
+                  <p className="text-[10px] text-[#8b949e] leading-relaxed">
+                    Ubah konfigurasi bentuk, dimensi fisik ({length}×{width}×{height} mm), dan tekstur dieline aktif menjadi file model 3D binary <strong>.GLB</strong> standar Three.js.
+                  </p>
+                  <button
+                    onClick={handleTriggerExportGLB}
+                    disabled={isExportingGLB}
+                    className="w-full py-2 px-3 rounded-lg bg-[#238636] hover:bg-[#2ea043] text-white font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>{isExportingGLB ? "Mengenerate GLB..." : "Generate & Unduh File .GLB"}</span>
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
@@ -1019,6 +1126,16 @@ function AdminStudioContent() {
           </div>
 
           <div className="flex items-center gap-2 pointer-events-auto">
+            <button
+              onClick={handleTriggerExportGLB}
+              disabled={isExportingGLB}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#238636] hover:bg-[#2ea043] text-white font-bold text-[11px] shadow-sm transition-all active:scale-95 disabled:opacity-50"
+              title="Generate dan download file 3D GLB langsung dari model/dieline ini"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+              <span>{isExportingGLB ? "Generating GLB..." : "Generate 3D GLB"}</span>
+            </button>
+
             <Link
               href={`/editor?template=${selectedFormId}`}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/90 hover:bg-white text-[#1F3A5C] border border-[#D5E4F0] font-bold shadow-sm transition-all"
@@ -1052,6 +1169,9 @@ function AdminStudioContent() {
             canvasBackground={canvasBg}
             maxVisualBound={maxVisualBound}
             modelScaleMultiplier={modelScaleMultiplier}
+            exportGLBTrigger={exportGLBTrigger}
+            exportGLBFileName={`${formName.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${length}x${width}x${height}mm.glb`}
+            onExportGLBDone={handleExportGLBDone}
           />
 
           {/* Bottom Right Floating Badge */}

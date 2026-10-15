@@ -20,7 +20,9 @@ tmp/
 *.db
 *.sqlite
 *.sqlite3
-data/
+/data/
+!frontend/public/data/.gitkeep
+!frontend/public/uploads/.gitkeep
 
 # OS and IDE files
 .DS_Store

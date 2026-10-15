@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { getAllUmkm, updateUmkmStatus } from "@/lib/umkm"
+import { getAllUmkm, updateUmkmStatus, fetchUmkmList } from "@/lib/umkm"
 import { UmkmRegistration, UmkmStatus } from "@/types/umkm"
 import {
   ShieldCheck,
@@ -39,6 +39,7 @@ export default function AdminUmkmPage() {
       setIsAdminLoggedIn(true)
     }
     setUmkmList(getAllUmkm())
+    fetchUmkmList().then((list) => setUmkmList(list))
   }, [])
 
   const handleApprove = (id: string) => {

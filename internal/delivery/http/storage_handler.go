@@ -72,3 +72,42 @@ func (h *StorageHandler) UploadAsset(c *gin.Context) {
 		"size_bytes": fileHeader.Size,
 	})
 }
+
+var DefaultPublicTenantID = uuid.MustParse("00000000-0000-0000-0000-000000000000")
+
+// UploadPublicAsset allows public uploads (e.g. category thumbnails, packaging previews, 3D glb models)
+func (h *StorageHandler) UploadPublicAsset(c *gin.Context) {
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		response.BadRequest(c, "Field 'file' wajib diisi", err.Error())
+		return
+	}
+
+	if fileHeader.Size > storage.MaxFileSize {
+		response.BadRequest(c, "Ukuran file melebihi 50MB", nil)
+		return
+	}
+
+	src, err := fileHeader.Open()
+	if err != nil {
+		response.InternalServerError(c, "Gagal membaca file upload")
+		return
+	}
+	defer src.Close()
+
+	folder := c.DefaultPostForm("folder", "public")
+
+	fileURL, err := h.storageService.Upload(DefaultPublicTenantID, folder, fileHeader.Filename, src)
+	if err != nil {
+		response.BadRequest(c, err.Error(), nil)
+		return
+	}
+
+	response.Success(c, http.StatusOK, "File berhasil diunggah", gin.H{
+		"success":    true,
+		"url":        fileURL,
+		"file_url":   fileURL,
+		"filename":   fileHeader.Filename,
+		"size_bytes": fileHeader.Size,
+	})
+}

@@ -90,6 +90,7 @@ func main() {
 	calculatorHandler := deliveryHttp.NewCalculatorHandler(calcUsecase)
 	templateHandler := deliveryHttp.NewTemplateHandler(templateUsecase)
 	aiHandler := deliveryHttp.NewAIHandler(aiService)
+	categoryHandler := deliveryHttp.NewCategoryHandler("./uploads/data")
 
 	// 6. Initialize Gin Router
 	router := gin.Default()
@@ -118,6 +119,18 @@ func main() {
 			"env": cfg.AppEnv,
 		})
 	})
+
+	// Public File Upload (Thumbnails, 3D GLB, SVG)
+	router.POST("/api/v1/upload", storageHandler.UploadPublicAsset)
+
+	// Public Master Categories Management
+	categoryGroup := router.Group("/api/v1/categories")
+	{
+		categoryGroup.GET("", categoryHandler.ListCategories)
+		categoryGroup.POST("", categoryHandler.SaveCategories)
+		categoryGroup.DELETE("", categoryHandler.DeleteCategory)
+		categoryGroup.DELETE("/:id", categoryHandler.DeleteCategory)
+	}
 
 	// Public Auth Routes (Tenant Registration & Login)
 	authGroup := router.Group("/api/v1/auth")

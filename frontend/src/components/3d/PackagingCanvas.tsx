@@ -59,6 +59,11 @@ export interface PackagingCanvasProps {
   // Auto-fit & max-bound controls for 1280px screen and custom mesh models
   maxVisualBound?: number // Maximum rendered visual size in Three.js world units (default 1.25)
   modelScaleMultiplier?: number // Manual multiplier for fine-tuning scale (default 1.0)
+
+  // GLB 3D Model Exporter
+  exportGLBTrigger?: number
+  exportGLBFileName?: string
+  onExportGLBDone?: (blob: Blob, fileName: string) => void
 }
 
 // Camera controller for smooth angle transitions
@@ -100,6 +105,48 @@ function CameraController({
     }
     controls.update()
   }, [view, camera, controlsRef])
+
+  return null
+}
+
+// Dedicated GLB Exporter using Three.js GLTFExporter
+function GLBExportController({
+  trigger,
+  modelRef,
+  onExport,
+  fileName,
+}: {
+  trigger?: number
+  modelRef: React.RefObject<THREE.Group | null>
+  onExport?: (blob: Blob, fileName: string) => void
+  fileName?: string
+}) {
+  const { scene } = useThree()
+
+  useEffect(() => {
+    if (!trigger || !onExport) return
+
+    import("three/examples/jsm/exporters/GLTFExporter.js")
+      .then(({ GLTFExporter }) => {
+        const exporter = new GLTFExporter()
+        const target = modelRef.current || scene
+
+        exporter.parse(
+          target,
+          (gltf) => {
+            const blob = new Blob([gltf as ArrayBuffer], { type: "model/gltf-binary" })
+            onExport(blob, fileName || "packaging-model.glb")
+          },
+          (error) => {
+            console.error("Gagal mengekspor GLB:", error)
+          },
+          { binary: true }
+        )
+      })
+      .catch((err) => {
+        console.error("Gagal memuat GLTFExporter:", err)
+      })
+  }, [trigger, modelRef, onExport, fileName, scene])
 
   return null
 }
@@ -2192,8 +2239,12 @@ export default function PackagingCanvas({
   canvasBackground = "#eaedf0",
   maxVisualBound = 1.25,
   modelScaleMultiplier = 1.0,
+  exportGLBTrigger,
+  exportGLBFileName,
+  onExportGLBDone,
 }: PackagingCanvasProps) {
   const controlsRef = useRef<OrbitControlsImpl>(null)
+  const modelGroupRef = useRef<THREE.Group>(null)
   const [orbitEnabled, setOrbitEnabled] = useState(true)
   const [isHoveringObject, setIsHoveringObject] = useState(false)
   const [modelBottomY, setModelBottomY] = useState(-0.65)
@@ -2235,6 +2286,13 @@ export default function PackagingCanvas({
           </group>
         </Environment>
 
+        <GLBExportController
+          trigger={exportGLBTrigger}
+          modelRef={modelGroupRef}
+          onExport={onExportGLBDone}
+          fileName={exportGLBFileName}
+        />
+
         <Center
           position={[0, 0, 0]}
           key={`${model3dUrl || category}`}
@@ -2246,7 +2304,8 @@ export default function PackagingCanvas({
             }
           }}
         >
-          {model3dUrl ? (
+          <group ref={modelGroupRef}>
+            {model3dUrl ? (
             <CustomMeshModel
               modelUrl={model3dUrl}
               modelFormat={modelFormat}
@@ -2361,6 +2420,7 @@ export default function PackagingCanvas({
               openProgress={openProgress}
             />
           )}
+          </group>
         </Center>
 
         {showGrid && (
