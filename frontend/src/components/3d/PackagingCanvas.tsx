@@ -9,8 +9,10 @@ import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js"
 import * as THREE from "three"
 import { parseSvgDielinePanels, DielinePanelZone } from "@/lib/dielineGenerator"
 import { autoFixDielineSvg, sanitizeSvgFor3D } from "@/lib/dielineAutoFixer"
-import { PanelMappingManifest, PanelRegionMapping, ModelUVDiagnosticReport } from "@/types/panelMapping"
+import { PackagingManifestV2, PanelMappingDefinition, ModelUVDiagnosticReport } from "@/types/panelMapping"
 import { analyzeModelUV, createUVDebugTexture } from "@/lib/uvDiagnostics"
+import { migrateLegacyManifest, getPanelMapping } from "@/lib/panelManifestManager"
+import { createVisualCalibrationTexture, PANEL_CALIBRATION_COLORS } from "@/lib/calibrationPattern"
 
 export type DecalType = "image" | "circle" | "square" | "triangle" | "star" | "hexagon" | "badge"
 export type SurfaceTarget = "front" | "back" | "top" | "left" | "right"
@@ -48,7 +50,7 @@ export interface PackagingCanvasProps {
   model3dUrl?: string
   modelFormat?: "glb" | "gltf" | "stl" | string
   dielineSvgUrl?: string
-  manifest?: PanelMappingManifest | Record<string, any> | string | null
+  manifest?: PackagingManifestV2 | Record<string, any> | string | null
   showUVDebug?: boolean
   onUVDiagnostic?: (report: ModelUVDiagnosticReport) => void
 
@@ -1942,21 +1944,14 @@ function CustomMeshModel({
   maxVisualBound?: number
   modelScaleMultiplier?: number
   faceColors?: Record<string, string>
-  manifest?: PanelMappingManifest | Record<string, any> | string | null
+  manifest?: PackagingManifestV2 | Record<string, any> | string | null
   showUVDebug?: boolean
   onUVDiagnostic?: (report: ModelUVDiagnosticReport) => void
 }) {
-  const parsedManifest = useMemo<PanelMappingManifest | null>(() => {
+  const parsedManifest = useMemo<PackagingManifestV2 | null>(() => {
     if (!manifest) return null
-    if (typeof manifest === "string") {
-      try {
-        return JSON.parse(manifest) as PanelMappingManifest
-      } catch (e) {
-        return null
-      }
-    }
-    return manifest as PanelMappingManifest
-  }, [manifest])
+    return migrateLegacyManifest(manifest, modelUrl)
+  }, [manifest, modelUrl])
   const [stlGeometry, setStlGeometry] = useState<THREE.BufferGeometry | null>(null)
   const [gltfScene, setGltfScene] = useState<THREE.Group | null>(null)
   const [initialDims, setInitialDims] = useState<{
@@ -2176,14 +2171,17 @@ function CustomMeshModel({
       // 1. Draw individual face colors onto calibrated UV island regions
       if (faceColors) {
         manifestPanels.forEach((p) => {
-          const col = faceColors[p.face] || (faceColors as any)[p.id]
+          const col = faceColors[p.face] || (faceColors as any)[p.panelId]
           if (col) {
-            const px = p.uvBounds.uMin * canvas.width
-            const py = p.uvBounds.vMin * canvas.height
-            const pw = (p.uvBounds.uMax - p.uvBounds.uMin) * canvas.width
-            const ph = (p.uvBounds.vMax - p.uvBounds.vMin) * canvas.height
-            ctx.fillStyle = col
-            ctx.fillRect(px, py, pw, ph)
+            const uv = p.uvRegion
+            if (uv.uMax > uv.uMin && uv.vMax > uv.vMin) {
+              const px = uv.uMin * canvas.width
+              const py = uv.vMin * canvas.height
+              const pw = (uv.uMax - uv.uMin) * canvas.width
+              const ph = (uv.vMax - uv.vMin) * canvas.height
+              ctx.fillStyle = col
+              ctx.fillRect(px, py, pw, ph)
+            }
           }
         })
       }
@@ -2197,17 +2195,17 @@ function CustomMeshModel({
       objects.forEach((obj) => {
         if (!obj.visible) return
 
-        const panel =
-          manifestPanels.find((p) => p.face === obj.surfaceTarget) ||
-          manifestPanels.find((p) => p.id === obj.surfaceTarget) ||
-          manifestPanels.find((p) => p.id.toLowerCase().includes(obj.surfaceTarget.toLowerCase())) ||
-          manifestPanels.find((p) => p.face === "front") ||
-          manifestPanels[0]
-
+        const panel = getPanelMapping(parsedManifest, obj.surfaceTarget)
         if (!panel) return
 
-        const pW = panel.svgBounds.width || 100
-        const pH = panel.svgBounds.height || 100
+        // Guard: If panel is unmapped or UV degenerate, do NOT produce fake mapping!
+        if (panel.status === "unmapped") return
+
+        const uv = panel.uvRegion
+        if (uv.uMax <= uv.uMin || uv.vMax <= uv.vMin) return
+
+        const pW = panel.svgRegion.width || 100
+        const pH = panel.svgRegion.height || 100
 
         // Relative offset from panel center normalized to [-0.5, 0.5]
         let rx = obj.posX / pW
@@ -2218,11 +2216,11 @@ function CustomMeshModel({
         let ny = 0.5 + ry
 
         // Apply flip if required by UV island authoring
-        if (panel.flipU) nx = 1.0 - nx
-        if (panel.flipV) ny = 1.0 - ny
+        if (panel.transform.flipU) nx = 1.0 - nx
+        if (panel.transform.flipV) ny = 1.0 - ny
 
         // Apply rotation if required by UV island authoring
-        const rot = panel.rotation || 0
+        const rot = panel.transform.rotation || 0
         if (rot === 90) {
           const temp = nx
           nx = 1.0 - ny
@@ -2236,11 +2234,11 @@ function CustomMeshModel({
           ny = 1.0 - temp
         }
 
-        const uvWidth = panel.uvBounds.uMax - panel.uvBounds.uMin
-        const uvHeight = panel.uvBounds.vMax - panel.uvBounds.vMin
+        const uvWidth = uv.uMax - uv.uMin
+        const uvHeight = uv.vMax - uv.vMin
 
-        const u = panel.uvBounds.uMin + nx * uvWidth
-        const v = panel.uvBounds.vMin + ny * uvHeight
+        const u = uv.uMin + nx * uvWidth
+        const v = uv.vMin + ny * uvHeight
 
         const cx = u * canvas.width
         const cy = v * canvas.height

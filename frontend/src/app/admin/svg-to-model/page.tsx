@@ -207,6 +207,8 @@ export default function SvgToModelPage() {
     }
   }, [isPlaying])
 
+  const [glbExportCallback, setGlbExportCallback] = useState<{ cb: (blob: Blob) => void } | null>(null)
+
   // 4. Trigger GLB Download
   const handleDownloadGlb = () => {
     setIsExporting(true)
@@ -217,6 +219,13 @@ export default function SvgToModelPage() {
   // 5. Handle Generated GLB Blob
   const handleExportDone = async (blob: Blob, filename: string) => {
     setIsExporting(false)
+
+    if (glbExportCallback) {
+      const cb = glbExportCallback.cb
+      setGlbExportCallback(null)
+      cb(blob)
+      return
+    }
 
     // Trigger download on client
     const url = URL.createObjectURL(blob)
@@ -245,16 +254,30 @@ export default function SvgToModelPage() {
       let glbUrl = ""
       const glbFilename = `${templateName.toLowerCase().replace(/[^a-z0-9]/g, "-")}-3d.glb`
 
-      // Generate GLB blob promise
-      const glbBlob = await new Promise<Blob>((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error("Timeout generating GLB")), 8000)
-        // Temporarily export
-        import("three/examples/jsm/exporters/GLTFExporter.js").then(({ GLTFExporter }) => {
-          // Fallback simple GLB via upload
-          clearTimeout(timeout)
-          resolve(new Blob(["astakraf-model"], { type: "model/gltf-binary" }))
-        }).catch(reject)
-      })
+      try {
+        const glbBlob = await new Promise<Blob>((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error("Timeout generating GLB")), 10000)
+          setGlbExportCallback({
+            cb: (blob: Blob) => {
+              clearTimeout(timeout)
+              resolve(blob)
+            },
+          })
+          setExportTrigger((prev) => prev + 1)
+        })
+
+        if (glbBlob && glbBlob.size > 0) {
+          const glbFormData = new FormData()
+          glbFormData.append("file", glbBlob, glbFilename)
+          const uploadRes = await fetch("/api/upload", { method: "POST", body: glbFormData })
+          const uploadJson = await uploadRes.json()
+          if (uploadJson.url) {
+            glbUrl = uploadJson.url
+          }
+        }
+      } catch (glbErr) {
+        console.warn("Gagal mengekspor GLB untuk template:", glbErr)
+      }
 
       // 2. Upload SVG dieline to server
       let dielineUrl = ""
@@ -277,8 +300,9 @@ export default function SvgToModelPage() {
         description: templateDesc,
         preview_url: capturedThumbnail || "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=300&auto=format&fit=crop&q=80",
         dieline_svg_url: dielineUrl || undefined,
+        model_3d_url: glbUrl || undefined,
         is_printable: true,
-        is_custom_mesh: true,
+        is_custom_mesh: !!glbUrl,
         badge: templateBadge,
         default_dimensions: {
           length_mm: analysis.dims.length,

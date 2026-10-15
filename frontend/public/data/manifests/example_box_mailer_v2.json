@@ -1,0 +1,244 @@
+{
+  "schemaVersion": "2.0.0",
+  "manifestId": "manifest_box_rectangular_v1",
+  "modelId": "box_rectangular_v1",
+  "dielineId": "dieline_box_rectangular_65x45x35",
+  "status": "verified",
+  "uvLayoutStrategy": "atlas",
+  "targetMeshNames": ["BoxMesh"],
+  "panels": {
+    "front": {
+      "panelId": "front",
+      "name": "Muka Depan (Front Face)",
+      "face": "front",
+      "status": "verified",
+      "geometry": {
+        "meshIndex": 0,
+        "primitiveIndex": 0,
+        "meshName": "BoxMesh",
+        "surfaceNormal": [0, 0, 1],
+        "normalTolerance": 0.85,
+        "localBounds3D": {
+          "min": [-32.5, -17.5, 22.5],
+          "max": [32.5, 17.5, 22.5]
+        }
+      },
+      "svgRegion": {
+        "x": 45.0,
+        "y": 35.0,
+        "width": 65.0,
+        "height": 35.0
+      },
+      "uvRegion": {
+        "uMin": 0.0,
+        "vMin": 0.0,
+        "uMax": 0.29545,
+        "vMax": 1.0
+      },
+      "transform": {
+        "rotation": 0,
+        "flipU": false,
+        "flipV": false,
+        "scale": [1.0, 1.0]
+      },
+      "verifiedAt": "2026-10-16T02:30:00.000Z",
+      "notes": "Diverifikasi dengan perhitungan perimeter kontinu 2*(65+45)=220mm, uMax=65/220=0.29545."
+    },
+    "right": {
+      "panelId": "right",
+      "name": "Sisi Kanan (Right Side)",
+      "face": "right",
+      "status": "verified",
+      "geometry": {
+        "meshIndex": 0,
+        "primitiveIndex": 0,
+        "meshName": "BoxMesh",
+        "surfaceNormal": [1, 0, 0],
+        "normalTolerance": 0.85,
+        "localBounds3D": {
+          "min": [32.5, -17.5, -22.5],
+          "max": [32.5, 17.5, 22.5]
+        }
+      },
+      "svgRegion": {
+        "x": 110.0,
+        "y": 35.0,
+        "width": 45.0,
+        "height": 35.0
+      },
+      "uvRegion": {
+        "uMin": 0.29545,
+        "vMin": 0.0,
+        "uMax": 0.5,
+        "vMax": 1.0
+      },
+      "transform": {
+        "rotation": 0,
+        "flipU": false,
+        "flipV": false,
+        "scale": [1.0, 1.0]
+      },
+      "verifiedAt": "2026-10-16T02:30:00.000Z",
+      "notes": "Diverifikasi dengan uMin=65/220=0.29545, uMax=(65+45)/220=0.50000."
+    },
+    "back": {
+      "panelId": "back",
+      "name": "Muka Belakang (Back Face)",
+      "face": "back",
+      "status": "verified",
+      "geometry": {
+        "meshIndex": 0,
+        "primitiveIndex": 0,
+        "meshName": "BoxMesh",
+        "surfaceNormal": [0, 0, -1],
+        "normalTolerance": 0.85,
+        "localBounds3D": {
+          "min": [-32.5, -17.5, -22.5],
+          "max": [32.5, 17.5, -22.5]
+        }
+      },
+      "svgRegion": {
+        "x": 155.0,
+        "y": 35.0,
+        "width": 65.0,
+        "height": 35.0
+      },
+      "uvRegion": {
+        "uMin": 0.5,
+        "vMin": 0.0,
+        "uMax": 0.79545,
+        "vMax": 1.0
+      },
+      "transform": {
+        "rotation": 0,
+        "flipU": false,
+        "flipV": false,
+        "scale": [1.0, 1.0]
+      },
+      "verifiedAt": "2026-10-16T02:30:00.000Z",
+      "notes": "Diverifikasi dengan uMin=110/220=0.50000, uMax=(110+65)/220=0.79545."
+    },
+    "left": {
+      "panelId": "left",
+      "name": "Sisi Kiri (Left Side)",
+      "face": "left",
+      "status": "verified",
+      "geometry": {
+        "meshIndex": 0,
+        "primitiveIndex": 0,
+        "meshName": "BoxMesh",
+        "surfaceNormal": [-1, 0, 0],
+        "normalTolerance": 0.85,
+        "localBounds3D": {
+          "min": [-32.5, -17.5, -22.5],
+          "max": [-32.5, 17.5, 22.5]
+        }
+      },
+      "svgRegion": {
+        "x": 0.0,
+        "y": 35.0,
+        "width": 45.0,
+        "height": 35.0
+      },
+      "uvRegion": {
+        "uMin": 0.79545,
+        "vMin": 0.0,
+        "uMax": 1.0,
+        "vMax": 1.0
+      },
+      "transform": {
+        "rotation": 0,
+        "flipU": false,
+        "flipV": false,
+        "scale": [1.0, 1.0]
+      },
+      "verifiedAt": "2026-10-16T02:30:00.000Z",
+      "notes": "Diverifikasi dengan uMin=175/220=0.79545, uMax=220/220=1.00000."
+    },
+    "top": {
+      "panelId": "top",
+      "name": "Tutup Atas (Top Flap)",
+      "face": "top",
+      "status": "verified",
+      "geometry": {
+        "meshIndex": 0,
+        "primitiveIndex": 0,
+        "meshName": "BoxMesh",
+        "surfaceNormal": [0, 1, 0],
+        "normalTolerance": 0.85,
+        "localBounds3D": {
+          "min": [-32.5, 17.5, -22.5],
+          "max": [32.5, 17.5, 22.5]
+        }
+      },
+      "svgRegion": {
+        "x": 45.0,
+        "y": 0.0,
+        "width": 65.0,
+        "height": 45.0
+      },
+      "uvRegion": {
+        "uMin": 0.0,
+        "vMin": 0.0,
+        "uMax": 1.0,
+        "vMax": 1.0
+      },
+      "transform": {
+        "rotation": 0,
+        "flipU": false,
+        "flipV": false,
+        "scale": [1.0, 1.0]
+      },
+      "verifiedAt": "2026-10-16T02:30:00.000Z",
+      "notes": "Permukaan atas independen dengan normal [0, 1, 0] unit tekstur."
+    },
+    "bottom": {
+      "panelId": "bottom",
+      "name": "Alas Bawah (Bottom Base)",
+      "face": "bottom",
+      "status": "verified",
+      "geometry": {
+        "meshIndex": 0,
+        "primitiveIndex": 0,
+        "meshName": "BoxMesh",
+        "surfaceNormal": [0, -1, 0],
+        "normalTolerance": 0.85,
+        "localBounds3D": {
+          "min": [-32.5, -17.5, -22.5],
+          "max": [32.5, -17.5, 22.5]
+        }
+      },
+      "svgRegion": {
+        "x": 45.0,
+        "y": 70.0,
+        "width": 65.0,
+        "height": 45.0
+      },
+      "uvRegion": {
+        "uMin": 0.0,
+        "vMin": 0.0,
+        "uMax": 1.0,
+        "vMax": 1.0
+      },
+      "transform": {
+        "rotation": 0,
+        "flipU": false,
+        "flipV": false,
+        "scale": [1.0, 1.0]
+      },
+      "verifiedAt": "2026-10-16T02:30:00.000Z",
+      "notes": "Permukaan bawah independen dengan normal [0, -1, 0] unit tekstur."
+    }
+  },
+  "metadata": {
+    "modelDimensionsMm": {
+      "length": 65.0,
+      "width": 45.0,
+      "height": 35.0
+    },
+    "author": "AstaKraf Packaging Technical Standard",
+    "verifiedBy": "AstaKraf Senior Graphics Engineer",
+    "verifiedAt": "2026-10-16T02:30:00.000Z",
+    "notes": "Contoh manifest verified untuk model kotak 65x45x35 mm (Mailer Box) menghubungkan panel 2D SVG dengan permukaan 3D GLB secara presisi."
+  }
+}

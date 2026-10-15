@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="413.2mm" height="407mm" viewBox="0 0 413.2 407">
+  <defs>
+    <style>
+      .txt-title { font-family: 'Barlow', 'Helvetica Neue', Arial, sans-serif; font-weight: 700; font-size: 4.5px; fill: #111827; }
+      .txt-meta { font-family: 'Barlow', 'Helvetica Neue', Arial, sans-serif; font-size: 2.8px; fill: #4b5563; }
+      .txt-dim { font-family: 'Barlow', 'Helvetica Neue', Arial, sans-serif; font-size: 2.6px; font-weight: 600; fill: #1f2937; text-anchor: middle; }
+      .dim-line { stroke: #6b7280; stroke-width: 0.25; fill: none; }
+      .cut-line { stroke: #ff007f; stroke-width: 0.45; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .crease-line { stroke: #00a651; stroke-width: 0.45; stroke-dasharray: 2 1.5; fill: none; stroke-linecap: round; }
+      .bleed-line { stroke: #00a0e9; stroke-width: 0.35; stroke-dasharray: 1.5 1.5; fill: none; }
+      .safe-line { stroke: #2e7d32; stroke-width: 0.25; stroke-dasharray: 0.8 1.2; fill: none; }
+    </style>
+  </defs>
+  <!-- ARTWORK DESIGN LAYER (Place graphics here) -->
+  <g id="Artwork-Layer" />
+  <!-- 3MM SAFE MARGIN -->
+  <g id="Safe-Zone" class="safe-line">
+
+  </g>
+  <!-- 3MM BLEED OUTLINE -->
+  <g id="Bleed-3mm" class="bleed-line">
+
+  </g>
+  <!-- DIE CUT LINE (Spot Magenta #ff007f) -->
+  <g id="Dieline-Cut" class="cut-line">
+    <path d="M 30 66 L 343.2 66"/>
+    <path d="M 30 276 L 343.2 276"/>
+    <path d="M 30 66 L 30 276"/>
+    <path d="M 343.2 30 L 343.2 312"/>
+    <path d="M 55.2 30 L 343.2 30"/>
+    <path d="M 55.2 312 L 343.2 312"/>
+    <path d="M 55.2 30 L 55.2 66"/>
+    <path d="M 55.2 276 L 55.2 312"/>
+    <path d="M 126.45 30 L 126.45 66"/>
+    <path d="M 127.95 30 L 127.95 66"/>
+    <path d="M 126.45 276 L 126.45 312"/>
+    <path d="M 127.95 276 L 127.95 312"/>
+    <path d="M 126.45 30 L 127.95 30"/>
+    <path d="M 126.45 312 L 127.95 312"/>
+    <path d="M 198.45 30 L 198.45 66"/>
+    <path d="M 199.95 30 L 199.95 66"/>
+    <path d="M 198.45 276 L 198.45 312"/>
+    <path d="M 199.95 276 L 199.95 312"/>
+    <path d="M 198.45 30 L 199.95 30"/>
+    <path d="M 198.45 312 L 199.95 312"/>
+    <path d="M 270.45 30 L 270.45 66"/>
+    <path d="M 271.95 30 L 271.95 66"/>
+    <path d="M 270.45 276 L 270.45 312"/>
+    <path d="M 271.95 276 L 271.95 312"/>
+    <path d="M 270.45 30 L 271.95 30"/>
+    <path d="M 270.45 312 L 271.95 312"/>
+  </g>
+  <!-- CREASE / SCORE LINES (Green Dashed #00a651) -->
+  <g id="Crease-Score" class="crease-line">
+    <path d="M 55.2 30 L 55.2 312"/>
+    <path d="M 127.2 30 L 127.2 312"/>
+    <path d="M 199.2 30 L 199.2 312"/>
+    <path d="M 271.2 30 L 271.2 312"/>
+    <path d="M 55.2 66 L 343.2 66"/>
+    <path d="M 55.2 276 L 343.2 276"/>
+  </g>
+  <!-- TECHNICAL DIMENSIONS & REGISTRATION -->
+  <g id="Technical-Annotations">
+    <!-- Registration Crosshairs -->
+    <g stroke="#222222" stroke-width="0.3" fill="none"><circle cx="10" cy="10" r="3"/><line x1="5" y1="10" x2="15" y2="10"/><line x1="10" y1="5" x2="10" y2="15"/></g>
+    <g stroke="#222222" stroke-width="0.3" fill="none"><circle cx="403.2" cy="10" r="3"/><line x1="398.2" y1="10" x2="408.2" y2="10"/><line x1="403.2" y1="5" x2="403.2" y2="15"/></g>
+    <g stroke="#222222" stroke-width="0.3" fill="none"><circle cx="10" cy="397" r="3"/><line x1="5" y1="397" x2="15" y2="397"/><line x1="10" y1="392" x2="10" y2="402"/></g>
+    <g stroke="#222222" stroke-width="0.3" fill="none"><circle cx="403.2" cy="397" r="3"/><line x1="398.2" y1="397" x2="408.2" y2="397"/><line x1="403.2" y1="392" x2="403.2" y2="402"/></g>
+    <!-- Dimension Lines -->
+<line x1="30" y1="324" x2="343.2" y2="324" class="dim-line"/><circle cx="30" cy="324" r="0.6" fill="#6b7280"/><circle cx="343.2" cy="324" r="0.6" fill="#6b7280"/><text x="186.6" y="322.5" class="txt-dim">313 mm Flat</text>
+<line x1="355.2" y1="30" x2="355.2" y2="312" class="dim-line"/><circle cx="355.2" cy="30" r="0.6" fill="#6b7280"/><circle cx="355.2" cy="312" r="0.6" fill="#6b7280"/><text x="355.2" y="169.5" class="txt-dim">282 mm Flat</text>
+    <!-- Title Block & Specifications Header -->
+    <g transform="translate(10, 383)">
+      <rect x="0" y="0" width="393.2" height="18" fill="#f9fafb" stroke="#e5e7eb" stroke-width="0.3" rx="1.5"/>
+      <text x="5" y="5.5" class="txt-title">Gable-Top Beverage Carton — Production Dieline</text>
+      <text x="5" y="10" class="txt-meta">Finished Size: 313 x 282 mm | Bleed: +3.0 mm | Scale: 100% 1:1</text>
+      <text x="5" y="14.5" class="txt-meta">Style: Structural Regular slotted container (RSC) (FEFCO 0201) | Material: Folding Boxboard (FBB) / SBS / Kraft Corrugated Flute</text>
+      <!-- Legend -->
+      <g transform="translate(293.2, 4)">
+        <line x1="0" y1="2" x2="10" y2="2" class="cut-line"/>
+        <text x="12" y="3" class="txt-meta">Cut Line</text>
+        <line x1="45" y1="2" x2="55" y2="2" class="bleed-line"/>
+        <text x="57" y="3" class="txt-meta">Bleed (3mm)</text>
+        <line x1="0" y1="8.5" x2="10" y2="8.5" class="crease-line"/>
+        <text x="12" y="9.5" class="txt-meta">Crease Line</text>
+        <line x1="45" y1="8.5" x2="55" y2="8.5" class="safe-line"/>
+        <text x="57" y="9.5" class="txt-meta">Safe Zone</text>
+      </g>
+    </g>
+  </g>
+</svg>

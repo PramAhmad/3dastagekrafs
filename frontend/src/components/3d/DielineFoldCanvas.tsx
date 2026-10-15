@@ -155,8 +155,19 @@ export default function DielineFoldCanvas({
     img.onload = () => {
       if (!isMounted) return
       const canvas = document.createElement("canvas")
-      canvas.width = 2048
-      canvas.height = 2048
+      const svgW = analysis.svgCanvasW || analysis.totalWidthMm || 2048
+      const svgH = analysis.svgCanvasH || analysis.totalHeightMm || 2048
+      const aspect = svgW / svgH
+
+      const maxRes = 2048
+      if (aspect >= 1) {
+        canvas.width = maxRes
+        canvas.height = Math.max(256, Math.round(maxRes / aspect))
+      } else {
+        canvas.width = Math.max(256, Math.round(maxRes * aspect))
+        canvas.height = maxRes
+      }
+
       const ctx = canvas.getContext("2d")
       if (!ctx) return
 
@@ -180,12 +191,17 @@ export default function DielineFoldCanvas({
     return () => {
       isMounted = false
     }
-  }, [dielineSvgString, boxColor])
+  }, [dielineSvgString, boxColor, analysis.svgCanvasW, analysis.svgCanvasH, analysis.totalWidthMm, analysis.totalHeightMm])
+
+  const maxDim = Math.max(analysis.dims.length, analysis.dims.width, analysis.dims.height, 80)
+  const scale = 1.5 / maxDim
+  const boxHeight = analysis.dims.height * scale
+  const centerY = boxHeight / 2
 
   return (
     <div className="w-full h-full relative select-none">
       <Canvas
-        camera={{ position: [1.8, 1.4, 2.2], fov: 42 }}
+        camera={{ position: [1.8, centerY + 0.6, 2.2], fov: 42 }}
         shadows
         gl={{ preserveDrawingBuffer: true, antialias: true }}
       >
@@ -193,30 +209,29 @@ export default function DielineFoldCanvas({
         <directionalLight position={[4, 8, 5]} intensity={1.2} castShadow shadow-mapSize={1024} />
         <directionalLight position={[-4, -3, -4]} intensity={0.4} />
 
-        <Center top>
-          <FoldedMeshRenderer
-            analysis={analysis}
-            foldProgress={foldProgress}
-            boxColor={boxColor}
-            materialFinish={materialFinish}
-            dielineTexture={dielineTexture}
-            modelRef={modelRef}
-          />
-        </Center>
+        <FoldedMeshRenderer
+          analysis={analysis}
+          foldProgress={foldProgress}
+          boxColor={boxColor}
+          materialFinish={materialFinish}
+          dielineTexture={dielineTexture}
+          modelRef={modelRef}
+        />
 
-        {/* Soft realistic ground shadow */}
+        {/* Soft realistic ground shadow sitting flush under box */}
         <ContactShadows
-          position={[0, -0.01, 0]}
+          position={[0, -0.005, 0]}
           opacity={0.65}
-          scale={4.0}
-          blur={2.0}
-          far={3.0}
+          scale={3.5}
+          blur={1.8}
+          far={2.0}
         />
 
         <OrbitControls
           makeDefault
           enableDamping
           dampingFactor={0.08}
+          target={[0, centerY, 0]}
           minDistance={0.5}
           maxDistance={8.0}
         />

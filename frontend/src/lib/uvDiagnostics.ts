@@ -247,8 +247,12 @@ export function createUVDebugTexture(manifest?: PanelMappingManifest | null): TH
       const colors = ["#f43f5e", "#06b6d4", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899"]
       let colorIdx = 0
 
-      Object.values(manifest.panels).forEach((panel) => {
-        const { uMin, vMin, uMax, vMax } = panel.uvBounds
+      Object.values(manifest.panels).forEach((panel: any) => {
+        const uv = panel.uvRegion || panel.uvBounds
+        if (!uv) return
+        const { uMin, vMin, uMax, vMax } = uv
+        if (uMax <= uMin || vMax <= vMin) return
+
         const col = colors[colorIdx % colors.length]
         colorIdx++
 
@@ -266,7 +270,8 @@ export function createUVDebugTexture(manifest?: PanelMappingManifest | null): TH
 
         ctx.fillStyle = col
         ctx.font = "bold 20px sans-serif"
-        ctx.fillText(`${panel.id} (${panel.name})`, px + 10, py + 30)
+        const label = `${panel.panelId || panel.id || "panel"} (${panel.name || panel.face || ""})`
+        ctx.fillText(label, px + 10, py + 30)
       })
     }
   }
