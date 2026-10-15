@@ -82,9 +82,9 @@ export default function SvgToModelPage() {
   const [isPlaying, setIsPlaying] = useState<boolean>(false)
   const animFrameRef = useRef<number | null>(null)
 
-  // Material & Appearance
-  const [boxColor, setBoxColor] = useState<string>("#ffffff")
-  const [materialFinish, setMaterialFinish] = useState<"matte" | "glossy" | "kraft" | "metallic">("matte")
+  // Material & Appearance (Default Pacdora Kraft Cardboard)
+  const [boxColor, setBoxColor] = useState<string>("#be8d58")
+  const [materialFinish, setMaterialFinish] = useState<"matte" | "glossy" | "kraft" | "metallic">("kraft")
 
   // GLB Export & Save Modal State
   const [exportTrigger, setExportTrigger] = useState<number>(0)
@@ -627,14 +627,17 @@ export default function SvgToModelPage() {
                 </span>
                 <div className="flex items-center gap-1">
                   {[
-                    { id: "kraft", label: "Kraft Cokelat", color: "#ca9a66" },
-                    { id: "matte", label: "Ivory Doff", color: "#ffffff" },
-                    { id: "glossy", label: "Glossy UV", color: "#f8fafc" },
-                    { id: "metallic", label: "Foil Emas", color: "#d4af37" },
+                    { id: "kraft", label: "Corrugated Kraft (Pacdora)", color: "#be8d58" },
+                    { id: "matte", label: "Ivory / Duplex Putih", color: "#f8f9fa" },
+                    { id: "glossy", label: "Glossy Coated UV", color: "#ffffff" },
+                    { id: "metallic", label: "Metallic Gold Foil", color: "#d4af37" },
                   ].map((m) => (
                     <button
                       key={m.id}
-                      onClick={() => setMaterialFinish(m.id as any)}
+                      onClick={() => {
+                        setMaterialFinish(m.id as any)
+                        setBoxColor(m.color)
+                      }}
                       className={`px-2.5 py-1 rounded-xl text-[9.5px] font-bold transition-all border ${
                         materialFinish === m.id
                           ? "bg-[#1F3A5C] text-[#F7CB45] border-[#1F3A5C] shadow-xs"

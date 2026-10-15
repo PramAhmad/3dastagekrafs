@@ -4,6 +4,7 @@
 
 import * as THREE from "three"
 import { DielinePanelZone } from "./dielineGenerator"
+import { getCardboardBumpTexture } from "./cardboardTexture"
 
 export interface DielineAnalysis {
   totalWidthMm: number
@@ -377,17 +378,27 @@ export function buildFolded3DModel(
   const materials: THREE.MeshPhysicalMaterial[] = []
 
   const isKraft = materialFinish === "kraft"
-  const roughness = isKraft ? 0.92 : materialFinish === "glossy" ? 0.08 : materialFinish === "metallic" ? 0.15 : 0.65
-  const metalness = materialFinish === "metallic" ? 0.88 : 0.04
+  const kraftBumpMap = isKraft ? getCardboardBumpTexture(true) : null
+  const bumpScale = isKraft ? 0.032 : 0
+
+  const defaultColor = isKraft ? "#be8d58" : boxColor
+  const roughness = isKraft ? 0.90 : materialFinish === "glossy" ? 0.08 : materialFinish === "metallic" ? 0.15 : 0.65
+  const metalness = materialFinish === "metallic" ? 0.88 : 0.02
   const clearcoat = materialFinish === "glossy" ? 0.95 : 0.0
 
   const createMaterial = () => {
     const mat = new THREE.MeshPhysicalMaterial({
-      color: dielineTexture ? 0xffffff : new THREE.Color(boxColor),
+      color: dielineTexture ? 0xffffff : new THREE.Color(boxColor || defaultColor),
       map: dielineTexture,
       roughness,
       metalness,
       clearcoat,
+      clearcoatRoughness: 0.1,
+      sheen: isKraft ? 0.28 : 0.0,
+      sheenRoughness: 0.8,
+      sheenColor: new THREE.Color("#d4aa73"),
+      bumpMap: kraftBumpMap,
+      bumpScale: bumpScale,
       side: THREE.DoubleSide,
     })
     materials.push(mat)

@@ -52,6 +52,7 @@ export interface PackagingCanvasProps {
   dielineSvgUrl?: string
   manifest?: PackagingManifestV2 | Record<string, any> | string | null
   showUVDebug?: boolean
+  debugOverlayMode?: "calibration" | "grid"
   onUVDiagnostic?: (report: ModelUVDiagnosticReport) => void
 
   // Multi-Object Layers
@@ -1928,6 +1929,7 @@ function CustomMeshModel({
   faceColors,
   manifest,
   showUVDebug = false,
+  debugOverlayMode = "calibration",
   onUVDiagnostic,
 }: {
   modelUrl: string
@@ -1946,6 +1948,7 @@ function CustomMeshModel({
   faceColors?: Record<string, string>
   manifest?: PackagingManifestV2 | Record<string, any> | string | null
   showUVDebug?: boolean
+  debugOverlayMode?: "calibration" | "grid"
   onUVDiagnostic?: (report: ModelUVDiagnosticReport) => void
 }) {
   const parsedManifest = useMemo<PackagingManifestV2 | null>(() => {
@@ -2147,7 +2150,10 @@ function CustomMeshModel({
   useEffect(() => {
     // A. UV Diagnostic Debug Mode: Render calibration checkerboard & panel boundaries directly on 3D mesh
     if (showUVDebug) {
-      const debugTex = createUVDebugTexture(parsedManifest)
+      const debugTex =
+        debugOverlayMode === "grid"
+          ? createUVDebugTexture(parsedManifest)
+          : createVisualCalibrationTexture(parsedManifest)
       setDielineTexture(debugTex)
       return () => {
         debugTex.dispose()
@@ -2339,6 +2345,7 @@ function CustomMeshModel({
     width,
     height,
     showUVDebug,
+    debugOverlayMode,
   ])
 
   // 4. Bind Texture to GLB (matches 3DPAKS loader: binds to LabelZone or primary body meshes)
@@ -2679,6 +2686,7 @@ export default function PackagingCanvas({
   dielineSvgUrl,
   manifest,
   showUVDebug: externalShowUVDebug,
+  debugOverlayMode: externalDebugOverlayMode,
   onUVDiagnostic,
   objects = [],
   selectedObjectId = null,
@@ -2701,9 +2709,16 @@ export default function PackagingCanvas({
   const [modelBottomY, setModelBottomY] = useState(-0.65)
   const [isIntroSpinning, setIsIntroSpinning] = useState(true)
   const [localUVDebug, setLocalUVDebug] = useState(false)
+  const [debugOverlayMode, setDebugOverlayMode] = useState<"calibration" | "grid">(externalDebugOverlayMode || "calibration")
+  const [showDebugPanelList, setShowDebugPanelList] = useState(false)
   const [uvDiagnosticReport, setUvDiagnosticReport] = useState<ModelUVDiagnosticReport | null>(null)
 
   const showUVDebug = externalShowUVDebug || localUVDebug
+
+  const parsedManifest = useMemo<PackagingManifestV2 | null>(() => {
+    if (!manifest) return null
+    return migrateLegacyManifest(manifest, model3dUrl || "model.glb")
+  }, [manifest, model3dUrl])
 
   // Pacdora-style 360 Turntable Intro Spin on load
   useEffect(() => {
@@ -2787,6 +2802,7 @@ export default function PackagingCanvas({
               faceColors={faceColors}
               manifest={manifest}
               showUVDebug={showUVDebug}
+              debugOverlayMode={debugOverlayMode}
               onUVDiagnostic={(report) => {
                 setUvDiagnosticReport(report)
                 if (onUVDiagnostic) onUVDiagnostic(report)
@@ -2937,44 +2953,183 @@ export default function PackagingCanvas({
         />
       </Canvas>
 
-      {/* 3D UV Diagnostics & Inspection Badge */}
+      {/* 3D UV Diagnostics & Inspection Panel */}
       {model3dUrl && (
-        <div className="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 pointer-events-auto">
-          <button
-            type="button"
-            onClick={() => setLocalUVDebug((v) => !v)}
-            className={`px-2 py-1 rounded-lg text-[9.5px] font-bold border transition-all flex items-center gap-1 shadow-xs cursor-pointer ${
-              localUVDebug
-                ? "bg-[#2F79A6] text-white border-[#2F79A6]"
-                : "bg-white/90 backdrop-blur-xs text-[#1F3A5C] border-[#D5E4F0] hover:bg-[#EEF4F8]"
-            }`}
-            title="Periksa UV Wireframe & Panel Mapping"
-          >
-            <span>{localUVDebug ? "Tutup UV Debug" : "UV Debug"}</span>
-          </button>
+        <div className="absolute bottom-3 left-3 z-20 flex flex-col gap-1.5 pointer-events-auto max-w-sm">
+          {/* Detailed Panel & Geometry Inspector Modal/Drawer */}
+          {showUVDebug && showDebugPanelList && (
+            <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-700/80 rounded-xl p-3 shadow-2xl text-[10px] space-y-2 mb-1 max-h-80 overflow-y-auto">
+              <div className="flex items-center justify-between pb-1.5 border-b border-slate-700">
+                <span className="font-bold text-slate-200 tracking-wide flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  Panel Mapping & Geometry Inspector
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowDebugPanelList(false)}
+                  className="text-slate-400 hover:text-white text-xs px-1 cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
 
-          {uvDiagnosticReport && (
-            <span
-              className={`px-2 py-0.5 rounded-lg text-[9px] font-mono font-bold border ${
-                manifest
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                  : uvDiagnosticReport.overallStatus === "cad_uncalibrated"
-                  ? "bg-purple-50 text-purple-700 border-purple-200"
-                  : uvDiagnosticReport.overallStatus === "valid"
-                  ? "bg-blue-50 text-blue-700 border-blue-200"
-                  : "bg-amber-50 text-amber-700 border-amber-200"
-              }`}
-              title={uvDiagnosticReport.summary}
-            >
-              {manifest
-                ? "Panel: Mapped"
-                : uvDiagnosticReport.overallStatus === "cad_uncalibrated"
-                ? "UV: CAD Scale"
-                : uvDiagnosticReport.overallStatus === "valid"
-                ? "UV: [0, 1] Valid"
-                : "UV: Belum Dipetakan"}
-            </span>
+              {parsedManifest ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-slate-400 text-[9px] font-mono">
+                    <span>Manifest: {parsedManifest.manifestId || "v2"}</span>
+                    <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${
+                      parsedManifest.status === "verified" ? "bg-emerald-950 text-emerald-400 border border-emerald-800" :
+                      parsedManifest.status === "needs_review" ? "bg-amber-950 text-amber-400 border border-amber-800" :
+                      "bg-rose-950 text-rose-400 border border-rose-800"
+                    }`}>
+                      {parsedManifest.status.toUpperCase()}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    {Object.values(parsedManifest.panels).map((p) => {
+                      const color =
+                        PANEL_CALIBRATION_COLORS[p.panelId.toLowerCase()] ||
+                        PANEL_CALIBRATION_COLORS[p.face.toLowerCase()] ||
+                        "#64748b"
+                      return (
+                        <div
+                          key={p.panelId}
+                          className="bg-slate-800/80 rounded-lg p-2 border border-slate-700/50 space-y-1 font-mono text-[9px]"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold flex items-center gap-1.5 text-slate-100">
+                              <span className="w-2.5 h-2.5 rounded-xs inline-block shrink-0" style={{ backgroundColor: color }}></span>
+                              {p.panelId} <span className="text-slate-400 font-normal">({p.face})</span>
+                            </span>
+                            <span className={`px-1 py-0.2 rounded text-[7.5px] font-bold ${
+                              p.status === "verified" ? "text-emerald-400 bg-emerald-950/60" :
+                              p.status === "needs_review" ? "text-amber-400 bg-amber-950/60" :
+                              "text-rose-400 bg-rose-950/60"
+                            }`}>
+                              {p.status}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-1 text-[8.5px] text-slate-300">
+                            <div>
+                              <span className="text-slate-500">Normal:</span> [{p.geometry.surfaceNormal.join(", ")}]
+                            </div>
+                            <div>
+                              <span className="text-slate-500">Mesh:</span> {p.geometry.meshIndex} ({p.geometry.meshName || "primary"})
+                            </div>
+                            <div className="col-span-2">
+                              <span className="text-slate-500">UV Atlas:</span> [{p.uvRegion.uMin.toFixed(3)}, {p.uvRegion.vMin.toFixed(3)}] → [{p.uvRegion.uMax.toFixed(3)}, {p.uvRegion.vMax.toFixed(3)}]
+                            </div>
+                            <div>
+                              <span className="text-slate-500">Size:</span> {p.svgRegion.width}×{p.svgRegion.height}mm
+                            </div>
+                            <div>
+                              <span className="text-slate-500">Rot:</span> {p.transform.rotation}° {p.transform.flipU ? "flipU " : ""}{p.transform.flipV ? "flipV" : ""}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-amber-300 bg-amber-950/40 border border-amber-900 rounded p-2 text-[9.5px]">
+                  ⚠️ Model ini belum memiliki <code className="text-amber-200">manifest_json</code> terkalibrasi.
+                </div>
+              )}
+
+              {uvDiagnosticReport && (
+                <div className="pt-1.5 border-t border-slate-700/80 text-[8.5px] text-slate-400 space-y-0.5">
+                  <div className="font-semibold text-slate-300">Diagnostik UV Geometri:</div>
+                  <div>Meshes: {uvDiagnosticReport.totalMeshes} | Status: {uvDiagnosticReport.overallStatus}</div>
+                  <div>Rekomendasi: {uvDiagnosticReport.recommendedStrategy}</div>
+                </div>
+              )}
+            </div>
           )}
+
+          {/* Controls Bar */}
+          <div className="flex items-center gap-1.5 bg-white/95 backdrop-blur-xs p-1 rounded-xl border border-[#D5E4F0] shadow-xs">
+            <button
+              type="button"
+              onClick={() => setLocalUVDebug((v) => !v)}
+              className={`px-2 py-1 rounded-lg text-[9.5px] font-bold border transition-all flex items-center gap-1 cursor-pointer ${
+                showUVDebug
+                  ? "bg-[#2F79A6] text-white border-[#2F79A6]"
+                  : "bg-white text-[#1F3A5C] border-[#D5E4F0] hover:bg-[#EEF4F8]"
+              }`}
+              title="Periksa UV Wireframe & Panel Mapping"
+            >
+              <span>{showUVDebug ? "Tutup Debug" : "UV Debug"}</span>
+            </button>
+
+            {showUVDebug && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setDebugOverlayMode("calibration")}
+                  className={`px-2 py-1 rounded-lg text-[9px] font-bold transition-all cursor-pointer ${
+                    debugOverlayMode === "calibration"
+                      ? "bg-amber-600 text-white"
+                      : "text-slate-600 hover:bg-slate-100"
+                  }`}
+                  title="Tampilkan Pola Kalibrasi Warna & Orientasi Panah Panel"
+                >
+                  Kalibrasi
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDebugOverlayMode("grid")}
+                  className={`px-2 py-1 rounded-lg text-[9px] font-bold transition-all cursor-pointer ${
+                    debugOverlayMode === "grid"
+                      ? "bg-sky-600 text-white"
+                      : "text-slate-600 hover:bg-slate-100"
+                  }`}
+                  title="Tampilkan UV Checker Grid"
+                >
+                  Grid
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowDebugPanelList((v) => !v)}
+                  className={`px-2 py-1 rounded-lg text-[9px] font-bold border transition-all cursor-pointer ${
+                    showDebugPanelList
+                      ? "bg-slate-800 text-white border-slate-800"
+                      : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                  }`}
+                  title="Lihat Daftar Panel, Geometri Normal, dan Region UV"
+                >
+                  Inspector {parsedManifest?.panels ? `(${Object.keys(parsedManifest.panels).length})` : ""}
+                </button>
+              </>
+            )}
+
+            {uvDiagnosticReport && (
+              <span
+                className={`px-2 py-0.5 rounded-lg text-[9px] font-mono font-bold border ${
+                  manifest
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    : uvDiagnosticReport.overallStatus === "cad_uncalibrated"
+                    ? "bg-purple-50 text-purple-700 border-purple-200"
+                    : uvDiagnosticReport.overallStatus === "valid"
+                    ? "bg-blue-50 text-blue-700 border-blue-200"
+                    : "bg-amber-50 text-amber-700 border-amber-200"
+                }`}
+                title={uvDiagnosticReport.summary}
+              >
+                {manifest
+                  ? "Panel: Mapped"
+                  : uvDiagnosticReport.overallStatus === "cad_uncalibrated"
+                  ? "UV: CAD Scale"
+                  : uvDiagnosticReport.overallStatus === "valid"
+                  ? "UV: [0, 1] Valid"
+                  : "UV: Belum Dipetakan"}
+              </span>
+            )}
+          </div>
         </div>
       )}
     </div>

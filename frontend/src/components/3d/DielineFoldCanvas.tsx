@@ -2,9 +2,10 @@
 
 import React, { useRef, useEffect, useMemo, useState } from "react"
 import { Canvas, useThree, useFrame } from "@react-three/fiber"
-import { OrbitControls, ContactShadows, Center, Environment } from "@react-three/drei"
+import { OrbitControls, ContactShadows, Center, Environment, Lightformer } from "@react-three/drei"
 import * as THREE from "three"
 import { DielineAnalysis, buildFolded3DModel, FoldModelHierarchy } from "@/lib/dielineTo3D"
+import { applyCardboardBackground } from "@/lib/cardboardTexture"
 
 interface DielineFoldCanvasProps {
   analysis: DielineAnalysis
@@ -171,9 +172,12 @@ export default function DielineFoldCanvas({
       const ctx = canvas.getContext("2d")
       if (!ctx) return
 
-      // Base background
-      ctx.fillStyle = boxColor
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      // Apply authentic procedural packaging material background (paper fibers, pulp flecks, flutes)
+      applyCardboardBackground(ctx, canvas.width, canvas.height, {
+        baseColor: boxColor,
+        materialFinish: materialFinish,
+        isCorrugated: materialFinish === "kraft",
+      })
 
       // Draw SVG dieline graphics
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
@@ -191,7 +195,7 @@ export default function DielineFoldCanvas({
     return () => {
       isMounted = false
     }
-  }, [dielineSvgString, boxColor, analysis.svgCanvasW, analysis.svgCanvasH, analysis.totalWidthMm, analysis.totalHeightMm])
+  }, [dielineSvgString, boxColor, materialFinish, analysis.svgCanvasW, analysis.svgCanvasH, analysis.totalWidthMm, analysis.totalHeightMm])
 
   const maxDim = Math.max(analysis.dims.length, analysis.dims.width, analysis.dims.height, 80)
   const scale = 1.5 / maxDim
@@ -205,9 +209,27 @@ export default function DielineFoldCanvas({
         shadows
         gl={{ preserveDrawingBuffer: true, antialias: true }}
       >
-        <ambientLight intensity={0.85} />
-        <directionalLight position={[4, 8, 5]} intensity={1.2} castShadow shadow-mapSize={1024} />
-        <directionalLight position={[-4, -3, -4]} intensity={0.4} />
+        {/* Realistic Packaging Studio Lighting & Procedural Environment Reflections */}
+        <ambientLight intensity={0.65} />
+        <hemisphereLight args={["#ffffff", "#5d4037", 0.65]} />
+        <directionalLight
+          position={[5, 9, 6]}
+          intensity={1.25}
+          castShadow
+          shadow-mapSize={1024}
+        />
+        <directionalLight position={[-6, 5, -4]} intensity={0.5} color="#e0f2fe" />
+        <directionalLight position={[0, -4, 3]} intensity={0.2} color="#fef3c7" />
+
+        {/* Procedural Lightformer studio softboxes (100% offline, zero network fetch) */}
+        <Environment resolution={256}>
+          <group rotation={[-Math.PI / 3, 0, 1]}>
+            <Lightformer form="circle" intensity={2.5} rotation-x={Math.PI / 2} position={[0, 6, -8]} scale={3} />
+            <Lightformer form="rect" intensity={2} rotation-y={Math.PI / 2} position={[-6, 2, -1]} scale={[10, 5, 1]} />
+            <Lightformer form="rect" intensity={2} rotation-y={-Math.PI / 2} position={[8, 2, 0]} scale={[10, 5, 1]} />
+            <Lightformer form="rect" intensity={1.2} position={[0, 8, 0]} rotation-x={Math.PI / 2} scale={[12, 12, 1]} />
+          </group>
+        </Environment>
 
         <FoldedMeshRenderer
           analysis={analysis}
@@ -221,10 +243,11 @@ export default function DielineFoldCanvas({
         {/* Soft realistic ground shadow sitting flush under box */}
         <ContactShadows
           position={[0, -0.005, 0]}
-          opacity={0.65}
-          scale={3.5}
+          opacity={0.7}
+          scale={3.8}
           blur={1.8}
-          far={2.0}
+          far={2.2}
+          color="#3e2723"
         />
 
         <OrbitControls
