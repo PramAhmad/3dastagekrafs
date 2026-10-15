@@ -148,6 +148,31 @@ export default function DielineCanvas({
             baseColor.setAttribute("fill", "none")
           }
 
+          // Auto-clean unneeded drafting texts, registration crosshairs, and technical legends
+          doc.querySelectorAll("text, tspan").forEach((t) => t.remove())
+          const junkSelectors = [
+            "#layer-annotations",
+            "#Technical-Annotations",
+            "#Legend",
+            "#Registration-Marks",
+            ".title-label",
+            ".dim-label",
+            ".txt-title",
+            ".txt-meta",
+            ".txt-dim",
+            ".dim-line",
+          ]
+          junkSelectors.forEach((sel) => {
+            doc.querySelectorAll(sel).forEach((el) => el.remove())
+          })
+          // Remove 4 corner registration crosshairs
+          doc.querySelectorAll("circle").forEach((c) => {
+            const r = parseFloat(c.getAttribute("r") || "0")
+            if (r <= 3.5 && c.parentElement && c.parentElement.querySelectorAll("line").length >= 2) {
+              c.parentElement.remove()
+            }
+          })
+
           const svgEl = doc.querySelector("svg")
           if (svgEl) {
             // Extract inner elements (excluding outer <svg>)

@@ -8,7 +8,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js"
 import * as THREE from "three"
 import { parseSvgDielinePanels, DielinePanelZone } from "@/lib/dielineGenerator"
-import { autoFixDielineSvg } from "@/lib/dielineAutoFixer"
+import { autoFixDielineSvg, sanitizeSvgFor3D } from "@/lib/dielineAutoFixer"
 
 export type DecalType = "image" | "circle" | "square" | "triangle" | "star" | "hexagon" | "badge"
 export type SurfaceTarget = "front" | "back" | "top" | "left" | "right"
@@ -353,6 +353,67 @@ function useImageCache(objects: CanvasObject[]) {
 
   return loadedImages
 }
+
+// Preloads and sanitizes 2D SVG Dieline for 3D model wrapping,
+// ensuring red cut lines, green crease lines, drafting labels and annotations
+// are stripped so only authentic artwork is painted onto the 3D surface.
+function useSanitizedSvgImage(dielineSvgUrl?: string): HTMLImageElement | null {
+  const [svgImg, setSvgImg] = useState<HTMLImageElement | null>(null)
+
+  useEffect(() => {
+    if (!dielineSvgUrl) {
+      setSvgImg(null)
+      return
+    }
+    let isMounted = true
+
+    const loadSanitized = async () => {
+      try {
+        let text = ""
+        if (dielineSvgUrl.startsWith("data:image/svg+xml")) {
+          const base64Index = dielineSvgUrl.indexOf(";base64,")
+          if (base64Index !== -1) {
+            text = decodeURIComponent(escape(atob(dielineSvgUrl.substring(base64Index + 8))))
+          } else {
+            text = decodeURIComponent(dielineSvgUrl.substring(dielineSvgUrl.indexOf(",") + 1))
+          }
+        } else if (dielineSvgUrl.startsWith("data:") || dielineSvgUrl.includes("<svg")) {
+          text = dielineSvgUrl
+        } else {
+          const res = await fetch(dielineSvgUrl)
+          if (res.ok) text = await res.text()
+        }
+
+        if (text && isMounted) {
+          const sanitized = sanitizeSvgFor3D(text)
+          if (sanitized) {
+            const img = new Image()
+            img.crossOrigin = "anonymous"
+            img.onload = () => {
+              if (isMounted) setSvgImg(img)
+            }
+            img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(sanitized)}`
+          } else {
+            if (isMounted) setSvgImg(null)
+          }
+        } else if (!text && isMounted) {
+          setSvgImg(null)
+        }
+      } catch (err) {
+        console.warn("Failed to sanitize cylinder dieline SVG for 3D:", err)
+        if (isMounted) setSvgImg(null)
+      }
+    }
+
+    loadSanitized()
+    return () => {
+      isMounted = false
+    }
+  }, [dielineSvgUrl])
+
+  return svgImg
+}
+
 
 // Procedural Kraft / Corrugated Cardboard Bump Map (creates authentic physical fiber & fluting relief)
 let cachedKraftBumpTex: THREE.CanvasTexture | null = null
@@ -1228,22 +1289,7 @@ function ContinuousJarModel({
   const clearcoat = isGlossy ? 1.0 : 0.0
 
   const loadedImages = useImageCache(objects)
-  const [svgImg, setSvgImg] = useState<HTMLImageElement | null>(null)
-
-  useEffect(() => {
-    if (!dielineSvgUrl) {
-      setSvgImg(null)
-      return
-    }
-    const img = new Image()
-    img.crossOrigin = "anonymous"
-    img.onload = () => setSvgImg(img)
-    if (!dielineSvgUrl.startsWith("data:") && dielineSvgUrl.includes("<svg")) {
-      img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(dielineSvgUrl)}`
-    } else {
-      img.src = dielineSvgUrl
-    }
-  }, [dielineSvgUrl])
+  const svgImg = useSanitizedSvgImage(dielineSvgUrl)
 
   const wrapTexture = useMemo(() => {
     const canvas = document.createElement("canvas")
@@ -1519,22 +1565,7 @@ function ContinuousBottleModel({
   const bodyH = h * 0.7
 
   const loadedImages = useImageCache(objects)
-  const [svgImg, setSvgImg] = useState<HTMLImageElement | null>(null)
-
-  useEffect(() => {
-    if (!dielineSvgUrl) {
-      setSvgImg(null)
-      return
-    }
-    const img = new Image()
-    img.crossOrigin = "anonymous"
-    img.onload = () => setSvgImg(img)
-    if (!dielineSvgUrl.startsWith("data:") && dielineSvgUrl.includes("<svg")) {
-      img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(dielineSvgUrl)}`
-    } else {
-      img.src = dielineSvgUrl
-    }
-  }, [dielineSvgUrl])
+  const svgImg = useSanitizedSvgImage(dielineSvgUrl)
 
   const bottleTexture = useMemo(() => {
     const canvas = document.createElement("canvas")
@@ -1629,22 +1660,7 @@ function ContinuousCanModel({
   const h = height * normFactor
 
   const loadedImages = useImageCache(objects)
-  const [svgImg, setSvgImg] = useState<HTMLImageElement | null>(null)
-
-  useEffect(() => {
-    if (!dielineSvgUrl) {
-      setSvgImg(null)
-      return
-    }
-    const img = new Image()
-    img.crossOrigin = "anonymous"
-    img.onload = () => setSvgImg(img)
-    if (!dielineSvgUrl.startsWith("data:") && dielineSvgUrl.includes("<svg")) {
-      img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(dielineSvgUrl)}`
-    } else {
-      img.src = dielineSvgUrl
-    }
-  }, [dielineSvgUrl])
+  const svgImg = useSanitizedSvgImage(dielineSvgUrl)
 
   const canTexture = useMemo(() => {
     const canvas = document.createElement("canvas")
@@ -1970,19 +1986,8 @@ function CustomMeshModel({
       return
     }
     let isMounted = true
-    const img = new Image()
-    img.crossOrigin = "anonymous"
-    img.onload = () => {
-      if (isMounted) setSvgImage(img)
-    }
-    img.onerror = () => {
-      if (!dielineSvgUrl.startsWith("data:") && dielineSvgUrl.includes("<svg")) {
-        img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(dielineSvgUrl)}`
-      }
-    }
-    img.src = dielineSvgUrl
 
-    // Parse semantic panels for exact 2D-to-3D UV registration
+    // Parse semantic panels for exact 2D-to-3D UV registration and sanitize 3D overlay
     const loadPanels = async () => {
       try {
         let text = ""
@@ -1997,6 +2002,7 @@ function CustomMeshModel({
           const res = await fetch(dielineSvgUrl)
           if (res.ok) text = await res.text()
         }
+
         if (text && isMounted) {
           const autoFixed = autoFixDielineSvg(text)
           setSvgPanels({
@@ -2005,30 +2011,21 @@ function CustomMeshModel({
             panels: autoFixed.panels,
           })
 
-          // Strip opaque white sheet background so boxColor and faceColors show through
-          let transparentSvg = autoFixed.fixedSvg
-          try {
-            const parser = new DOMParser()
-            const doc = parser.parseFromString(autoFixed.fixedSvg, "image/svg+xml")
-            const sheet = doc.querySelector("#layer-sheet, #Sheet-Background")
-            if (sheet) {
-              sheet.querySelectorAll("rect").forEach((r) => r.setAttribute("fill", "none"))
+          // SANITIZE FOR 3D:
+          // Strips red cut lines, green crease lines, text labels, and annotations.
+          // Only legitimate custom graphic artwork is projected onto the 3D product!
+          const sanitized3DSvg = sanitizeSvgFor3D(text)
+          if (sanitized3DSvg) {
+            const fixedImg = new Image()
+            fixedImg.crossOrigin = "anonymous"
+            fixedImg.onload = () => {
+              if (isMounted) setSvgImage(fixedImg)
             }
-            const baseColor = doc.querySelector("#base-face-color")
-            if (baseColor) {
-              baseColor.setAttribute("fill", "none")
-            }
-            transparentSvg = new XMLSerializer().serializeToString(doc)
-          } catch (e) {
-            console.warn("Could not strip opaque background for 3D overlay:", e)
+            fixedImg.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(sanitized3DSvg)}`
+          } else {
+            // Pure technical knife dieline: keep 3D packaging 100% clean and realistic!
+            setSvgImage(null)
           }
-
-          const fixedImg = new Image()
-          fixedImg.crossOrigin = "anonymous"
-          fixedImg.onload = () => {
-            if (isMounted) setSvgImage(fixedImg)
-          }
-          fixedImg.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(transparentSvg)}`
         }
       } catch (err) {
         console.error("Failed to parse dieline panels in 3D viewer:", err)

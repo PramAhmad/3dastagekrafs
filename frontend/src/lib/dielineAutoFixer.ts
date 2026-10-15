@@ -3,6 +3,7 @@ import { DielinePanelZone, parseSvgDielinePanels } from "./dielineGenerator"
 export interface AutoFixResult {
   originalSvg: string
   fixedSvg: string
+  cleanSvg: string
   fixesApplied: string[]
   panels: DielinePanelZone[]
   totalWidth: number
@@ -24,6 +25,7 @@ export interface AutoFixResult {
  *    or boxes into 6-sided folding faces.
  * 5. Cut & Crease Layer Standards: Normalizes strokes into #FF007F (Cut) and #00A651 dashed (Crease).
  * 6. Metadata: Injects AstaKraf standard schema metadata.
+ * 7. Junk & Noise Cleaning: Strips third-party drafting metadata, foreign tags, and unneeded clutter.
  */
 export function autoFixDielineSvg(rawSvgText: string): AutoFixResult {
   const fixesApplied: string[] = []
@@ -32,6 +34,7 @@ export function autoFixDielineSvg(rawSvgText: string): AutoFixResult {
     return {
       originalSvg: rawSvgText,
       fixedSvg: rawSvgText,
+      cleanSvg: rawSvgText,
       fixesApplied: [],
       panels: [],
       totalWidth: 200,
@@ -50,6 +53,7 @@ export function autoFixDielineSvg(rawSvgText: string): AutoFixResult {
       return {
         originalSvg: rawSvgText,
         fixedSvg: rawSvgText,
+        cleanSvg: rawSvgText,
         fixesApplied: ["Gagal mem-parsing XML SVG"],
         panels: [],
         totalWidth: 200,
@@ -275,9 +279,76 @@ export function autoFixDielineSvg(rawSvgText: string): AutoFixResult {
       }
     }
 
-    // 6. SERIALIZE CLEAN STANDARDIZED SVG
+    // 6. JUNK & NOISE CLEANING (Auto-remove third-party metadata, drafting texts, registration marks, title blocks)
+    let cleanedItemsCount = 0
+
+    // Remove third-party software junk metadata and hidden elements
+    const junkSelectors = [
+      "metadata",
+      "foreignObject",
+      "[display='none']",
+      "[visibility='hidden']",
+      "[opacity='0']",
+    ]
+    junkSelectors.forEach((sel) => {
+      doc.querySelectorAll(sel).forEach((el) => {
+        el.remove()
+        cleanedItemsCount++
+      })
+    })
+
+    // Remove technical annotation layers, title blocks, legends, registration marks
+    const annSelectors = [
+      "#layer-annotations",
+      "#Technical-Annotations",
+      "#Legend",
+      "#Registration-Marks",
+      "#Title-Block",
+      ".title-label",
+      ".dim-label",
+      ".txt-title",
+      ".txt-meta",
+      ".txt-dim",
+      ".dim-line",
+      "#layer-bleed",
+      "#layer-safe",
+      "#Bleed-3mm",
+      "#Safe-Zone",
+      ".bleed-line",
+      ".safe-line",
+    ]
+    annSelectors.forEach((sel) => {
+      doc.querySelectorAll(sel).forEach((el) => {
+        el.remove()
+        cleanedItemsCount++
+      })
+    })
+
+    // Remove 4 corner registration crosses (circles with r <= 3.5 with parent lines)
+    doc.querySelectorAll("circle").forEach((c) => {
+      const r = parseFloat(c.getAttribute("r") || "0")
+      if (r <= 3.5 && c.parentElement && c.parentElement.querySelectorAll("line").length >= 2) {
+        c.parentElement.remove()
+        cleanedItemsCount++
+      }
+    })
+
+    // Remove static drafting texts inside the dieline template
+    doc.querySelectorAll("text, tspan").forEach((t) => {
+      t.remove()
+      cleanedItemsCount++
+    })
+
+    if (cleanedItemsCount > 0) {
+      fixesApplied.push(`Dibersihkan ${cleanedItemsCount} elemen teknis drafting (teks, tanda registrasi, & anotasi)`)
+    }
+
+    // 7. SERIALIZE CLEAN STANDARDIZED SVG
     const serializer = new XMLSerializer()
     const fixedSvg = serializer.serializeToString(doc)
+
+    // Generate a decluttered version without heavy drafting texts & crosshairs
+    const cleanSvg = cleanDielineSvg(fixedSvg, { removeTexts: true, removeAnnotations: true })
 
     // Parse the newly standardized panels
     const parsed = parseSvgDielinePanels(fixedSvg)
@@ -285,6 +356,7 @@ export function autoFixDielineSvg(rawSvgText: string): AutoFixResult {
     return {
       originalSvg: rawSvgText,
       fixedSvg,
+      cleanSvg,
       fixesApplied,
       panels: parsed.panels,
       totalWidth: parsed.totalWidth,
@@ -297,6 +369,7 @@ export function autoFixDielineSvg(rawSvgText: string): AutoFixResult {
     return {
       originalSvg: rawSvgText,
       fixedSvg: rawSvgText,
+      cleanSvg: rawSvgText,
       fixesApplied: [`Error: ${err?.message || "Gagal memproses SVG"}`],
       panels: [],
       totalWidth: 200,
@@ -304,5 +377,199 @@ export function autoFixDielineSvg(rawSvgText: string): AutoFixResult {
       isCylinder: false,
       hasBaseColor: false,
     }
+  }
+}
+
+/**
+ * Sanitizes an SVG specifically for 3D model texture projection.
+ * Strips all technical cut lines, crease lines, text labels, dimension annotations,
+ * registration crosshairs, title blocks, and bleed/safe zones.
+ *
+ * Retains ONLY legitimate graphic artwork (e.g. paths/illustrations in #layer-artwork).
+ * Returns null if the SVG has no artwork (i.e. it is purely an engineering knife dieline),
+ * preventing red cut lines, green crease lines, and drafting texts from being projected onto the 3D model!
+ */
+export function sanitizeSvgFor3D(rawSvgText: string): string | null {
+  if (!rawSvgText || typeof window === "undefined") return null
+
+  try {
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(rawSvgText, "image/svg+xml")
+    const svgEl = doc.querySelector("svg")
+    if (!svgEl) return null
+
+    // 1. Remove all text and tspan elements
+    doc.querySelectorAll("text, tspan").forEach((t) => t.remove())
+
+    // 2. Remove technical annotations, dimension lines, title blocks, legends, bleed/safe
+    const annotationSelectors = [
+      "#layer-annotations",
+      "#Technical-Annotations",
+      "#Legend",
+      "#Title-Block",
+      ".title-label",
+      ".dim-label",
+      ".txt-title",
+      ".txt-meta",
+      ".txt-dim",
+      ".dim-line",
+      "#layer-sheet",
+      "#Sheet-Background",
+      "#base-face-color",
+      "#layer-panels",
+      "#Panels-Layer",
+      "[data-face]",
+      "#layer-bleed",
+      "#layer-safe",
+      "#Bleed-3mm",
+      "#Safe-Zone",
+      ".bleed-line",
+      ".safe-line",
+      "#Registration-Marks",
+      "#Reg-Marks",
+      "#Crosshairs",
+      "#Dimensions",
+      "#Guides",
+      "metadata",
+      "foreignObject",
+    ]
+    annotationSelectors.forEach((sel) => {
+      doc.querySelectorAll(sel).forEach((el) => el.remove())
+    })
+
+    // 3. Remove cut and crease lines from 3D model (model is already 3D folded!)
+    const isCutOrCreaseOrGuide = (el: Element) => {
+      const stroke = (el.getAttribute("stroke") || "").toLowerCase()
+      const style = (el.getAttribute("style") || "").toLowerCase()
+      const className = (el.getAttribute("class") || "").toLowerCase()
+      const id = (el.getAttribute("id") || "").toLowerCase()
+
+      // Check class or id
+      if (/cut|crease|score|perf|fold|dieline|knife|guide|dim|bleed|safe/i.test(className + " " + id)) return true
+
+      // Check stroke color (magenta, red, green, cyan)
+      const strokeVal = stroke + " " + style
+      if (
+        strokeVal.includes("ff007f") ||
+        strokeVal.includes("e11d48") ||
+        strokeVal.includes("f43f5e") ||
+        strokeVal.includes("ff0000") ||
+        strokeVal.includes("00a651") ||
+        strokeVal.includes("10b981") ||
+        strokeVal.includes("22c55e") ||
+        strokeVal.includes("00a0e9") ||
+        strokeVal.includes("magenta") ||
+        strokeVal.includes("rgb(255, 0, 127)") ||
+        strokeVal.includes("rgb(0, 166, 81)") ||
+        strokeVal.includes("rgb(255, 0, 0)")
+      ) {
+        return true
+      }
+      return false
+    }
+
+    doc.querySelectorAll("path, line, polyline, polygon, rect").forEach((el) => {
+      if (isCutOrCreaseOrGuide(el)) {
+        el.remove()
+      }
+    })
+
+    // 4. Remove registration marks (circle r <= 3.5 with cross lines)
+    doc.querySelectorAll("circle").forEach((c) => {
+      const r = parseFloat(c.getAttribute("r") || "0")
+      if (r <= 3.5 && c.parentElement && c.parentElement.querySelectorAll("line").length >= 2) {
+        c.parentElement.remove()
+      }
+    })
+
+    // 5. Remove sheet or solid white background rects that cover 3D packaging color
+    doc.querySelectorAll("rect").forEach((r) => {
+      const fill = (r.getAttribute("fill") || "").toLowerCase()
+      const id = (r.getAttribute("id") || "").toLowerCase()
+      if (id.includes("sheet") || id.includes("base") || fill === "#ffffff" || fill === "white" || fill === "#fff") {
+        r.remove()
+      }
+    })
+
+    // 6. Check if there are any remaining artwork paths/images/shapes
+    const artworkElements = svgEl.querySelectorAll("path, image, circle, ellipse, polygon, rect")
+    if (artworkElements.length === 0) {
+      // Pure technical knife dieline: return null so 3D model stays completely clean
+      return null
+    }
+
+    return new XMLSerializer().serializeToString(doc)
+  } catch (err) {
+    console.warn("Failed to sanitize SVG for 3D:", err)
+    return null
+  }
+}
+
+/**
+ * Automatically cleans up unneeded components, drafting texts, and technical junk from raw SVG dielines.
+ */
+export function cleanDielineSvg(
+  rawSvgText: string,
+  options: { removeTexts?: boolean; removeAnnotations?: boolean; removeJunkTags?: boolean } = {}
+): string {
+  const { removeTexts = true, removeAnnotations = true, removeJunkTags = true } = options
+  if (!rawSvgText || typeof window === "undefined") return rawSvgText
+
+  try {
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(rawSvgText, "image/svg+xml")
+    const svgEl = doc.querySelector("svg")
+    if (!svgEl) return rawSvgText
+
+    // 1. Remove third-party software junk metadata and invisible elements
+    if (removeJunkTags) {
+      const junkSelectors = [
+        "metadata",
+        "foreignObject",
+        "[display='none']",
+        "[visibility='hidden']",
+        "[opacity='0']",
+      ]
+      junkSelectors.forEach((sel) => {
+        doc.querySelectorAll(sel).forEach((el) => el.remove())
+      })
+    }
+
+    // 2. Remove technical annotations, title blocks, legends, registration marks
+    if (removeAnnotations) {
+      const annSelectors = [
+        "#layer-annotations",
+        "#Technical-Annotations",
+        "#Legend",
+        "#Registration-Marks",
+        ".title-label",
+        ".dim-label",
+        ".txt-title",
+        ".txt-meta",
+        ".txt-dim",
+        ".dim-line",
+      ]
+      annSelectors.forEach((sel) => {
+        doc.querySelectorAll(sel).forEach((el) => el.remove())
+      })
+
+      // Remove 4 corner registration crosses
+      doc.querySelectorAll("circle").forEach((c) => {
+        const r = parseFloat(c.getAttribute("r") || "0")
+        if (r <= 3.5 && c.parentElement && c.parentElement.querySelectorAll("line").length >= 2) {
+          c.parentElement.remove()
+        }
+      })
+    }
+
+    // 3. Remove text nodes if requested
+    if (removeTexts) {
+      doc.querySelectorAll("text, tspan").forEach((t) => t.remove())
+    }
+
+    return new XMLSerializer().serializeToString(doc)
+  } catch (e) {
+    console.warn("cleanDielineSvg error:", e)
+    return rawSvgText
   }
 }
