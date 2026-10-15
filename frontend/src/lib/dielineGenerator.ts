@@ -9,6 +9,15 @@ export interface DielineParams {
   style: "fefco-0427" | "fefco-0201" | "fefco-0211" | "fefco-0422"
 }
 
+export interface DielinePanelZone {
+  face: "front" | "back" | "left" | "right" | "top" | "bottom" | "glue-flap" | "dust-flap"
+  x: number
+  y: number
+  width: number
+  height: number
+  label?: string
+}
+
 export interface GeneratedDieline {
   style: string
   name: string
@@ -18,6 +27,7 @@ export interface GeneratedDieline {
   dataUrl: string
   canvasWidthPx: number // at 150 DPI
   canvasHeightPx: number // at 150 DPI
+  panels: DielinePanelZone[]
 }
 
 // 150 DPI physical conversion rule: pixels = (mm / 25.4) * 150
@@ -47,6 +57,7 @@ export function generateParametricDieline({
   let name = "FEFCO 0427 (Roll-End Tuck Top Mailer)"
   let cutPaths: string[] = []
   let creaseLines: { x1: number; y1: number; x2: number; y2: number }[] = []
+  let panelZones: DielinePanelZone[] = []
   let totalW = 100
   let totalH = 100
 
@@ -113,6 +124,15 @@ export function generateParametricDieline({
       { x1: startX, y1: baseY, x2: startX, y2: baseY + D },
       { x1: startX + W, y1: baseY, x2: startX + W, y2: baseY + D },
     ]
+
+    panelZones = [
+      { face: "front", x: startX, y: frontWallY, width: W, height: flapH, label: "DEPAN (FRONT)" },
+      { face: "bottom", x: startX, y: baseY, width: W, height: D, label: "ALAS (BOTTOM)" },
+      { face: "back", x: startX, y: backWallY, width: W, height: H, label: "BELAKANG (BACK)" },
+      { face: "top", x: startX, y: lidY, width: W, height: D, label: "TUTUP (TOP LID)" },
+      { face: "left", x: startX - flapH, y: baseY, width: flapH, height: D, label: "KIRI (LEFT)" },
+      { face: "right", x: startX + W, y: baseY, width: flapH, height: D, label: "KANAN (RIGHT)" },
+    ]
   } else if (style === "fefco-0201") {
     name = "FEFCO 0201 (Regular Slotted Container - RSC)"
     const flap = Math.round(D / 2)
@@ -157,6 +177,14 @@ export function generateParametricDieline({
     creaseLines.push({ x1: pad + glueTab, y1: y1, x2: totalW - pad, y2: y1 })
     creaseLines.push({ x1: pad + glueTab, y1: y2, x2: totalW - pad, y2: y2 })
     creaseLines.push({ x1: pad + glueTab, y1: y1, x2: pad + glueTab, y2: y2 })
+
+    panelZones = [
+      { face: "glue-flap", x: pad, y: y1, width: glueTab, height: H, label: "LEM (GLUE)" },
+      { face: "front", x: pad + glueTab, y: y1, width: W, height: H, label: "DEPAN (FRONT)" },
+      { face: "right", x: pad + glueTab + W, y: y1, width: D, height: H, label: "KANAN (RIGHT)" },
+      { face: "back", x: pad + glueTab + W + D, y: y1, width: W, height: H, label: "BELAKANG (BACK)" },
+      { face: "left", x: pad + glueTab + W * 2 + D, y: y1, width: D, height: H, label: "KIRI (LEFT)" },
+    ]
   } else if (style === "fefco-0211") {
     name = "FEFCO 0211 (Straight Tuck-End Carton)"
     const tuck = Math.min(25, D * 0.6)
@@ -204,6 +232,16 @@ export function generateParametricDieline({
       { x1: startX + W + D, y1: yBodyTop, x2: startX + W + D, y2: yBodyBottom },
       { x1: startX + W * 2 + D, y1: yBodyTop, x2: startX + W * 2 + D, y2: yBodyBottom },
     ]
+
+    panelZones = [
+      { face: "glue-flap", x: pad, y: yBodyTop, width: glueTab, height: H, label: "LEM (GLUE)" },
+      { face: "front", x: startX, y: yBodyTop, width: W, height: H, label: "DEPAN (FRONT)" },
+      { face: "right", x: startX + W, y: yBodyTop, width: D, height: H, label: "KANAN (RIGHT)" },
+      { face: "back", x: startX + W + D, y: yBodyTop, width: W, height: H, label: "BELAKANG (BACK)" },
+      { face: "left", x: startX + W * 2 + D, y: yBodyTop, width: D, height: H, label: "KIRI (LEFT)" },
+      { face: "top", x: startX + W, y: yTopLid, width: D, height: D, label: "TUTUP ATAS" },
+      { face: "bottom", x: startX + W, y: yBodyBottom, width: D, height: D, label: "TUTUP BAWAH" },
+    ]
   } else {
     // FEFCO 0422 (Counter Display Tray)
     name = "FEFCO 0422 (Counter Display Tray)"
@@ -233,39 +271,94 @@ export function generateParametricDieline({
       { x1: bx, y1: by, x2: bx, y2: by + D },
       { x1: bx + W, y1: by, x2: bx + W, y2: by + D },
     ]
+
+    panelZones = [
+      { face: "bottom", x: bx, y: by, width: W, height: D, label: "DASAR TRAY" },
+      { face: "left", x: bx - H, y: by, width: H, height: D, label: "DINDING KIRI" },
+      { face: "right", x: bx + W, y: by, width: H, height: D, label: "DINDING KANAN" },
+      { face: "back", x: bx, y: by - H, width: W, height: H, label: "DINDING BELAKANG" },
+      { face: "front", x: bx, y: by + D, width: W, height: H, label: "DINDING DEPAN" },
+    ]
   }
 
   // Calculate 150 DPI pixel dimensions
   const canvasWidthPx = mmToPixels150Dpi(totalW)
   const canvasHeightPx = mmToPixels150Dpi(totalH)
 
-  // Construct pure SVG XML
+  // Construct pure SVG XML conforming to AstaKraf Packaging Standard v1.0
   const svgString = `
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalW} ${totalH}" width="${totalW}mm" height="${totalH}mm">
+<svg 
+  xmlns="http://www.w3.org/2000/svg" 
+  viewBox="0 0 ${totalW} ${totalH}" 
+  width="${totalW}mm" 
+  height="${totalH}mm"
+  data-generator="astakraf-dieline-engine"
+  data-style="${style}"
+  data-width="${W}"
+  data-depth="${D}"
+  data-height="${H}"
+  data-unit="mm"
+>
   <defs>
+    <!-- AstaKraf Packaging Technical Metadata -->
+    <metadata>
+      <astakraf:packaging
+        xmlns:astakraf="https://kemasan3d.id/schema/dieline/v1"
+        style="${style}"
+        length="${W}"
+        width="${D}"
+        height="${H}"
+        caliper="${caliper}"
+        unit="mm"
+      />
+    </metadata>
+
     <style>
       .cut-line { stroke: #e11d48; stroke-width: 1.2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
       .crease-line { stroke: #10b981; stroke-width: 1.0; stroke-dasharray: 4 3; fill: none; }
+      .perf-line { stroke: #8b5cf6; stroke-width: 0.8; stroke-dasharray: 1.5 2; fill: none; }
+      .bleed-line { stroke: #ec4899; stroke-width: 0.5; stroke-dasharray: 2 2; fill: none; }
+      .safe-line { stroke: #06b6d4; stroke-width: 0.5; stroke-dasharray: 1 2; fill: none; }
       .dim-label { font-family: monospace; font-size: 8px; font-weight: bold; fill: #2563eb; }
       .title-label { font-family: sans-serif; font-size: 9px; font-weight: bold; fill: #0f172a; }
+      .panel-label { font-family: sans-serif; font-size: 7px; font-weight: bold; fill: #64748b; text-anchor: middle; }
     </style>
   </defs>
 
-  <!-- Background Guide Sheet -->
-  <rect width="${totalW}" height="${totalH}" fill="#ffffff" />
+  <!-- Layer 1: Sheet Background -->
+  <g id="layer-sheet">
+    <rect width="${totalW}" height="${totalH}" fill="#ffffff" />
+  </g>
 
-  <!-- Dieline Meta Title -->
-  <text x="15" y="15" class="title-label">${name} — ${W} × ${D} × ${H} mm (Caliper: ${caliper} mm)</text>
-  <text x="15" y="25" class="dim-label" fill="#64748b">150 DPI Canvas: ${canvasWidthPx} × ${canvasHeightPx} px | Solid Red = Cut | Dashed Green = Crease</text>
+  <!-- Layer 2: Semantic Panels (3D Face UV Mapping) -->
+  <g id="layer-panels">
+    ${panelZones
+      .map(
+        (p) => `
+    <rect id="face-${p.face}" data-face="${p.face}" x="${p.x}" y="${p.y}" width="${p.width}" height="${p.height}" fill="rgba(37,99,235,0.02)" stroke="rgba(37,99,235,0.2)" stroke-width="0.4" />
+    <text x="${p.x + p.width / 2}" y="${p.y + p.height / 2 + 2.5}" class="panel-label">${p.label || p.face.toUpperCase()}</text>`
+      )
+      .join("")}
+  </g>
 
-  <!-- Layer: Crease / Fold Lines -->
-  <g id="crease-lines" class="crease-line">
+  <!-- Layer 3: Artwork (Designers place custom graphics/stickers here) -->
+  <g id="layer-artwork">
+  </g>
+
+  <!-- Layer 4: Crease / Fold Lines -->
+  <g id="layer-crease" class="crease-line">
     ${creaseLines.map((c) => `<line x1="${c.x1}" y1="${c.y1}" x2="${c.x2}" y2="${c.y2}" />`).join("\n    ")}
   </g>
 
-  <!-- Layer: Cut Lines (Pisau Potong) -->
-  <g id="cut-lines" class="cut-line">
+  <!-- Layer 5: Cut Lines (Pisau Potong Luar) -->
+  <g id="layer-cut" class="cut-line">
     ${cutPaths.map((p) => `<path d="${p}" />`).join("\n    ")}
+  </g>
+
+  <!-- Layer 6: Technical Annotations & Legend -->
+  <g id="layer-annotations">
+    <text x="15" y="15" class="title-label">${name} — ${W} × ${D} × ${H} mm (Caliper: ${caliper} mm)</text>
+    <text x="15" y="25" class="dim-label" fill="#64748b">150 DPI: ${canvasWidthPx} × ${canvasHeightPx} px | Solid Red = Cut | Dashed Green = Crease</text>
   </g>
 </svg>
 `.trim()
@@ -281,5 +374,6 @@ export function generateParametricDieline({
     dataUrl,
     canvasWidthPx,
     canvasHeightPx,
+    panels: panelZones,
   }
 }
