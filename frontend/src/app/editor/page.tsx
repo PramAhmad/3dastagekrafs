@@ -8,6 +8,7 @@ import PackagingCanvas, {
   CanvasObject,
 } from "@/components/3d/PackagingCanvas"
 import DielineCanvas from "@/components/2d/DielineCanvas"
+import PacdoraLoadingScreen from "@/components/ui/PacdoraLoadingScreen"
 import { formatRupiah } from "@/lib/utils"
 import { getCurrentUser, getProjectById, saveProjectToHistory, getUserSavedProjects, logoutUser } from "@/lib/auth"
 import { UserSession, SavedProject } from "@/types/auth"
@@ -260,6 +261,7 @@ function EditorComponent() {
   // Auth User State
   const [currentUser, setCurrentUser] = useState<UserSession | null>(null)
   const [authChecking, setAuthChecking] = useState(true)
+  const [isStudioLoading, setIsStudioLoading] = useState(true)
 
   // Current Project Info
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(projectIdParam || null)
@@ -1072,11 +1074,15 @@ function EditorComponent() {
 
   const selectedObject = objects.find((o) => o.id === selectedObjectId)
 
-  if (authChecking) {
+  if (authChecking || isStudioLoading) {
     return (
-      <div className="h-screen w-full bg-[#EEF4F8] flex items-center justify-center text-xs text-[#1F3A5C] font-sans">
-        Memeriksa autentikasi studio...
-      </div>
+      <PacdoraLoadingScreen
+        message="Memuat Studio 3D & Dieline Kemasan..."
+        durationMs={1300}
+        onLoaded={() => {
+          if (!authChecking) setIsStudioLoading(false)
+        }}
+      />
     )
   }
 
@@ -2116,7 +2122,7 @@ function EditorComponent() {
 
 export default function EditorPage() {
   return (
-    <Suspense fallback={<div className="h-screen w-full bg-[#EEF4F8] flex items-center justify-center text-xs text-[#1F3A5C] font-bold">Memuat Studio 3D...</div>}>
+    <Suspense fallback={<PacdoraLoadingScreen message="Memuat Studio 3D Kemasan..." />}>
       <EditorComponent />
     </Suspense>
   )

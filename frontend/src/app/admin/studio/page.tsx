@@ -30,6 +30,7 @@ import {
 
 import PackagingCanvas, { CanvasObject, SurfaceTarget } from "@/components/3d/PackagingCanvas"
 import { generateParametricDieline, mmToPixels150Dpi } from "@/lib/dielineGenerator"
+import { autoFixDielineSvg } from "@/lib/dielineAutoFixer"
 import { saveAsset, getAsset } from "@/lib/assetStorage"
 import { PackagingTemplate } from "@/types/admin"
 
@@ -266,44 +267,36 @@ function AdminStudioContent() {
 
     try {
       const text = await file.text()
-      setCustomDielineSvgRaw(text)
+      const autoFix = autoFixDielineSvg(text)
+      const effectiveSvg = autoFix.fixedSvg
+      setCustomDielineSvgRaw(effectiveSvg)
 
-      const reader = new FileReader()
-      reader.onload = async (evt) => {
-        const dataUrl = evt.target?.result as string
-        setCustomDielineSvgUrl(dataUrl)
-        await saveAsset(`temp_dieline_${file.name}`, dataUrl)
+      const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(effectiveSvg)}`
+      setCustomDielineSvgUrl(dataUrl)
+      await saveAsset(`temp_dieline_${file.name}`, dataUrl)
 
-        // Intelligent auto-detection of Cylindrical Bottle / Can wrap label vs Folding Box
-        const isCylinderPattern =
-          /cylinder|spray|bottle|kaleng|can|wrap|melingkar/i.test(file.name) ||
-          /Cylindrical|cylinder|Spray|Wrap Label/i.test(text)
+      // Intelligent auto-detection of Cylindrical Bottle / Can wrap label vs Folding Box
+      const isCylinderPattern = autoFix.isCylinder || /cylinder|spray|bottle|kaleng|can|wrap|melingkar/i.test(file.name)
 
-        if (isCylinderPattern) {
-          setCategory("BOTTLE")
-          setSelectedFormId("bottle-spray")
-          setFormName(file.name.replace(/\.[^/.]+$/, ""))
+      if (isCylinderPattern) {
+        setCategory("BOTTLE")
+        setSelectedFormId("bottle-spray")
+        setFormName(file.name.replace(/\.[^/.]+$/, ""))
 
-          // Extract wrap dimensions if available (e.g. 126 x 98 mm)
-          const dimMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:mm|x|×)\s*(\d+(?:\.\d+)?)\s*mm/i)
-          if (dimMatch) {
-            const parsedWrap = parseFloat(dimMatch[1])
-            const parsedH = parseFloat(dimMatch[2])
-            if (parsedWrap > 0 && parsedH > 0) {
-              const calculatedRadius = Math.round(parsedWrap / (2 * Math.PI))
-              setRadius(calculatedRadius)
-              setHeight(parsedH)
-            }
-          } else {
-            setRadius(20)
-            setHeight(98)
-          }
-          showToast(`Terdeteksi Dieline Botol Spray Silinder! Kategori 3D beralih ke BOTOL.`, "info")
+        // Calculate radius from width
+        const wrapW = autoFix.totalWidth * 0.7
+        const calculatedRadius = Math.round(wrapW / (2 * Math.PI))
+        setRadius(calculatedRadius > 5 ? calculatedRadius : 20)
+        setHeight(Math.round(autoFix.totalHeight * 0.6) || 98)
+
+        showToast(`✓ Dieline Silinder Terdeteksi & Auto-Fixed (Ditambahkan Base Color & Panel 3D)!`, "success")
+      } else {
+        if (autoFix.fixesApplied.length > 0) {
+          showToast(`✓ SVG Auto-Fixed (${autoFix.fixesApplied.length} perbaikan standar diterapkan)!`, "success")
         } else {
           showToast(`Dieline SVG "${file.name}" terhubung langsung ke tekstur 3D!`)
         }
       }
-      reader.readAsDataURL(file)
     } catch (err) {
       console.error("Gagal membaca file SVG:", err)
       showToast("Gagal membaca file SVG yang diunggah.", "error")

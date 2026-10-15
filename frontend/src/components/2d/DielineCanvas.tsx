@@ -3,6 +3,8 @@
 import React, { useRef, useState, useEffect, useMemo, useCallback } from "react"
 import { CanvasObject, DecalType, SurfaceTarget } from "@/components/3d/PackagingCanvas"
 import { BRAND_COLORS } from "@/lib/theme"
+import { parseSvgDielinePanels, DielinePanelZone } from "@/lib/dielineGenerator"
+import { autoFixDielineSvg } from "@/lib/dielineAutoFixer"
 import {
   RotateCw,
   ZoomIn,
@@ -100,7 +102,12 @@ export default function DielineCanvas({
   const [rotationAngle, setRotationAngle] = useState(0)
 
   // Custom SVG state
-  const [svgMeta, setSvgMeta] = useState<{ width: number; height: number; innerSvg: string } | null>(null)
+  const [svgMeta, setSvgMeta] = useState<{
+    width: number
+    height: number
+    innerSvg: string
+    panels?: DielinePanelZone[]
+  } | null>(null)
 
   // Parse custom uploaded SVG dieline when dielineSvgUrl changes
   useEffect(() => {
@@ -127,30 +134,17 @@ export default function DielineCanvas({
         }
 
         if (svgText) {
+          const autoFix = autoFixDielineSvg(svgText)
           const parser = new DOMParser()
-          const doc = parser.parseFromString(svgText, "image/svg+xml")
+          const doc = parser.parseFromString(autoFix.fixedSvg, "image/svg+xml")
           const svgEl = doc.querySelector("svg")
           if (svgEl) {
-            let w = parseFloat(svgEl.getAttribute("width") || "")
-            let h = parseFloat(svgEl.getAttribute("height") || "")
-            const viewBox = svgEl.getAttribute("viewBox")
-
-            if (viewBox && (!w || !h || isNaN(w) || isNaN(h))) {
-              const parts = viewBox.split(/[\s,]+/).map(Number)
-              if (parts.length >= 4) {
-                w = parts[2]
-                h = parts[3]
-              }
-            }
-
-            if (!w || isNaN(w)) w = 800
-            if (!h || isNaN(h)) h = 600
-
             // Extract inner elements (excluding outer <svg>)
             setSvgMeta({
-              width: w,
-              height: h,
+              width: autoFix.totalWidth,
+              height: autoFix.totalHeight,
               innerSvg: svgEl.innerHTML,
+              panels: autoFix.panels,
             })
           }
         }
@@ -193,62 +187,61 @@ export default function DielineCanvas({
       const svgW = svgMeta.width
       const svgH = svgMeta.height
 
-      // Construct interactive face regions matching the SVG coordinate grid
-      const mainFaceW = svgW * 0.4
-      const mainFaceH = svgH * 0.4
-      const centerX = (svgW - mainFaceW) / 2
-      const centerY = (svgH - mainFaceH) / 2
+      let faces: FaceDef[] = []
+      if (svgMeta.panels && svgMeta.panels.length > 0) {
+        faces = svgMeta.panels.map((p) => ({
+          id: p.face,
+          name: p.label || p.face.toUpperCase(),
+          surfaceTarget: p.face as SurfaceTarget,
+          x: p.x,
+          y: p.y,
+          w: p.width,
+          h: p.height,
+          dimLabelW: `${Math.round(p.width)} mm`,
+          dimLabelH: `${Math.round(p.height)} mm`,
+          isMainFace: true,
+        }))
+      } else {
+        // Fallback: Construct default front/back regions matching coordinate grid
+        const mainFaceW = svgW * 0.4
+        const mainFaceH = svgH * 0.4
+        const centerX = (svgW - mainFaceW) / 2
+        const centerY = (svgH - mainFaceH) / 2
 
-      const faces: FaceDef[] = [
-        {
-          id: "front",
-          name: "Muka Depan (Front Panel)",
-          surfaceTarget: "front",
-          x: centerX,
-          y: centerY,
-          w: mainFaceW,
-          h: mainFaceH,
-          dimLabelW: `${Math.round((svgW / 150) * 25.4)} mm`,
-          dimLabelH: `${Math.round((svgH / 150) * 25.4)} mm`,
-          isMainFace: true,
-        },
-        {
-          id: "back",
-          name: "Muka Belakang (Back Panel)",
-          surfaceTarget: "back",
-          x: centerX,
-          y: centerY,
-          w: mainFaceW,
-          h: mainFaceH,
-          dimLabelW: `${Math.round((svgW / 150) * 25.4)} mm`,
-          dimLabelH: `${Math.round((svgH / 150) * 25.4)} mm`,
-          isMainFace: true,
-        },
-        {
-          id: "top",
-          name: "Sisi Atas (Top Panel)",
-          surfaceTarget: "top",
-          x: centerX,
-          y: Math.max(10, centerY - mainFaceH * 0.5),
-          w: mainFaceW,
-          h: mainFaceH * 0.5,
-          dimLabelW: `${Math.round((svgW / 150) * 25.4)} mm`,
-          dimLabelH: `${Math.round(((svgH * 0.5) / 150) * 25.4)} mm`,
-          isMainFace: true,
-        },
-        {
-          id: "bottom",
-          name: "Sisi Bawah (Bottom Panel)",
-          surfaceTarget: "bottom" as SurfaceTarget,
-          x: centerX,
-          y: centerY + mainFaceH,
-          w: mainFaceW,
-          h: mainFaceH * 0.5,
-          dimLabelW: `${Math.round((svgW / 150) * 25.4)} mm`,
-          dimLabelH: `${Math.round(((svgH * 0.5) / 150) * 25.4)} mm`,
-          isMainFace: true,
-        },
-      ]
+        faces = [
+          {
+            id: "front",
+            name: "Muka Depan (Front Panel)",
+            surfaceTarget: "front",
+            x: centerX,
+            y: centerY,
+            w: mainFaceW,
+            h: mainFaceH,
+            dimLabelW: `${Math.round(mainFaceW)} mm`,
+            dimLabelH: `${Math.round(mainFaceH)} mm`,
+            isMainFace: true,
+          },
+          {
+            id: "back",
+            name: "Muka Belakang (Back Panel)",
+            surfaceTarget: "back",
+            x: centerX,
+            y: centerY,
+            w: mainFaceW,
+            h: mainFaceH,
+            dimLabelW: `${Math.round(mainFaceW)} mm`,
+            dimLabelH: `${Math.round(mainFaceH)} mm`,
+            isMainFace: true,
+          },
+        ]
+      }
+
+      const faceMap: Record<string, FaceDef> = {}
+      faces.forEach((f) => {
+        faceMap[f.id] = f
+        faceMap[f.surfaceTarget] = f
+      })
+      if (!faceMap.front && faces[0]) faceMap.front = faces[0]
 
       return {
         faces,
@@ -256,14 +249,7 @@ export default function DielineCanvas({
         totalW: svgW,
         totalH: svgH,
         isCustomSvg: true,
-        faceMap: {
-          front: faces[0],
-          back: faces[1],
-          top: faces[2],
-          bottom: faces[3],
-          left: faces[0],
-          right: faces[0],
-        } as Record<string, FaceDef>,
+        faceMap,
       }
     }
 
@@ -759,11 +745,50 @@ export default function DielineCanvas({
         <g filter="url(#cardboardShadow)">
           {/* 1. CUSTOM UPLOADED VECTOR SVG DIELINE (PACDORA REVERSE SYSTEM) */}
           {svgMeta && (
-            <g
-              id="pacdora-reverse-svg-layer"
-              transform={`scale(${activeScale})`}
-              dangerouslySetInnerHTML={{ __html: svgMeta.innerSvg }}
-            />
+            <>
+              {/* Interactive Face Panels underneath custom vector paths */}
+              {dieline.faces.map((face) => {
+                const isSelected = selectedFaceId === face.id
+                const faceFill = getFaceFill(face.id)
+                return (
+                  <g
+                    key={`custom_panel_${face.id}`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedFaceId(face.id)
+                      setShowColorPopover(false)
+                    }}
+                    className="cursor-pointer group"
+                  >
+                    <rect
+                      x={face.x * activeScale}
+                      y={face.y * activeScale}
+                      width={face.w * activeScale}
+                      height={face.h * activeScale}
+                      fill={faceFill}
+                      fillOpacity={isSelected ? 0.35 : 0.15}
+                      stroke={isSelected ? "#2563eb" : "rgba(37,99,235,0.4)"}
+                      strokeWidth={isSelected ? 2 : 1}
+                      strokeDasharray={isSelected ? undefined : "3,2"}
+                    />
+                    <text
+                      x={(face.x + face.w / 2) * activeScale}
+                      y={(face.y + face.h / 2) * activeScale + 3}
+                      textAnchor="middle"
+                      className="fill-slate-500 font-mono text-[9px] font-bold pointer-events-none select-none opacity-60"
+                    >
+                      {face.name}
+                    </text>
+                  </g>
+                )
+              })}
+
+              <g
+                id="pacdora-reverse-svg-layer"
+                transform={`scale(${activeScale})`}
+                dangerouslySetInnerHTML={{ __html: svgMeta.innerSvg }}
+              />
+            </>
           )}
 
           {/* Render All Interactive Faces and Their Connected Flaps (Only if NOT custom SVG or as interactive overlay) */}

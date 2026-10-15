@@ -5,9 +5,10 @@ import path from "path"
 
 function getTargetUploadDirs(): string[] {
   const cwd = process.cwd()
+  const isInsideFrontend = cwd.endsWith("frontend")
   const candidates = [
     path.join(cwd, "public", "uploads"),
-    path.join(cwd, "frontend", "public", "uploads"),
+    ...(isInsideFrontend ? [] : [path.join(cwd, "frontend", "public", "uploads")]),
     path.join("/var/www/astaKraf/frontend/public/uploads"),
   ]
 

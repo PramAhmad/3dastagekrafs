@@ -377,3 +377,93 @@ export function generateParametricDieline({
     panels: panelZones,
   }
 }
+
+/**
+ * Universal SVG Dieline Parser
+ * Extracts physical dimensions and semantic panel zones (data-face) for exact 2D-to-3D UV mapping.
+ */
+export function parseSvgDielinePanels(svgText: string): {
+  totalWidth: number
+  totalHeight: number
+  panels: DielinePanelZone[]
+} {
+  if (!svgText || typeof window === "undefined") {
+    return { totalWidth: 200, totalHeight: 200, panels: [] }
+  }
+
+  try {
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(svgText, "image/svg+xml")
+    const svgEl = doc.querySelector("svg")
+    if (!svgEl) return { totalWidth: 200, totalHeight: 200, panels: [] }
+
+    // 1. Determine total dimensions from width/height or viewBox
+    let totalWidth = parseFloat(svgEl.getAttribute("width") || "")
+    let totalHeight = parseFloat(svgEl.getAttribute("height") || "")
+    const viewBox = svgEl.getAttribute("viewBox")
+
+    if (viewBox && (!totalWidth || !totalHeight || isNaN(totalWidth) || isNaN(totalHeight))) {
+      const parts = viewBox.split(/[\s,]+/).map(Number)
+      if (parts.length >= 4) {
+        totalWidth = parts[2]
+        totalHeight = parts[3]
+      }
+    }
+
+    if (!totalWidth || isNaN(totalWidth)) totalWidth = 200
+    if (!totalHeight || isNaN(totalHeight)) totalHeight = 200
+
+    const panels: DielinePanelZone[] = []
+
+    // 2. Query elements with [data-face] (AstaKraf standard)
+    const faceElements = doc.querySelectorAll("[data-face]")
+    if (faceElements.length > 0) {
+      faceElements.forEach((el) => {
+        const rawFace = el.getAttribute("data-face") || "front"
+        const face = rawFace.toLowerCase() as DielinePanelZone["face"]
+        const x = parseFloat(el.getAttribute("x") || "0")
+        const y = parseFloat(el.getAttribute("y") || "0")
+        const width = parseFloat(el.getAttribute("width") || "50")
+        const height = parseFloat(el.getAttribute("height") || "50")
+        const label = el.getAttribute("data-label") || el.getAttribute("id") || face.toUpperCase()
+
+        panels.push({ face, x, y, width, height, label })
+      })
+    } else {
+      // 3. Fallback: Query elements with id containing face names
+      const standardFaces: Array<DielinePanelZone["face"]> = ["front", "back", "top", "bottom", "left", "right", "glue-flap"]
+      standardFaces.forEach((f) => {
+        const el = doc.querySelector(`#face-${f}, #${f}, [id*="${f}"]`)
+        if (el && (el.tagName === "rect" || el.tagName === "g")) {
+          const x = parseFloat(el.getAttribute("x") || "0")
+          const y = parseFloat(el.getAttribute("y") || "0")
+          const width = parseFloat(el.getAttribute("width") || "50")
+          const height = parseFloat(el.getAttribute("height") || "50")
+          if (width > 0 && height > 0) {
+            panels.push({ face: f, x, y, width, height, label: f.toUpperCase() })
+          }
+        }
+      })
+
+      // 4. Fallback for Cylindrical Wrap Labels
+      if (panels.length === 0) {
+        const isCylinder = /cylinder|bottle|spray|can|wrap/i.test(svgText)
+        if (isCylinder) {
+          const wrapW = totalWidth * 0.7
+          const wrapH = totalHeight * 0.6
+          const startX = (totalWidth - wrapW) / 2
+          const startY = (totalHeight - wrapH) / 2
+          panels.push(
+            { face: "front", x: startX, y: startY, width: wrapW / 2, height: wrapH, label: "MUKA DEPAN (FRONT 0°-180°)" },
+            { face: "back", x: startX + wrapW / 2, y: startY, width: wrapW / 2, height: wrapH, label: "MUKA BELAKANG (BACK 180°-360°)" }
+          )
+        }
+      }
+    }
+
+    return { totalWidth, totalHeight, panels }
+  } catch (e) {
+    console.error("Failed to parse SVG dieline panels:", e)
+    return { totalWidth: 200, totalHeight: 200, panels: [] }
+  }
+}

@@ -7,6 +7,8 @@ import type { OrbitControls as OrbitControlsImpl } from "three-stdlib"
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js"
 import * as THREE from "three"
+import { parseSvgDielinePanels, DielinePanelZone } from "@/lib/dielineGenerator"
+import { autoFixDielineSvg } from "@/lib/dielineAutoFixer"
 
 export type DecalType = "image" | "circle" | "square" | "triangle" | "star" | "hexagon" | "badge"
 export type SurfaceTarget = "front" | "back" | "top" | "left" | "right"
@@ -1878,6 +1880,7 @@ function CustomMeshModel({
   selectedObjectId,
   maxVisualBound = 1.25,
   modelScaleMultiplier = 1.0,
+  faceColors,
 }: {
   modelUrl: string
   modelFormat?: string
@@ -1892,6 +1895,7 @@ function CustomMeshModel({
   selectedObjectId: string | null
   maxVisualBound?: number
   modelScaleMultiplier?: number
+  faceColors?: Record<string, string>
 }) {
   const [stlGeometry, setStlGeometry] = useState<THREE.BufferGeometry | null>(null)
   const [gltfScene, setGltfScene] = useState<THREE.Group | null>(null)
@@ -1904,6 +1908,7 @@ function CustomMeshModel({
   const [loading, setLoading] = useState<boolean>(true)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [svgImage, setSvgImage] = useState<HTMLImageElement | null>(null)
+  const [svgPanels, setSvgPanels] = useState<{ totalWidth: number; totalHeight: number; panels: DielinePanelZone[] } | null>(null)
   const [dielineTexture, setDielineTexture] = useState<THREE.CanvasTexture | null>(null)
 
   const loadedImages = useImageCache(objects)
@@ -1918,6 +1923,7 @@ function CustomMeshModel({
   useEffect(() => {
     if (!dielineSvgUrl) {
       setSvgImage(null)
+      setSvgPanels(null)
       return
     }
     let isMounted = true
@@ -1927,12 +1933,49 @@ function CustomMeshModel({
       if (isMounted) setSvgImage(img)
     }
     img.onerror = () => {
-      // Fallback for raw SVG string or malformed data URL
       if (!dielineSvgUrl.startsWith("data:") && dielineSvgUrl.includes("<svg")) {
         img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(dielineSvgUrl)}`
       }
     }
     img.src = dielineSvgUrl
+
+    // Parse semantic panels for exact 2D-to-3D UV registration
+    const loadPanels = async () => {
+      try {
+        let text = ""
+        if (dielineSvgUrl.startsWith("data:image/svg+xml")) {
+          const base64Index = dielineSvgUrl.indexOf(";base64,")
+          if (base64Index !== -1) {
+            text = decodeURIComponent(escape(atob(dielineSvgUrl.substring(base64Index + 8))))
+          } else {
+            text = decodeURIComponent(dielineSvgUrl.substring(dielineSvgUrl.indexOf(",") + 1))
+          }
+        } else {
+          const res = await fetch(dielineSvgUrl)
+          if (res.ok) text = await res.text()
+        }
+        if (text && isMounted) {
+          const autoFixed = autoFixDielineSvg(text)
+          setSvgPanels({
+            totalWidth: autoFixed.totalWidth,
+            totalHeight: autoFixed.totalHeight,
+            panels: autoFixed.panels,
+          })
+          if (autoFixed.fixesApplied.length > 0) {
+            const fixedImg = new Image()
+            fixedImg.crossOrigin = "anonymous"
+            fixedImg.onload = () => {
+              if (isMounted) setSvgImage(fixedImg)
+            }
+            fixedImg.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(autoFixed.fixedSvg)}`
+          }
+        }
+      } catch (err) {
+        console.error("Failed to parse dieline panels in 3D viewer:", err)
+      }
+    }
+    loadPanels()
+
     return () => {
       isMounted = false
     }
@@ -2054,35 +2097,73 @@ function CustomMeshModel({
     // A. Base Material Finish & Color
     applyMaterialBackground(ctx, canvas.width, canvas.height, boxColor, materialFinish, materialType)
 
-    // B. Draw 2D SVG Dieline (Cut & Crease Lines)
-    if (svgImage && svgImage.complete && svgImage.naturalWidth > 0) {
-      ctx.drawImage(svgImage, 0, 0, canvas.width, canvas.height)
-    }
+    // B. Draw Panel Face Colors, Vector Dieline, and Precisely Mapped Artwork Decals
+    if (svgPanels && svgPanels.panels.length > 0) {
+      const { totalWidth: svgW, totalHeight: svgH, panels } = svgPanels
 
-    // C. Draw Artwork Decals / Text / Logos placed by user
-    const pxPerMm = canvas.width / Math.max(100, (length || 80) + (width || 60) * 2)
-    objects.forEach((obj) => {
-      if (!obj.visible) return
-      let cx = canvas.width / 2
-      let cy = canvas.height / 2
-
-      if (obj.surfaceTarget === "front") {
-        cx = canvas.width * 0.25
-      } else if (obj.surfaceTarget === "right") {
-        cx = canvas.width * 0.5
-      } else if (obj.surfaceTarget === "back") {
-        cx = canvas.width * 0.75
-      } else if (obj.surfaceTarget === "left") {
-        cx = canvas.width * 0.9
-      } else if (obj.surfaceTarget === "top") {
-        cy = canvas.height * 0.2
+      // Apply individual face colors to panel bounding boxes
+      if (faceColors) {
+        panels.forEach((p) => {
+          const col = faceColors[p.face]
+          if (col) {
+            ctx.fillStyle = col
+            ctx.fillRect(
+              (p.x / svgW) * canvas.width,
+              (p.y / svgH) * canvas.height,
+              (p.width / svgW) * canvas.width,
+              (p.height / svgH) * canvas.height
+            )
+          }
+        })
       }
 
-      cx += (obj.posX || 0) * (pxPerMm * 0.35)
-      cy -= (obj.posY || 0) * (pxPerMm * 0.35)
+      // Draw 2D SVG Dieline (Cut & Crease Lines)
+      if (svgImage && svgImage.complete && svgImage.naturalWidth > 0) {
+        ctx.drawImage(svgImage, 0, 0, canvas.width, canvas.height)
+      }
 
-      drawObject(ctx, obj, cx, cy, loadedImages, false, pxPerMm * 0.35, pxPerMm * 0.35)
-    })
+      // Draw Artwork Decals positioned relative to panel center (100% matched to 2D editor)
+      const pxPerMmX = canvas.width / svgW
+      const pxPerMmY = canvas.height / svgH
+
+      objects.forEach((obj) => {
+        if (!obj.visible) return
+        const panel = panels.find((p) => p.face === obj.surfaceTarget) || panels.find((p) => p.face === "front") || panels[0]
+        if (!panel) return
+
+        const panelCenterX = panel.x + panel.width / 2
+        const panelCenterY = panel.y + panel.height / 2
+
+        const objSvgX = panelCenterX + obj.posX
+        const objSvgY = panelCenterY - obj.posY
+
+        const cx = (objSvgX / svgW) * canvas.width
+        const cy = (objSvgY / svgH) * canvas.height
+
+        drawObject(ctx, obj, cx, cy, loadedImages, false, pxPerMmX, pxPerMmY)
+      })
+    } else {
+      // Fallback if no SVG panels are defined
+      if (svgImage && svgImage.complete && svgImage.naturalWidth > 0) {
+        ctx.drawImage(svgImage, 0, 0, canvas.width, canvas.height)
+      }
+
+      const pxPerMm = canvas.width / Math.max(100, (length || 80) + (width || 60) * 2)
+      objects.forEach((obj) => {
+        if (!obj.visible) return
+        let cx = canvas.width / 2
+        let cy = canvas.height / 2
+        if (obj.surfaceTarget === "front") cx = canvas.width * 0.25
+        else if (obj.surfaceTarget === "right") cx = canvas.width * 0.5
+        else if (obj.surfaceTarget === "back") cx = canvas.width * 0.75
+        else if (obj.surfaceTarget === "left") cx = canvas.width * 0.9
+        else if (obj.surfaceTarget === "top") cy = canvas.height * 0.2
+
+        cx += (obj.posX || 0) * (pxPerMm * 0.35)
+        cy -= (obj.posY || 0) * (pxPerMm * 0.35)
+        drawObject(ctx, obj, cx, cy, loadedImages, false, pxPerMm * 0.35, pxPerMm * 0.35)
+      })
+    }
 
     // D. Create Three.js Texture with 3DPAKS-Standard ColorSpace & FlipY=false
     const tex = new THREE.CanvasTexture(canvas)
@@ -2096,7 +2177,7 @@ function CustomMeshModel({
     return () => {
       tex.dispose()
     }
-  }, [boxColor, materialFinish, materialType, svgImage, objects, loadedImages, length, width, height])
+  }, [boxColor, faceColors, materialFinish, materialType, svgImage, svgPanels, objects, loadedImages, length, width, height])
 
   // 4. Bind Texture to GLB (matches 3DPAKS loader: binds to LabelZone or primary body meshes)
   useEffect(() => {
@@ -2314,6 +2395,15 @@ export default function PackagingCanvas({
   const [orbitEnabled, setOrbitEnabled] = useState(true)
   const [isHoveringObject, setIsHoveringObject] = useState(false)
   const [modelBottomY, setModelBottomY] = useState(-0.65)
+  const [isIntroSpinning, setIsIntroSpinning] = useState(true)
+
+  // Pacdora-style 360 Turntable Intro Spin on load
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsIntroSpinning(false)
+    }, 3800)
+    return () => clearTimeout(timer)
+  }, [])
 
   return (
     <div
@@ -2386,6 +2476,7 @@ export default function PackagingCanvas({
               selectedObjectId={selectedObjectId}
               maxVisualBound={maxVisualBound}
               modelScaleMultiplier={modelScaleMultiplier}
+              faceColors={faceColors}
             />
           ) : category === "POUCH" ? (
             <ContinuousPouchModel
@@ -2526,6 +2617,9 @@ export default function PackagingCanvas({
           minDistance={0.5}
           maxDistance={8}
           maxPolarAngle={Math.PI / 2 + 0.05}
+          autoRotate={isIntroSpinning}
+          autoRotateSpeed={2.8}
+          onStart={() => setIsIntroSpinning(false)}
         />
       </Canvas>
     </div>
