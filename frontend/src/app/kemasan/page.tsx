@@ -205,7 +205,7 @@ export default function KemasanCatalogPage() {
               href="/kemasan"
               className="text-[#2F79A6] bg-[#EEF4F8] px-2.5 py-1 rounded-lg transition-all"
             >
-              Katalog Model (12 Model)
+              Katalog Model
             </Link>
             <Link
               href="/editor"
@@ -269,7 +269,7 @@ export default function KemasanCatalogPage() {
           <div className="space-y-2.5 max-w-2xl text-center md:text-left">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1F3A5C] text-[#F7CB45] font-mono text-[10px] font-bold shadow-2xs">
               <Sparkles className="w-3 h-3 text-[#F7CB45]" />
-              <span>KOLEKSI LENGKAP 12 MODEL KEMASAN</span>
+              <span>KOLEKSI LENGKAP {templates.length > 0 ? `${templates.length} ` : ""}MODEL KEMASAN</span>
             </div>
             <h1 className="text-2xl sm:text-4xl font-black text-[#1F3A5C] tracking-tight leading-tight">
               Katalog Model Kemasan 3D &amp; Dieline Presisi
@@ -279,7 +279,7 @@ export default function KemasanCatalogPage() {
             </p>
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 pt-1 font-mono text-[11px] font-bold text-[#1F3A5C]">
               <span className="flex items-center gap-1.5 bg-white px-3 py-1 rounded-lg border border-[#D5E4F0]">
-                📦 12 Model Siap Desain
+                📦 {templates.length > 0 ? templates.length : 12} Model Siap Desain
               </span>
               <span className="flex items-center gap-1.5 bg-white px-3 py-1 rounded-lg border border-[#D5E4F0]">
                 🎨 11 Pilihan Bahan Khusus

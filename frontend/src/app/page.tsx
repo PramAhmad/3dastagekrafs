@@ -338,7 +338,7 @@ export default function LandingPage() {
               href="/kemasan"
               className="hover:text-[#1F3A5C] hover:bg-[#EEF4F8] px-2.5 py-1 rounded-lg transition-all"
             >
-              Katalog Model (12 Model)
+              Katalog Model
             </a>
             <a
               href="#kontak"
@@ -497,7 +497,7 @@ export default function LandingPage() {
                 className="px-5 py-3.5 rounded-xl bg-white hover:bg-[#EEF4F8] text-[#1F3A5C] font-bold text-xs border border-white transition-all shadow-md active:scale-95 flex items-center gap-1.5"
               >
                 <Package className="w-3.5 h-3.5 text-[#2F79A6]" />
-                <span>Lihat 12 Model Kemasan</span>
+                <span>Lihat Katalog Kemasan</span>
               </a>
             </div>
           </div>
@@ -771,8 +771,8 @@ export default function LandingPage() {
                 onClick={() => handleSelectTemplateAndStart(tmpl)}
                 className="group bg-white rounded-2xl border border-white/80 hover:border-[#1F3A5C] p-4 flex flex-col justify-between cursor-pointer transition-all hover:shadow-xl hover:-translate-y-1"
               >
-                {/* 3D Mockup Visual Box (Clean, Prominent Packaging Character) */}
-                <div className="w-full h-52 bg-[#EEF4F8] rounded-xl flex items-center justify-center p-4 group-hover:bg-[#EEF4F8]/80 transition-colors relative overflow-hidden border border-[#4394C3]/15">
+                {/* 3D Mockup Visual Box (Clean, Prominent Packaging Character - 1:1 Aspect Ratio) */}
+                <div className="w-full aspect-square bg-[#EEF4F8] rounded-xl flex items-center justify-center p-4 group-hover:bg-[#EEF4F8]/80 transition-colors relative overflow-hidden border border-[#4394C3]/15">
                   {/* Badge */}
                   {tmpl.badge && (
                     <div className="absolute top-2.5 right-2.5 z-10 px-2 py-0.5 rounded-md bg-[#1F3A5C] text-[#F7CB45] font-bold text-[9px] uppercase tracking-wider font-mono shadow-xs flex items-center gap-1">
@@ -910,7 +910,7 @@ export default function LandingPage() {
               href="/kemasan"
               className="px-5 py-3 rounded-2xl bg-white hover:bg-[#EEF4F8] text-[#1F3A5C] font-extrabold text-xs border border-white transition-all shadow-md active:scale-95 flex items-center gap-1.5"
             >
-              <span>Halaman Katalog Lengkap (12 Model)</span>
+              <span>Halaman Katalog Lengkap</span>
               <ArrowRight className="w-3.5 h-3.5 text-[#2F79A6]" />
             </a>
           </div>
