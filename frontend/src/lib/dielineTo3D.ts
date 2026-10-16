@@ -920,17 +920,21 @@ export function buildFolded3DModel(
     if (analysis.modelId === "fries-box") {
       const bottomL = L * 0.68
       const bottomW = W * 0.72
-      const makePanel = (bottom: number, top: number, height: number) => {
+      const makePanel = (bottom: number, top: number, height: number, scoop = false) => {
         const shape = new THREE.Shape()
         shape.moveTo(-bottom / 2, 0)
         shape.lineTo(bottom / 2, 0)
         shape.lineTo(top / 2, height)
-        shape.lineTo(-top / 2, height)
+        if (scoop) {
+          shape.quadraticCurveTo(0, height * 0.58, -top / 2, height)
+        } else {
+          shape.lineTo(-top / 2, height)
+        }
         shape.closePath()
         return new THREE.ShapeGeometry(shape)
       }
       const bottom = makeMesh(new THREE.BoxGeometry(bottomL, 0.012, bottomW)); group.add(bottom)
-      const front = makeMesh(makePanel(bottomL, L, H * 0.78)); front.position.z = W / 2; group.add(front)
+      const front = makeMesh(makePanel(bottomL, L, H * 0.78, true)); front.position.z = W / 2; group.add(front)
       const back = makeMesh(makePanel(bottomL, L, H)); back.position.z = -W / 2; group.add(back)
       const left = makeMesh(makePanel(bottomW, W, H)); left.rotation.y = Math.PI / 2; left.position.x = -L / 2; group.add(left)
       const right = makeMesh(makePanel(bottomW, W, H)); right.rotation.y = -Math.PI / 2; right.position.x = L / 2; group.add(right)
@@ -973,6 +977,56 @@ export function buildFolded3DModel(
     return { rootGroup, updateFold, materials }
   }
 
+  if (family === "gable_carton") {
+    const L = numberSpec("L", 125) * scale
+    const W = numberSpec("W", 85) * scale
+    const H = numberSpec("H", 105) * scale
+    const roofH = numberSpec("roofExtraHeight", 69) * scale * 0.48
+    const group = new THREE.Group()
+    rootGroup.add(group)
+    const walls = addOpenTray(group, L, W, H).slice(1)
+    const roofLength = Math.sqrt((W / 2) ** 2 + roofH ** 2)
+    const roofAngle = Math.atan2(roofH, W / 2)
+    const leftRoof = makeMesh(new THREE.BoxGeometry(L, 0.012, roofLength))
+    leftRoof.position.set(0, H + roofH / 2, -W / 4); leftRoof.rotation.x = roofAngle; group.add(leftRoof)
+    const rightRoof = makeMesh(new THREE.BoxGeometry(L, 0.012, roofLength))
+    rightRoof.position.set(0, H + roofH / 2, W / 4); rightRoof.rotation.x = -roofAngle; group.add(rightRoof)
+    const gableShape = new THREE.Shape()
+    gableShape.moveTo(-W / 2, 0); gableShape.lineTo(W / 2, 0); gableShape.lineTo(0, roofH); gableShape.closePath()
+    const frontGable = makeMesh(new THREE.ShapeGeometry(gableShape)); frontGable.rotation.y = Math.PI / 2; frontGable.position.set(L / 2, H, 0); group.add(frontGable)
+    const backGable = makeMesh(new THREE.ShapeGeometry(gableShape)); backGable.rotation.y = -Math.PI / 2; backGable.position.set(-L / 2, H, 0); group.add(backGable)
+    const handle = makeMesh(new THREE.BoxGeometry(L * 0.44, roofH * 0.34, 0.018)); handle.position.set(0, H + roofH * 0.92, 0); group.add(handle)
+    const updateFold = (progress: number) => {
+      const t = Math.max(0.02, Math.min(1, progress))
+      walls.forEach((wall) => { wall.scale.y = t })
+      leftRoof.rotation.x = roofAngle * t
+      rightRoof.rotation.x = -roofAngle * t
+    }
+    updateFold(1)
+    return { rootGroup, updateFold, materials }
+  }
+
+  if (family === "rolled_wall_mailer") {
+    const L = numberSpec("L", 220) * scale
+    const W = numberSpec("W", 150) * scale
+    const H = numberSpec("H", 55) * scale
+    const group = new THREE.Group()
+    rootGroup.add(group)
+    addOpenTray(group, L, W, H)
+    const rail = Math.max(0.018, H * 0.16)
+    const leftRoll = makeMesh(new THREE.BoxGeometry(rail, H * 0.72, W * 0.94)); leftRoll.position.set(-L / 2 + rail * 1.2, H * 0.64, 0); group.add(leftRoll)
+    const rightRoll = makeMesh(new THREE.BoxGeometry(rail, H * 0.72, W * 0.94)); rightRoll.position.set(L / 2 - rail * 1.2, H * 0.64, 0); group.add(rightRoll)
+    const lidPivot = new THREE.Group(); lidPivot.position.set(0, H, -W / 2); group.add(lidPivot)
+    const lid = makeMesh(new THREE.BoxGeometry(L, 0.014, W)); lid.position.z = W / 2; lidPivot.add(lid)
+    const tuck = makeMesh(new THREE.BoxGeometry(L * 0.9, H * 0.55, 0.012)); tuck.position.set(0, -H * 0.275, W); lidPivot.add(tuck)
+    const updateFold = (progress: number) => {
+      const t = Math.max(0, Math.min(1, progress))
+      lidPivot.rotation.x = -Math.PI / 2 * (1 - t)
+    }
+    updateFold(1)
+    return { rootGroup, updateFold, materials }
+  }
+
   if (family === "rigid_set") {
     const traySpec = objectSpec("tray") || objectSpec("base") || { L: analysis.dims.length, W: analysis.dims.width, H: Math.max(20, analysis.dims.height * 0.25) }
     const L = traySpec.L * scale
@@ -997,12 +1051,13 @@ export function buildFolded3DModel(
       closedY = lidGroup.position.y
     } else if (analysis.modelId === "book-box") {
       const cover = new THREE.Group()
-      cover.position.set(-L / 2, 0, -W / 2 - 0.025)
+      cover.position.set(-L / 2, 0, 0)
       group.add(cover)
-      const back = makeMesh(new THREE.BoxGeometry(L, 0.012, W)); back.position.set(L / 2, -0.02, W / 2); cover.add(back)
-      const spine = makeMesh(new THREE.BoxGeometry(0.012, H, W)); spine.position.set(0, H / 2, W / 2); cover.add(spine)
-      const front = makeMesh(new THREE.BoxGeometry(L, 0.012, W)); front.position.set(L / 2, H, W / 2); cover.add(front)
-      movableGroup = cover
+      const back = makeMesh(new THREE.BoxGeometry(L, 0.018, W)); back.position.set(L / 2, -0.025, 0); cover.add(back)
+      const spine = makeMesh(new THREE.BoxGeometry(0.018, H, W)); spine.position.set(0, H / 2, 0); cover.add(spine)
+      const frontPivot = new THREE.Group(); frontPivot.position.y = H; cover.add(frontPivot)
+      const front = makeMesh(new THREE.BoxGeometry(L, 0.018, W)); front.position.x = L / 2; frontPivot.add(front)
+      movableGroup = frontPivot
     } else {
       const sleeveGroup = new THREE.Group(); sleeveGroup.position.set(L * 0.64, 0, 0); group.add(sleeveGroup)
       const sleeveL = L * 1.04, sleeveW = W * 1.04, sleeveH = H * 1.12, wall = 0.012
@@ -1017,7 +1072,7 @@ export function buildFolded3DModel(
       const t = Math.max(0, Math.min(1, progress))
       if (!movableGroup) return
       if (analysis.modelId === "lidbase") movableGroup.position.y = closedY + H * 1.6 * (1 - t)
-      else if (analysis.modelId === "book-box") movableGroup.rotation.z = -Math.PI * 0.78 * (1 - t)
+      else if (analysis.modelId === "book-box") movableGroup.rotation.z = -Math.PI / 2 * (1 - t)
       else movableGroup.position.x = closedX + L * 0.82 * (1 - t)
     }
     updateFold(1)
@@ -1422,9 +1477,13 @@ export function buildFolded3DModel(
     const centerGroup = new THREE.Group()
     rootGroup.add(centerGroup)
 
-    const W = cutBox.w * scale
-    const H = cutBox.h * scale
-    const depthMax = W * 0.28
+    const filmW = numberSpec("filmWidth", cutBox.w)
+    const panelH = numberSpec("panelHeight", cutBox.h)
+    const gusset = numberSpec("bottomGusset", filmW * 0.28)
+    const pouchScale = 1.5 / Math.max(filmW, panelH)
+    const W = filmW * pouchScale
+    const H = panelH * pouchScale
+    const depthMax = gusset * pouchScale
 
     centerGroup.position.y = H / 2
 
@@ -1459,9 +1518,19 @@ export function buildFolded3DModel(
     centerGroup.add(bMesh)
 
     if (analysis.modelId === "spout-pouch") {
-      const spout = makeMesh(new THREE.CylinderGeometry(W * 0.055, W * 0.065, H * 0.13, 24))
-      spout.position.set(W * 0.3, H * 0.54, 0)
+      const spout = makeMesh(new THREE.CylinderGeometry(W * 0.05, W * 0.065, H * 0.13, 24))
+      spout.rotation.z = Math.PI / 2
+      spout.position.set(W * 0.48, H * 0.38, 0)
       centerGroup.add(spout)
+      const cap = makeMesh(new THREE.CylinderGeometry(W * 0.075, W * 0.075, H * 0.055, 24))
+      cap.rotation.z = Math.PI / 2
+      cap.position.set(W * 0.56, H * 0.38, 0)
+      centerGroup.add(cap)
+    } else if (analysis.modelId === "coffee-bag") {
+      const valve = makeMesh(new THREE.CylinderGeometry(W * 0.07, W * 0.07, 0.018, 32))
+      valve.rotation.x = Math.PI / 2
+      valve.position.set(0, H * 0.22, depthMax * 0.5 + 0.012)
+      centerGroup.add(valve)
     }
 
     const updateFold = (progress: number) => {
@@ -1472,7 +1541,7 @@ export function buildFolded3DModel(
       for (let r = 0; r <= segsY; r++) {
         const ny = r / segsY // 0 at top, 1 at bottom
         // Pouch curves wider in middle & bottom, pinched flat at top zipper seal
-        const vWeight = Math.sin(ny * Math.PI) * (ny > 0.15 ? 1.0 : ny / 0.15)
+        const vWeight = Math.pow(Math.sin(ny * Math.PI), 0.65) * (ny > 0.12 ? 1.0 : ny / 0.12)
         for (let c = 0; c <= segsX; c++) {
           const idx = r * (segsX + 1) + c
           const nx = c / segsX // 0 to 1
