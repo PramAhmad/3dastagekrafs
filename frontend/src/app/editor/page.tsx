@@ -26,7 +26,6 @@ import {
   Palette,
   UploadCloud,
   LayoutDashboard,
-  Grid as GridIcon,
   Circle,
   Square,
   Triangle,
@@ -301,9 +300,8 @@ function EditorComponent() {
   const [showImageLibraryModal, setShowImageLibraryModal] = useState(false)
   const [replacingObjectId, setReplacingObjectId] = useState<string | null>(null)
 
-  // Camera Orbit & Grid
-  const [cameraView, setCameraView] = useState<"iso" | "front" | "back" | "top" | "side">("iso")
-  const [showGrid, setShowGrid] = useState(false)
+  // Camera Orbit 360° (Pacdora-Style)
+  const [cameraView, setCameraView] = useState<"iso" | "front" | "back" | "top" | "bottom" | "side">("iso")
   const [dielineZoom, setDielineZoom] = useState(100)
   const [openProgress, setOpenProgress] = useState(0)
 
@@ -611,14 +609,7 @@ function EditorComponent() {
         return
       }
 
-      // 4. Ctrl+G / Cmd+G -> Toggle Grid
-      if ((e.ctrlKey || e.metaKey) && (e.key === "g" || e.key === "G")) {
-        e.preventDefault()
-        setShowGrid((prev) => !prev)
-        return
-      }
-
-      // 5. Ctrl+Z / Cmd+Z -> Undo
+      // 4. Ctrl+Z / Cmd+Z -> Undo
       if ((e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "Z") && !e.shiftKey) {
         e.preventDefault()
         handleUndo()
@@ -1637,7 +1628,6 @@ function EditorComponent() {
           manifest={selectedTemplate.manifest_json}
           objects={objects}
           selectedObjectId={selectedObjectId}
-          showGrid={showGrid}
           cameraView={cameraView}
           canvasBackground="#eaedf0"
           maxVisualBound={1.65}
@@ -1694,7 +1684,7 @@ function EditorComponent() {
 
         {/* Center Camera Orbit Buttons */}
         <div className="flex items-center gap-1 bg-[#EEF4F8] p-1 rounded-xl border border-[#D5E4F0]">
-          {(["iso", "front", "back", "top", "side"] as const).map((view) => (
+          {(["iso", "front", "back", "top", "bottom", "side"] as const).map((view) => (
             <button
               key={view}
               onClick={() => setCameraView(view)}
@@ -1704,17 +1694,19 @@ function EditorComponent() {
                   : "text-[#4B6B94] hover:text-[#1F3A5C]"
               }`}
             >
-              {view === "iso" ? "3D Orbit" : view === "front" ? "Depan" : view === "back" ? "Belakang" : view === "top" ? "Atas" : "Samping"}
+              {view === "iso"
+                ? "3D Orbit"
+                : view === "front"
+                ? "Depan"
+                : view === "back"
+                ? "Belakang"
+                : view === "top"
+                ? "Atas"
+                : view === "bottom"
+                ? "Bawah"
+                : "Samping"}
             </button>
           ))}
-          <div className="w-px h-4 bg-[#D5E4F0] mx-0.5" />
-          <button
-            onClick={() => setShowGrid(!showGrid)}
-            className={`px-2 py-1 rounded-lg text-[10px] transition-colors ${showGrid ? "text-[#1F3A5C] bg-[#D5E4F0] font-bold" : "text-[#718BAA]"}`}
-            title="Toggle Grid (Ctrl+G)"
-          >
-            <GridIcon className="w-3.5 h-3.5" />
-          </button>
           <div className="w-px h-4 bg-[#D5E4F0] mx-0.5" />
           <button
             onClick={handleUndo}
@@ -2131,14 +2123,6 @@ function EditorComponent() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-[#EEF4F8]/60">
-                  <span className="font-medium text-[#1F3A5C]">Toggle Garis Bantu Grid</span>
-                  <div className="flex gap-1">
-                    <kbd className="px-2 py-0.5 rounded bg-white border border-[#D5E4F0] text-[10px] font-mono font-bold text-[#1F3A5C] shadow-2xs">Ctrl</kbd>
-                    <span>+</span>
-                    <kbd className="px-2 py-0.5 rounded bg-white border border-[#D5E4F0] text-[10px] font-mono font-bold text-[#1F3A5C] shadow-2xs">G</kbd>
-                  </div>
-                </div>
 
                 <div className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-[#EEF4F8]/60">
                   <span className="font-medium text-[#1F3A5C]">Undo Perubahan</span>

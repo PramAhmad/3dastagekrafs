@@ -1,7 +1,7 @@
-# Pacdora-Style 2D Dieline & 3D Live Sync Architecture
+# AstaKraft 2D Dieline & 3D Live Sync Architecture
 
 ## 1. Overview
-Sistem editor kemasan 3D mengadopsi standar industri **Pacdora**:
+Sistem editor kemasan 3D mengadopsi standar industri kemasan modern:
 1. **Mode 1: Mockup Generator (3D View Utama)**
    - Fokus pada visualisasi fotorealistik 3D kemasan.
    - Panel kiri mengelola ukuran parametrik (Panjang $\times$ Lebar $\times$ Tinggi dalam mm), tebal dinding, material (*corrugated board, matte, glossy, kraft*), dan kartu preview jaring-jaring 2D.

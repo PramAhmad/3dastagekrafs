@@ -2,7 +2,7 @@
 
 Dokumen ini merupakan panduan spesifikasi teknis resmi (**AstaKraf Packaging Dieline Specification v1.0**) untuk pembuatan, impor, dan ekspor pola vektor SVG jaring-jaring kemasan (*dieline*) agar sinkron 100% dengan model 3D (Three.js WebGL / GLB) di AstaKraf.
 
-Standar ini mengadopsi konvensi industri percetakan internasional (**FEFCO / ECMA / ArtiosCAD**) dan standar visualisasi kemasan digital modern (**Pacdora / 3DPAKS**).
+Standar ini mengadopsi konvensi industri percetakan internasional (**FEFCO / ECMA / ArtiosCAD**) dan standar visualisasi kemasan digital modern (**AstaKraft / 3DPAKS**).
 
 ---
 

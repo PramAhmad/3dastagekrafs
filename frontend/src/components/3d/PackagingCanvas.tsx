@@ -2,7 +2,7 @@
 
 import React, { useRef, useMemo, useEffect, useState, useCallback } from "react"
 import { Canvas, useThree, ThreeEvent } from "@react-three/fiber"
-import { OrbitControls, Center, ContactShadows, Text, Grid, Environment, Lightformer } from "@react-three/drei"
+import { OrbitControls, Center, ContactShadows, Text, Environment, Lightformer } from "@react-three/drei"
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib"
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js"
@@ -62,8 +62,8 @@ export interface PackagingCanvasProps {
   onSelectObject?: (id: string | null) => void
   onUpdateSelectedObjectPos?: (x: number, y: number) => void
 
-  showGrid: boolean
-  cameraView: "iso" | "front" | "top" | "side" | "back"
+  showGrid?: boolean
+  cameraView: "iso" | "front" | "top" | "side" | "back" | "bottom"
   openProgress?: number // 0 (closed) to 100 (fully open)
   canvasBackground?: string
 
@@ -82,7 +82,7 @@ function CameraController({
   view,
   controlsRef,
 }: {
-  view: "iso" | "front" | "top" | "side" | "back"
+  view: "iso" | "front" | "top" | "side" | "back" | "bottom"
   controlsRef: React.RefObject<OrbitControlsImpl | null>
 }) {
   const { camera } = useThree()
@@ -102,6 +102,10 @@ function CameraController({
         break
       case "top":
         camera.position.set(0, 2.85, 0.001)
+        controls.target.set(0, 0, 0)
+        break
+      case "bottom":
+        camera.position.set(0, -2.85, 0.001)
         controls.target.set(0, 0, 0)
         break
       case "side":
@@ -2638,7 +2642,7 @@ export default function PackagingCanvas({
           shadow-bias={-0.0001}
         />
         <directionalLight position={[-6, 6, -4]} intensity={0.58} color="#e0f2fe" />
-        <directionalLight position={[0, -4, 2]} intensity={0.25} color="#f8fafc" />
+        <directionalLight position={[0, -4, 2]} intensity={0.45} color="#f8fafc" />
 
         {/* Procedural Lightformer reflections for glossy & metallic materials without downloading external HDR files */}
         <Environment resolution={256}>
@@ -2799,26 +2803,11 @@ export default function PackagingCanvas({
           </group>
         </Center>
 
-        {showGrid && (
-          <Grid
-            renderOrder={-1}
-            position={[0, modelBottomY - 0.001, 0]}
-            infiniteGrid
-            cellSize={0.2}
-            cellThickness={0.5}
-            cellColor="#e2e8f0"
-            sectionSize={1.0}
-            sectionThickness={1.0}
-            sectionColor="#cbd5e1"
-            fadeDistance={20}
-          />
-        )}
-
         <ContactShadows
-          position={[0, modelBottomY, 0]}
-          opacity={0.45}
+          position={[0, modelBottomY - 0.01, 0]}
+          opacity={0.35}
           scale={8}
-          blur={1.8}
+          blur={2.0}
           far={3.0}
           resolution={512}
           color="#0f172a"
@@ -2832,7 +2821,8 @@ export default function PackagingCanvas({
           dampingFactor={0.06}
           minDistance={0.5}
           maxDistance={8}
-          maxPolarAngle={Math.PI / 2 + 0.05}
+          minPolarAngle={0}
+          maxPolarAngle={Math.PI}
           autoRotate={isIntroSpinning}
           autoRotateSpeed={2.8}
           onStart={() => setIsIntroSpinning(false)}
