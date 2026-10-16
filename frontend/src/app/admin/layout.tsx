@@ -52,7 +52,11 @@ export default function AdminLayout({
   return (
     <AuthGuard>
       <div className="flex h-dvh min-h-0 overflow-hidden bg-[#EEF4F8] font-sans text-[12px] text-[#1F3A5C] antialiased">
-        {!isWorkspace && <AdminSidebar mode="persistent" />}
+        {isWorkspace ? (
+          !isMobileLayout && <AdminSidebar mode="rail" />
+        ) : (
+          <AdminSidebar mode="persistent" />
+        )}
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <AdminHeader

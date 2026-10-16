@@ -20,7 +20,7 @@ import {
 import { getAllUmkm } from "@/lib/umkm"
 
 interface AdminSidebarProps {
-  mode?: "persistent" | "drawer"
+  mode?: "persistent" | "drawer" | "rail"
   onNavigate?: () => void
   templateCount?: number
   orderCount?: number
@@ -117,6 +117,48 @@ export default function AdminSidebar({
       active: pathname.startsWith("/admin/settings"),
     },
   ]
+
+  if (mode === "rail") {
+    return (
+      <aside className="hidden w-[4.5rem] shrink-0 flex-col items-center justify-between border-r border-[#D5E4F0] bg-white py-3 shadow-xs select-none lg:flex" aria-label="Admin workspace rail">
+        <div className="flex w-full flex-col items-center gap-4">
+          <Link href="/admin/dashboard" onClick={onNavigate} className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#D5E4F0] bg-white p-1 shadow-xs" title="AstaKraft Admin" aria-label="AstaKraft Admin dashboard">
+            <img src="/logo/astakraft-primary.jpg" alt="" className="h-full w-full rounded-lg object-contain" />
+          </Link>
+          <nav aria-label="Admin workspace navigation" className="flex w-full flex-col items-center gap-1">
+            {menuItems.map((item) => {
+              const IconComp = item.icon
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onNavigate}
+                  aria-label={item.label}
+                  title={item.label}
+                  className={`relative flex h-11 w-11 items-center justify-center rounded-xl transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2F79A6] ${
+                    item.active ? "bg-[#1F3A5C] text-[#F7CB45] shadow-sm" : "text-[#2F79A6] hover:bg-[#EEF4F8] hover:text-[#1F3A5C]"
+                  }`}
+                >
+                  <IconComp className="h-5 w-5" aria-hidden="true" />
+                  {item.badge !== undefined && (
+                    <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#F7CB45] ring-2 ring-white" aria-label={`${item.label} has updates`} />
+                  )}
+                </Link>
+              )
+            })}
+          </nav>
+        </div>
+        <div className="flex flex-col items-center gap-2 border-t border-[#D5E4F0] pt-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1F3A5C] text-[#F7CB45]" title="Super Admin" aria-label="Super Admin">
+            <User className="h-4 w-4" aria-hidden="true" />
+          </div>
+          <button type="button" onClick={handleLogout} className="flex h-11 w-11 items-center justify-center rounded-xl text-[#718BAA] hover:bg-red-50 hover:text-red-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2F79A6]" title="Keluar (Logout)" aria-label="Keluar (Logout)">
+            <LogOut className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+      </aside>
+    )
+  }
 
   return (
     <aside
