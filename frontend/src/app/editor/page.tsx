@@ -1755,8 +1755,26 @@ function EditorComponent() {
               <ArrowLeft className="w-4 h-4 text-[#1F3A5C]" />
             </button>
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-[#1F3A5C] text-xs tracking-tight">Upload &amp; Desain Pola (2D Dieline)</span>
+              <span className="font-extrabold text-[#1F3A5C] text-xs tracking-tight">Studio Pola Kemasan (2D)</span>
             </div>
+          </div>
+
+          {/* Center Studio Mode Segmented Switcher */}
+          <div className="flex items-center p-0.5 rounded-xl bg-slate-200/50 backdrop-blur-xs border border-white/80 shadow-2xs">
+            <button
+              onClick={() => setEditorMode("mockup")}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-[#718BAA] hover:text-[#1F3A5C]"
+            >
+              <Box className="w-3.5 h-3.5 text-[#2F79A6]" />
+              <span>3D Studio</span>
+            </button>
+            <button
+              onClick={() => setEditorMode("dieline")}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer bg-white text-[#1F3A5C] shadow-2xs"
+            >
+              <Layers className="w-3.5 h-3.5 text-[#2F79A6]" />
+              <span>2D Dieline</span>
+            </button>
           </div>
 
           <div className="flex items-center gap-2">
@@ -2170,8 +2188,8 @@ function EditorComponent() {
   // -------------------------------------------------------------
   return (
     <div className="h-screen w-full max-w-full bg-[#EEF4F8] text-[#1F3A5C] relative font-sans select-none overflow-hidden text-[11px] antialiased">
-      {/* 3D Viewport Centered Between Left & Right Sidebars with Equal Padding */}
-      <div className="absolute top-18.5 left-4 right-4 lg:left-[336px] lg:right-[336px] bottom-4 z-0 bg-[#eaedf0] rounded-2xl overflow-hidden border border-[#D5E4F0] shadow-sm flex items-center justify-center">
+      {/* Full-Bleed 3D Viewport - Edge-to-Edge Canvas without Card Boundaries */}
+      <div className="absolute inset-0 z-0 overflow-hidden">
         <PackagingCanvas
           category={selectedTemplate.category}
           length={length}
@@ -2190,13 +2208,13 @@ function EditorComponent() {
           objects={objects}
           selectedObjectId={selectedObjectId}
           cameraView={cameraView}
-          canvasBackground="#eaedf0"
+          canvasBackground="#EEF4F8"
           maxVisualBound={1.65}
         />
       </div>
 
-      {/* 1. Floating Top Header Island */}
-      <header className="absolute top-3.5 left-4 right-4 h-13 bg-white/90 backdrop-blur-md border border-[#D5E4F0] px-4 rounded-2xl flex items-center justify-between z-40 shadow-lg shadow-[#1F3A5C]/5">
+      {/* 1. Floating Top Header Island (Frosted Glass) */}
+      <header className="absolute top-3.5 left-4 right-4 h-13 bg-white/85 backdrop-blur-md border border-white/80 px-4 rounded-2xl flex items-center justify-between z-40 shadow-lg shadow-[#1F3A5C]/5">
         {/* Brand & Project Name */}
         <div className="flex items-center gap-3">
           <a
@@ -2220,55 +2238,76 @@ function EditorComponent() {
 
           <a
             href="/"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#EEF4F8] hover:bg-[#D5E4F0] text-[#1F3A5C] font-bold text-xs transition-all border border-[#D5E4F0] shadow-xs"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/70 hover:bg-white text-[#1F3A5C] font-bold text-xs transition-all border border-white/80 shadow-2xs"
             title="Kembali ke Beranda"
           >
             <ArrowLeft className="w-3.5 h-3.5 text-[#2F79A6]" />
             <span>Katalog</span>
           </a>
 
-          <div className="w-px h-4 bg-[#D5E4F0]" />
+          <div className="w-px h-4 bg-[#D5E4F0]/60" />
 
           <div className="flex items-center gap-2">
             <input
               type="text"
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
-              className="font-extrabold text-[#1F3A5C] tracking-tight text-xs bg-transparent hover:bg-[#EEF4F8] focus:bg-white px-2.5 py-1 rounded-lg border border-transparent focus:border-[#4394C3] focus:outline-none transition-all max-w-[200px]"
+              className="font-extrabold text-[#1F3A5C] tracking-tight text-xs bg-transparent hover:bg-white/60 focus:bg-white px-2.5 py-1 rounded-lg border border-transparent focus:border-[#4394C3] focus:outline-none transition-all max-w-[200px]"
               title="Klik untuk ubah nama proyek"
             />
           </div>
         </div>
 
-        {/* Center Actions: Undo & Redo */}
-        <div className="flex items-center gap-1 bg-[#EEF4F8] p-1 rounded-xl border border-[#D5E4F0]">
-          <button
-            onClick={handleUndo}
-            disabled={undoStack.length === 0}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-              undoStack.length > 0
-                ? "text-[#1F3A5C] hover:bg-white hover:shadow-2xs cursor-pointer"
-                : "text-[#A0B6CD] opacity-40 cursor-not-allowed"
-            }`}
-            title="Undo (Ctrl+Z)"
-          >
-            <Undo2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline text-[11px]">Undo</span>
-          </button>
-          <div className="w-px h-3.5 bg-[#D5E4F0]" />
-          <button
-            onClick={handleRedo}
-            disabled={redoStack.length === 0}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-              redoStack.length > 0
-                ? "text-[#1F3A5C] hover:bg-white hover:shadow-2xs cursor-pointer"
-                : "text-[#A0B6CD] opacity-40 cursor-not-allowed"
-            }`}
-            title="Redo (Ctrl+Y)"
-          >
-            <Redo2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline text-[11px]">Redo</span>
-          </button>
+        {/* Center Actions: Studio Mode Switcher + Undo & Redo */}
+        <div className="flex items-center gap-2">
+          {/* Studio Mode Segmented Switcher */}
+          <div className="flex items-center p-0.5 rounded-xl bg-slate-200/50 backdrop-blur-xs border border-white/80 shadow-2xs">
+            <button
+              onClick={() => setEditorMode("mockup")}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer bg-white text-[#1F3A5C] shadow-2xs"
+            >
+              <Box className="w-3.5 h-3.5 text-[#2F79A6]" />
+              <span>3D Studio</span>
+            </button>
+            <button
+              onClick={() => setEditorMode("dieline")}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-[#718BAA] hover:text-[#1F3A5C]"
+            >
+              <Layers className="w-3.5 h-3.5 text-[#2F79A6]" />
+              <span>2D Dieline</span>
+            </button>
+          </div>
+
+          {/* Undo & Redo */}
+          <div className="flex items-center gap-1 bg-white/60 backdrop-blur-sm p-1 rounded-xl border border-white/70 shadow-2xs">
+            <button
+              onClick={handleUndo}
+              disabled={undoStack.length === 0}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                undoStack.length > 0
+                  ? "text-[#1F3A5C] hover:bg-white hover:shadow-2xs cursor-pointer"
+                  : "text-[#A0B6CD] opacity-40 cursor-not-allowed"
+              }`}
+              title="Undo (Ctrl+Z)"
+            >
+              <Undo2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline text-[11px]">Undo</span>
+            </button>
+            <div className="w-px h-3.5 bg-[#D5E4F0]/60" />
+            <button
+              onClick={handleRedo}
+              disabled={redoStack.length === 0}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                redoStack.length > 0
+                  ? "text-[#1F3A5C] hover:bg-white hover:shadow-2xs cursor-pointer"
+                  : "text-[#A0B6CD] opacity-40 cursor-not-allowed"
+              }`}
+              title="Redo (Ctrl+Y)"
+            >
+              <Redo2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline text-[11px]">Redo</span>
+            </button>
+          </div>
         </div>
 
         {/* Right Actions: Clean, Uncluttered Header */}
@@ -2298,7 +2337,7 @@ function EditorComponent() {
           {/* Shortcuts Info Button */}
           <button
             onClick={() => setShowShortcutsModal(true)}
-            className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-white hover:bg-[#EEF4F8] text-[#1F3A5C] border border-[#D5E4F0] text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs"
+            className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-white/70 hover:bg-white text-[#1F3A5C] border border-white/80 text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs"
             title="Daftar Shortcut Keyboard"
           >
             <Keyboard className="w-3.5 h-3.5 text-[#2F79A6]" />
@@ -2306,17 +2345,17 @@ function EditorComponent() {
           </button>
 
           {/* User Profile Link & Logout */}
-          <div className="pl-1 border-l border-[#D5E4F0] flex items-center gap-1.5">
+          <div className="pl-1 border-l border-[#D5E4F0]/60 flex items-center gap-1.5">
             <a
               href="/profile"
-              className="flex items-center gap-1.5 px-2 py-1 rounded-xl hover:bg-[#EEF4F8] text-[#1F3A5C] text-xs font-bold transition-colors"
+              className="flex items-center gap-1.5 px-2 py-1 rounded-xl hover:bg-white/70 text-[#1F3A5C] text-xs font-bold transition-colors"
               title="Buka Profil Saya & Riwayat Desain"
             >
               {currentUser?.avatar ? (
                 <img
                   src={currentUser.avatar}
                   alt=""
-                  className="w-6 h-6 rounded-full object-cover border border-[#D5E4F0]"
+                  className="w-6 h-6 rounded-full object-cover border border-white/80"
                 />
               ) : (
                 <div className="w-6 h-6 rounded-full bg-[#1F3A5C] text-[#F7CB45] text-[9px] font-bold flex items-center justify-center">
@@ -2331,7 +2370,7 @@ function EditorComponent() {
                 logoutUser()
                 router.push("/login")
               }}
-              className="p-1.5 rounded-lg text-[#718BAA] hover:text-red-600 hover:bg-[#EEF4F8] transition-colors"
+              className="p-1.5 rounded-lg text-[#718BAA] hover:text-rose-600 hover:bg-white/70 transition-colors"
               title="Keluar / Logout"
             >
               <LogOut className="w-3.5 h-3.5" />
@@ -2341,13 +2380,13 @@ function EditorComponent() {
       </header>
 
       {/* Floating Left Parameter Panel Island (Geometry & Material) */}
-      <aside className="absolute top-18.5 left-4 bottom-4 w-68 z-30 bg-white/90 backdrop-blur-md border border-[#D5E4F0] rounded-2xl p-4 flex flex-col justify-between overflow-y-auto shadow-lg shadow-[#1F3A5C]/5 pointer-events-auto space-y-4">
+      <aside className="absolute top-18.5 left-4 bottom-4 w-68 z-30 bg-white/75 backdrop-blur-xl border border-white/80 rounded-3xl p-4 flex flex-col justify-between overflow-y-auto no-scrollbar shadow-xl shadow-[#1F3A5C]/5 pointer-events-auto space-y-4">
           <div className="space-y-4">
-            {/* Active Model & Ganti Button */}
-            <div className="bg-[#EEF4F8] p-2.5 rounded-2xl border border-[#D5E4F0] space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-extrabold text-[#1F3A5C]">Model Kemasan</span>
-                <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-white text-[#2F79A6] border border-[#D5E4F0]">
+            {/* 1. Model Kemasan Row */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-[11px] font-bold text-[#718BAA] uppercase tracking-wider">
+                <span>Model</span>
+                <span className="font-mono text-[9.5px] px-2 py-0.5 rounded-md bg-white/80 text-[#2F79A6] border border-white/80">
                   {selectedTemplate.category}
                 </span>
               </div>
@@ -2356,62 +2395,37 @@ function EditorComponent() {
                   setSwitchModalTab("models")
                   setShowSwitchModal(true)
                 }}
-                className="w-full flex items-center justify-between gap-2 p-2 rounded-xl bg-white hover:bg-[#D5E4F0]/40 border border-[#D5E4F0] text-left transition-all group cursor-pointer shadow-2xs"
-                title="Klik untuk memilih model kemasan lain"
+                className="w-full flex items-center justify-between gap-2.5 p-2 rounded-2xl bg-white/80 hover:bg-white border border-white/80 transition-all group cursor-pointer shadow-2xs hover:shadow-xs"
+                title="Ganti Template Kemasan"
               >
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-[#EEF4F8] border border-[#D5E4F0] overflow-hidden flex items-center justify-center shrink-0">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-[#EEF4F8] border border-white/80 overflow-hidden flex items-center justify-center shrink-0">
                     {selectedTemplate.preview_url ? (
                       <img src={selectedTemplate.preview_url} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <Box className="w-4 h-4 text-[#2F79A6]" />
                     )}
                   </div>
-                  <div className="min-w-0">
-                    <span className="font-extrabold text-[#1F3A5C] text-xs block truncate group-hover:text-[#2F79A6] transition-colors">
+                  <div className="min-w-0 text-left">
+                    <span className="font-bold text-[#1F3A5C] text-xs block truncate group-hover:text-[#2F79A6] transition-colors">
                       {selectedTemplate.name}
                     </span>
-                    <span className="text-[9px] text-[#718BAA] block">
-                      Klik untuk ganti model
+                    <span className="text-[10px] text-[#718BAA] block">
+                      Ganti Template
                     </span>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-[#718BAA] group-hover:text-[#1F3A5C] group-hover:translate-x-0.5 transition-all shrink-0" />
+                <ChevronRight className="w-4 h-4 text-[#718BAA] group-hover:text-[#1F3A5C] group-hover:translate-x-0.5 transition-all shrink-0 mr-1" />
               </button>
             </div>
 
-            {/* 1. Dieline Card CTA */}
+            <div className="h-px bg-[#D5E4F0]/50 w-full" />
+
+            {/* 2. Material Kemasan */}
             <div className="space-y-2">
-              <span className="font-extrabold text-[#1F3A5C] text-xs block">Pola Kemasan (Dieline)</span>
-              <div
-                onClick={() => setEditorMode("dieline")}
-                className="w-full h-28 rounded-2xl border-2 border-dashed border-[#4394C3]/30 hover:border-[#4394C3] bg-[#EEF4F8] hover:bg-[#E2EDF5] p-2.5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all group relative overflow-hidden shadow-xs"
-              >
-                <div className="w-full h-14 bg-white/80 rounded-xl flex items-center justify-center p-1 relative border border-[#D5E4F0]">
-                  <div className="grid grid-cols-4 gap-0.5 w-full h-full opacity-60">
-                    <div className="bg-[#D5E4F0] rounded-sm border border-[#4394C3]/20" />
-                    <div className="bg-[#D5E4F0] rounded-sm border border-[#4394C3]/20" />
-                    <div className="bg-[#D5E4F0] rounded-sm border border-[#4394C3]/20" />
-                    <div className="bg-[#D5E4F0] rounded-sm border border-[#4394C3]/20" />
-                  </div>
-                  <div className="absolute inset-0 flex items-center justify-center bg-[#1F3A5C]/10 rounded-xl backdrop-blur-[0.5px]">
-                    <span className="px-3 py-1 rounded-full bg-[#1F3A5C] text-[#F7CB45] text-[9px] font-extrabold shadow-sm group-hover:scale-105 transition-all">
-                      Adjust images (2D)
-                    </span>
-                  </div>
-                </div>
-
-                <span className="text-[9.5px] text-[#2F79A6] font-bold group-hover:text-[#1F3A5C]">
-                  Klik untuk edit desain di 2D
-                </span>
-              </div>
-            </div>
-
-            {/* 2. Material Selector */}
-            <div className="space-y-2.5 bg-[#EEF4F8] p-3 rounded-2xl border border-[#D5E4F0]">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-extrabold text-[#1F3A5C]">Material Kemasan</span>
-                <span className="text-[9px] font-mono font-bold text-[#2F79A6] truncate max-w-[100px]">
+              <div className="flex items-center justify-between text-[11px] font-bold text-[#718BAA] uppercase tracking-wider">
+                <span>Material</span>
+                <span className="text-[10px] font-bold text-[#2F79A6] truncate max-w-[110px]">
                   {selectedMaterial.name}
                 </span>
               </div>
@@ -2423,10 +2437,10 @@ function EditorComponent() {
                     <button
                       key={mat.id}
                       onClick={() => handleSelectMaterial(mat)}
-                      className={`w-6 h-6 rounded-full transition-all flex items-center justify-center shrink-0 ${
+                      className={`w-6 h-6 rounded-full transition-all flex items-center justify-center shrink-0 cursor-pointer ${
                         isSelected
-                          ? "ring-2 ring-[#1F3A5C] ring-offset-1 scale-110 shadow-sm z-10"
-                          : "border border-[#D5E4F0] hover:border-[#4394C3] hover:scale-105 opacity-85 hover:opacity-100"
+                          ? "ring-2 ring-[#1F3A5C] ring-offset-2 scale-110 shadow-xs z-10"
+                          : "border border-white/90 hover:border-[#4394C3] hover:scale-105 opacity-85 hover:opacity-100"
                       }`}
                       style={{
                         backgroundColor: mat.previewSwatch,
@@ -2455,151 +2469,173 @@ function EditorComponent() {
                 })}
               </div>
 
-              <div className="pt-2 border-t border-[#D5E4F0] flex items-center justify-between text-[8.5px] text-[#4B6B94]">
-                <span className="font-bold text-[#1F3A5C]">{selectedMaterial.name}</span>
-                <span className="text-[8px] text-[#718BAA]">{selectedMaterial.subtitle}</span>
+              <div className="text-[10px] text-[#718BAA] flex justify-between pt-0.5">
+                <span className="capitalize">{selectedMaterial.finish} finish</span>
+                <span>{selectedMaterial.subtitle}</span>
               </div>
             </div>
 
-            {/* 3. Custom Dimensions */}
-            <div className="space-y-2.5 bg-[#EEF4F8] p-3 rounded-2xl border border-[#D5E4F0]">
-              <div className="flex justify-between items-center text-xs font-extrabold text-[#1F3A5C]">
-                <span>Ukuran Kustom</span>
-                <span className="font-mono text-[9.5px] text-[#1F3A5C] font-extrabold bg-white px-2 py-0.5 rounded-md border border-[#D5E4F0] shadow-xs">
-                  {length}×{width}×{height} mm
+            <div className="h-px bg-[#D5E4F0]/50 w-full" />
+
+            {/* 3. Dimensi Kemasan (CAD Numeric Inputs + Sliders) */}
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between text-[11px] font-bold text-[#718BAA] uppercase tracking-wider">
+                <span>Dimensi (mm)</span>
+                <span className="font-mono text-[10px] text-[#1F3A5C] font-bold">
+                  {length} × {width} × {height}
                 </span>
               </div>
 
-              {/* Length */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-[9px] text-[#4B6B94]">
-                  <span>Panjang (L)</span>
-                  <span className="font-mono text-[#1F3A5C] font-bold">{length} mm</span>
+              {/* 3-Column Numeric Direct Inputs */}
+              <div className="grid grid-cols-3 gap-1.5">
+                <div className="flex items-center bg-white/90 hover:bg-white focus-within:bg-white focus-within:ring-1 focus-within:ring-[#4394C3] rounded-xl border border-white/90 px-2 py-1.5 shadow-2xs transition-all">
+                  <span className="text-[10px] font-bold text-[#718BAA] mr-1 select-none">P</span>
+                  <input
+                    type="number"
+                    min="30"
+                    max="200"
+                    value={length}
+                    onChange={(e) => setLength(Math.max(20, Math.min(300, Number(e.target.value) || 0)))}
+                    className="w-full text-xs font-mono font-bold text-[#1F3A5C] outline-none bg-transparent"
+                  />
                 </div>
-                <input
-                  type="range"
-                  min="30"
-                  max="150"
-                  value={length}
-                  onChange={(e) => setLength(Number(e.target.value))}
-                  className="w-full h-1.5 bg-[#D5E4F0] rounded-lg appearance-none cursor-pointer accent-[#4394C3]"
-                />
+                <div className="flex items-center bg-white/90 hover:bg-white focus-within:bg-white focus-within:ring-1 focus-within:ring-[#4394C3] rounded-xl border border-white/90 px-2 py-1.5 shadow-2xs transition-all">
+                  <span className="text-[10px] font-bold text-[#718BAA] mr-1 select-none">L</span>
+                  <input
+                    type="number"
+                    min="20"
+                    max="200"
+                    value={width}
+                    onChange={(e) => setWidth(Math.max(15, Math.min(300, Number(e.target.value) || 0)))}
+                    className="w-full text-xs font-mono font-bold text-[#1F3A5C] outline-none bg-transparent"
+                  />
+                </div>
+                <div className="flex items-center bg-white/90 hover:bg-white focus-within:bg-white focus-within:ring-1 focus-within:ring-[#4394C3] rounded-xl border border-white/90 px-2 py-1.5 shadow-2xs transition-all">
+                  <span className="text-[10px] font-bold text-[#718BAA] mr-1 select-none">T</span>
+                  <input
+                    type="number"
+                    min="20"
+                    max="200"
+                    value={height}
+                    onChange={(e) => setHeight(Math.max(15, Math.min(300, Number(e.target.value) || 0)))}
+                    className="w-full text-xs font-mono font-bold text-[#1F3A5C] outline-none bg-transparent"
+                  />
+                </div>
               </div>
 
-              {/* Width */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-[9px] text-[#4B6B94]">
-                  <span>Lebar (W)</span>
-                  <span className="font-mono text-[#1F3A5C] font-bold">{width} mm</span>
+              {/* Compact Scrub Range Sliders */}
+              <div className="space-y-1.5 pt-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-[9.5px] font-bold text-[#718BAA] w-3">P</span>
+                  <input
+                    type="range"
+                    min="30"
+                    max="150"
+                    value={length}
+                    onChange={(e) => setLength(Number(e.target.value))}
+                    className="w-full h-1 bg-[#D5E4F0]/80 rounded-lg appearance-none cursor-pointer accent-[#4394C3]"
+                  />
                 </div>
-                <input
-                  type="range"
-                  min="25"
-                  max="120"
-                  value={width}
-                  onChange={(e) => setWidth(Number(e.target.value))}
-                  className="w-full h-1.5 bg-[#D5E4F0] rounded-lg appearance-none cursor-pointer accent-[#4394C3]"
-                />
-              </div>
-
-              {/* Height */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-[9px] text-[#4B6B94]">
-                  <span>Tinggi (H)</span>
-                  <span className="font-mono text-[#1F3A5C] font-bold">{height} mm</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[9.5px] font-bold text-[#718BAA] w-3">L</span>
+                  <input
+                    type="range"
+                    min="25"
+                    max="120"
+                    value={width}
+                    onChange={(e) => setWidth(Number(e.target.value))}
+                    className="w-full h-1 bg-[#D5E4F0]/80 rounded-lg appearance-none cursor-pointer accent-[#4394C3]"
+                  />
                 </div>
-                <input
-                  type="range"
-                  min="20"
-                  max="120"
-                  value={height}
-                  onChange={(e) => setHeight(Number(e.target.value))}
-                  className="w-full h-1.5 bg-[#D5E4F0] rounded-lg appearance-none cursor-pointer accent-[#4394C3]"
-                />
+                <div className="flex items-center gap-2">
+                  <span className="text-[9.5px] font-bold text-[#718BAA] w-3">T</span>
+                  <input
+                    type="range"
+                    min="20"
+                    max="120"
+                    value={height}
+                    onChange={(e) => setHeight(Number(e.target.value))}
+                    className="w-full h-1 bg-[#D5E4F0]/80 rounded-lg appearance-none cursor-pointer accent-[#4394C3]"
+                  />
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="space-y-1.5 pt-3 border-t border-[#D5E4F0]">
+          {/* Bottom Secondary Studio CTA */}
+          <div className="pt-2">
             <button
               onClick={() => setEditorMode("dieline")}
-              className="w-full py-2.5 rounded-xl bg-[#F7CB45] hover:bg-[#E5B932] text-[#1F3A5C] font-extrabold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5"
+              className="w-full py-2.5 px-3 rounded-2xl bg-white/80 hover:bg-white text-[#1F3A5C] font-bold text-xs shadow-2xs hover:shadow-xs transition-all border border-white/90 flex items-center justify-center gap-2 cursor-pointer active:scale-98"
             >
-              <Layers className="w-4 h-4 text-[#1F3A5C]" />
+              <Layers className="w-4 h-4 text-[#2F79A6]" />
               <span>Buka Desain 2D Dieline</span>
             </button>
           </div>
         </aside>
 
         {/* Floating Right Inspector & Order Panel Island */}
-        <aside className="absolute top-18.5 right-4 bottom-4 w-76 z-30 bg-white/90 backdrop-blur-md border border-[#D5E4F0] rounded-2xl p-4 flex flex-col justify-between overflow-y-auto shadow-lg shadow-[#1F3A5C]/5 pointer-events-auto space-y-4">
+        <aside className="absolute top-18.5 right-4 bottom-4 w-76 z-30 bg-white/75 backdrop-blur-xl border border-white/80 rounded-3xl p-4 flex flex-col justify-between overflow-y-auto no-scrollbar shadow-xl shadow-[#1F3A5C]/5 pointer-events-auto space-y-4">
           <div className="space-y-4">
             {/* Header Status Ringkasan */}
-            <div className="flex items-center justify-between pb-2 border-b border-[#D5E4F0]">
+            <div className="flex items-center justify-between pb-2.5 border-b border-[#D5E4F0]/60">
               <div className="flex items-center gap-2">
                 <Package className="w-4 h-4 text-[#2F79A6]" />
-                <span className="font-extrabold text-[#1F3A5C] text-xs">Spesifikasi Kemasan</span>
+                <span className="font-extrabold text-[#1F3A5C] text-xs">Spesifikasi</span>
               </div>
-              <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-md bg-[#EEF4F8] text-[#2F79A6] border border-[#D5E4F0]">
+              <span className="text-[9.5px] font-mono font-bold px-2 py-0.5 rounded-md bg-white/80 text-[#2F79A6] border border-white/80">
                 {selectedTemplate.category}
               </span>
             </div>
 
-            {/* Quick Spec Cards */}
-            <div className="grid grid-cols-2 gap-2 text-[10px]">
-              <div className="bg-[#EEF4F8] p-2.5 rounded-xl border border-[#D5E4F0] space-y-0.5">
-                <span className="text-[8.5px] font-bold text-[#718BAA] uppercase tracking-wider block">Dimensi</span>
-                <span className="font-mono text-[#1F3A5C] font-extrabold">{length}×{width}×{height}</span>
-                <span className="text-[8px] text-[#718BAA] block">Milimeter (mm)</span>
+            {/* Clean Key-Value Inspector List */}
+            <div className="space-y-1.5 py-0.5 text-xs">
+              <div className="flex items-center justify-between py-1 border-b border-[#D5E4F0]/40 text-[11px]">
+                <span className="text-[#718BAA]">Dimensi</span>
+                <span className="font-mono font-bold text-[#1F3A5C]">{length} × {width} × {height} mm</span>
               </div>
-
-              <div className="bg-[#EEF4F8] p-2.5 rounded-xl border border-[#D5E4F0] space-y-0.5">
-                <span className="text-[8.5px] font-bold text-[#718BAA] uppercase tracking-wider block">Volume Efektif</span>
-                <span className="font-mono text-[#1F3A5C] font-extrabold">{quote.effective_volume_cm3} cm³</span>
-                <span className="text-[8px] text-[#718BAA] block">Total {quote.raw_volume_cm3} cm³</span>
+              <div className="flex items-center justify-between py-1 border-b border-[#D5E4F0]/40 text-[11px]">
+                <span className="text-[#718BAA]">Volume Efektif</span>
+                <span className="font-mono font-bold text-[#1F3A5C]">{quote.effective_volume_cm3} cm³</span>
               </div>
-
-              <div className="bg-[#EEF4F8] p-2.5 rounded-xl border border-[#D5E4F0] space-y-0.5">
-                <span className="text-[8.5px] font-bold text-[#718BAA] uppercase tracking-wider block">Material</span>
-                <span className="text-[#1F3A5C] font-extrabold truncate block">{selectedMaterial.name}</span>
-                <span className="text-[8px] text-[#718BAA] block capitalize">{selectedMaterial.finish} finish</span>
+              <div className="flex items-center justify-between py-1 border-b border-[#D5E4F0]/40 text-[11px]">
+                <span className="text-[#718BAA]">Material Finish</span>
+                <span className="font-bold text-[#1F3A5C] capitalize">{selectedMaterial.finish}</span>
               </div>
-
-              <div className="bg-[#EEF4F8] p-2.5 rounded-xl border border-[#D5E4F0] space-y-0.5">
-                <span className="text-[8.5px] font-bold text-[#718BAA] uppercase tracking-wider block">Elemen 2D</span>
-                <span className="font-mono text-[#1F3A5C] font-extrabold">{objects.length} Layer</span>
-                <span className="text-[8px] text-[#718BAA] block">{objects.filter(o => o.type === "image").length} gambar, {objects.filter(o => o.type !== "image").length} bentuk</span>
+              <div className="flex items-center justify-between py-1 border-b border-[#D5E4F0]/40 text-[11px]">
+                <span className="text-[#718BAA]">Artwork Aktif</span>
+                <span className="font-mono font-bold text-[#1F3A5C]">{objects.length} Layer</span>
               </div>
             </div>
 
             {/* Layer Elements Preview */}
-            <div className="space-y-2 bg-[#EEF4F8] p-3 rounded-2xl border border-[#D5E4F0]">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-extrabold text-[#1F3A5C]">Layer Grafis Aktif</span>
-                <span className="text-[9.5px] text-[#2F79A6] font-bold">{objects.length} elemen</span>
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center justify-between text-[11px] font-bold text-[#718BAA] uppercase tracking-wider">
+                <span>Layer Grafis</span>
+                <span className="text-[10px] text-[#2F79A6] font-mono font-bold">{objects.length} elemen</span>
               </div>
 
               {objects.length === 0 ? (
-                <div className="py-2 text-center text-[10px] text-[#718BAA] italic">
-                  Belum ada artwork/logo. Buka Studio 2D untuk menambah.
+                <div className="py-2.5 text-center text-[10.5px] text-[#718BAA] italic">
+                  Belum ada artwork. Buka Studio 2D untuk menambah.
                 </div>
               ) : (
-                <div className="space-y-1 max-h-28 overflow-y-auto pr-1">
+                <div className="space-y-1 max-h-32 overflow-y-auto no-scrollbar pr-1">
                   {objects.map((obj) => (
                     <div
                       key={obj.id}
-                      className="px-2 py-1.5 rounded-lg bg-white border border-[#D5E4F0] flex items-center justify-between text-[10px]"
+                      className="px-2.5 py-1.5 rounded-xl bg-white/80 hover:bg-white border border-white/80 flex items-center justify-between text-[10.5px] transition-colors"
                     >
-                      <div className="flex items-center gap-1.5 truncate">
+                      <div className="flex items-center gap-2 truncate">
                         {obj.type === "image" && obj.imageUrl ? (
-                          <img src={obj.imageUrl} alt="" className="w-3.5 h-3.5 rounded-xs object-contain shrink-0 border border-[#D5E4F0]" />
+                          <img src={obj.imageUrl} alt="" className="w-4 h-4 rounded-xs object-contain shrink-0 border border-white/80" />
                         ) : (
-                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: obj.color || "#1F3A5C" }} />
+                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: obj.color || "#1F3A5C" }} />
                         )}
-                        <span className="font-bold text-[#1F3A5C] truncate max-w-[100px]">{obj.name}</span>
+                        <span className="font-bold text-[#1F3A5C] truncate max-w-[110px]">{obj.name}</span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-[8.5px] text-[#718BAA] uppercase font-mono">{obj.surfaceTarget}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[8.5px] text-[#718BAA] uppercase font-mono font-semibold">{obj.surfaceTarget}</span>
                         {obj.type === "image" && (
                           <button
                             type="button"
@@ -2607,10 +2643,10 @@ function EditorComponent() {
                               setReplacingObjectId(obj.id)
                               setShowImageLibraryModal(true)
                             }}
-                            className="text-[#718BAA] hover:text-[#2F79A6] p-0.5 transition-colors"
+                            className="text-[#718BAA] hover:text-[#2F79A6] p-0.5 transition-colors cursor-pointer"
                             title="Ganti Gambar dari Pustaka"
                           >
-                            <FolderOpen className="w-3 h-3" />
+                            <FolderOpen className="w-3.5 h-3.5" />
                           </button>
                         )}
                       </div>
@@ -2619,14 +2655,14 @@ function EditorComponent() {
                 </div>
               )}
 
-              {/* Quick Image Library Attach in 3D Mode */}
+              {/* Quick Image Library Attach */}
               <button
                 type="button"
                 onClick={() => {
                   setReplacingObjectId(null)
                   setShowImageLibraryModal(true)
                 }}
-                className="w-full py-2 px-3 rounded-xl bg-white hover:bg-[#EEF4F8] border border-[#4394C3]/40 hover:border-[#2F79A6] text-[#1F3A5C] font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-2xs mt-2 active:scale-98"
+                className="w-full py-2 px-3 rounded-xl bg-white/80 hover:bg-white border border-white/90 text-[#1F3A5C] font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-2xs active:scale-98 cursor-pointer"
               >
                 <FolderOpen className="w-3.5 h-3.5 text-[#2F79A6]" />
                 <span>Pustaka Gambar &amp; Logo</span>
@@ -2634,51 +2670,54 @@ function EditorComponent() {
             </div>
           </div>
 
-          {/* Action CTAs in Right Panel */}
-          <div className="space-y-2 pt-3 border-t border-[#D5E4F0]">
+          {/* Action CTAs in Right Panel with Strict Hierarchy */}
+          <div className="space-y-2 pt-3 border-t border-[#D5E4F0]/60">
             {/* Primary Save Button */}
             <button
               onClick={handleSaveProject}
-              className={`w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm ${
+              className={`w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer ${
                 saveSuccessNotice
                   ? "bg-emerald-600 text-white"
-                  : "bg-[#1F3A5C] hover:bg-[#2F79A6] text-white"
+                  : "bg-[#1F3A5C] hover:bg-[#2A4D77] text-white active:scale-98"
               }`}
             >
               {saveSuccessNotice ? <CheckCircle2 className="w-4 h-4 text-white" /> : <Save className="w-4 h-4 text-[#F7CB45]" />}
-              <span>{saveSuccessNotice ? "Tersimpan ke Riwayat!" : "Simpan Desain Proyek"}</span>
+              <span>{saveSuccessNotice ? "Tersimpan ke Riwayat" : "Simpan Desain"}</span>
             </button>
 
-            {/* Export PDF Blueprint */}
-            <button
-              onClick={handleExportPDF}
-              className="w-full py-2.5 rounded-xl bg-[#1F3A5C] hover:bg-[#2F79A6] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-98"
-            >
-              <FileText className="w-4 h-4 text-[#F7CB45]" />
-              <span>Export Lembar Kerja PDF (.PDF)</span>
-            </button>
+            {/* Secondary Action Grid (Export PDF & Export STL) */}
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                onClick={handleExportPDF}
+                className="w-full py-2 px-2.5 rounded-xl bg-white/80 hover:bg-white border border-white/80 text-[#1F3A5C] font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-2xs active:scale-98 cursor-pointer"
+                title="Export Lembar Kerja PDF (.PDF)"
+              >
+                <FileText className="w-3.5 h-3.5 text-[#2F79A6]" />
+                <span>Export PDF</span>
+              </button>
 
-            {/* Export STL */}
-            <button
-              onClick={handleDownloadSTL}
-              className="w-full py-2 rounded-xl bg-white hover:bg-[#EEF4F8] border border-[#D5E4F0] text-[#1F3A5C] font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs active:scale-98"
-            >
-              <Download className="w-3.5 h-3.5 text-[#2F79A6]" />
-              <span>Export File 3D (.STL)</span>
-            </button>
+              <button
+                onClick={handleDownloadSTL}
+                className="w-full py-2 px-2.5 rounded-xl bg-white/80 hover:bg-white border border-white/80 text-[#1F3A5C] font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-2xs active:scale-98 cursor-pointer"
+                title="Export File 3D (.STL)"
+              >
+                <Download className="w-3.5 h-3.5 text-[#2F79A6]" />
+                <span>Export 3D</span>
+              </button>
+            </div>
           </div>
         </aside>
 
         {/* Floating Camera Orbit Controls (Bottom Center of 3D Viewport) */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 p-1 rounded-2xl bg-white/90 border border-[#D5E4F0] backdrop-blur-md shadow-lg shadow-[#1F3A5C]/10 flex items-center gap-1 font-semibold pointer-events-auto">
+        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 p-1.5 rounded-full bg-white/75 hover:bg-white/90 backdrop-blur-xl border border-white/80 shadow-xl shadow-[#1F3A5C]/8 flex items-center gap-1 font-semibold pointer-events-auto transition-all">
           {(["iso", "front", "back", "top", "bottom", "side"] as const).map((view) => (
             <button
               key={view}
               onClick={() => setCameraView(view)}
-              className={`px-3 py-1.5 rounded-xl text-[10.5px] font-bold transition-all cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-full text-[10.5px] font-bold transition-all cursor-pointer ${
                 cameraView === view
-                  ? "bg-[#1F3A5C] text-white shadow-xs scale-102"
-                  : "text-[#4B6B94] hover:text-[#1F3A5C] hover:bg-[#EEF4F8]"
+                  ? "bg-[#1F3A5C] text-white shadow-sm scale-102"
+                  : "text-[#4B6B94] hover:text-[#1F3A5C] hover:bg-white/60"
               }`}
             >
               {view === "iso"
