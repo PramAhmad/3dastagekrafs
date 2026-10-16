@@ -843,6 +843,22 @@ export function buildFolded3DModel(
     return mesh
   }
 
+  const addOpenTray = (parent: THREE.Group, length: number, width: number, height: number, wall = 0.012) => {
+    const parts: THREE.Mesh[] = []
+    const add = (geometry: THREE.BufferGeometry, x: number, y: number, z: number) => {
+      const mesh = makeMesh(geometry)
+      mesh.position.set(x, y, z)
+      parent.add(mesh)
+      parts.push(mesh)
+    }
+    add(new THREE.BoxGeometry(length, wall, width), 0, wall / 2, 0)
+    add(new THREE.BoxGeometry(length, height, wall), 0, height / 2, width / 2)
+    add(new THREE.BoxGeometry(length, height, wall), 0, height / 2, -width / 2)
+    add(new THREE.BoxGeometry(wall, height, width), -length / 2, height / 2, 0)
+    add(new THREE.BoxGeometry(wall, height, width), length / 2, height / 2, 0)
+    return parts
+  }
+
   // Assembly metadata selects topology before SVG heuristics. These builders provide
   // a faithful assembled preview for curved and multi-part packages that cannot be
   // reconstructed from axis-aligned crease strips.
@@ -862,6 +878,12 @@ export function buildFolded3DModel(
       const bottom = makeMesh(new THREE.CircleGeometry(bottomD * localScale / 2, 64))
       bottom.rotation.x = -Math.PI / 2
       group.add(bottom)
+      if (family === "circular_tube") {
+        const top = makeMesh(new THREE.CircleGeometry(topD * localScale / 2, 64))
+        top.rotation.x = Math.PI / 2
+        top.position.y = height * localScale
+        group.add(top)
+      }
     }
 
     const updateFold = (progress: number) => {
@@ -895,15 +917,38 @@ export function buildFolded3DModel(
     const H = numberSpec("H", Math.max(analysis.dims.height, 35)) * scale
     const group = new THREE.Group()
     rootGroup.add(group)
-    group.add(makeMesh(new THREE.BoxGeometry(L, 0.012, W)))
-    const front = makeMesh(new THREE.BoxGeometry(L, H, 0.012)); front.position.set(0, H / 2, W / 2); group.add(front)
-    const back = makeMesh(new THREE.BoxGeometry(L, H, 0.012)); back.position.set(0, H / 2, -W / 2); group.add(back)
-    const left = makeMesh(new THREE.BoxGeometry(0.012, H, W)); left.position.set(-L / 2, H / 2, 0); group.add(left)
-    const right = makeMesh(new THREE.BoxGeometry(0.012, H, W)); right.position.set(L / 2, H / 2, 0); group.add(right)
+    if (analysis.modelId === "fries-box") {
+      const bottomL = L * 0.68
+      const bottomW = W * 0.72
+      const makePanel = (bottom: number, top: number, height: number) => {
+        const shape = new THREE.Shape()
+        shape.moveTo(-bottom / 2, 0)
+        shape.lineTo(bottom / 2, 0)
+        shape.lineTo(top / 2, height)
+        shape.lineTo(-top / 2, height)
+        shape.closePath()
+        return new THREE.ShapeGeometry(shape)
+      }
+      const bottom = makeMesh(new THREE.BoxGeometry(bottomL, 0.012, bottomW)); group.add(bottom)
+      const front = makeMesh(makePanel(bottomL, L, H * 0.78)); front.position.z = W / 2; group.add(front)
+      const back = makeMesh(makePanel(bottomL, L, H)); back.position.z = -W / 2; group.add(back)
+      const left = makeMesh(makePanel(bottomW, W, H)); left.rotation.y = Math.PI / 2; left.position.x = -L / 2; group.add(left)
+      const right = makeMesh(makePanel(bottomW, W, H)); right.rotation.y = -Math.PI / 2; right.position.x = L / 2; group.add(right)
+      const updateFold = (progress: number) => {
+        const t = Math.max(0.02, Math.min(1, progress))
+        front.scale.y = back.scale.y = left.scale.y = right.scale.y = t
+      }
+      updateFold(1)
+      return { rootGroup, updateFold, materials }
+    }
+    const parts = addOpenTray(group, L, W, H)
+    const walls = parts.slice(1)
     const updateFold = (progress: number) => {
       const t = Math.max(0, Math.min(1, progress))
-      front.scale.y = back.scale.y = left.scale.y = right.scale.y = t
-      front.position.y = back.position.y = left.position.y = right.position.y = H * t / 2
+      walls.forEach((wall) => {
+        wall.scale.y = t
+        wall.position.y = H * t / 2
+      })
     }
     updateFold(1)
     return { rootGroup, updateFold, materials }
@@ -916,9 +961,10 @@ export function buildFolded3DModel(
     const lidH = numberSpec("lidHeight", 48) * scale
     const group = new THREE.Group()
     rootGroup.add(group)
-    const base = makeMesh(new THREE.BoxGeometry(L, H, W)); base.position.y = H / 2; group.add(base)
+    addOpenTray(group, L, W, H)
     const lidPivot = new THREE.Group(); lidPivot.position.set(0, H, -W / 2); group.add(lidPivot)
-    const lid = makeMesh(new THREE.BoxGeometry(L, lidH, W)); lid.position.set(0, lidH / 2, W / 2); lidPivot.add(lid)
+    const lidTray = new THREE.Group(); lidTray.position.z = W / 2; lidTray.rotation.x = Math.PI; lidPivot.add(lidTray)
+    addOpenTray(lidTray, L, W, lidH)
     const updateFold = (progress: number) => {
       const t = Math.max(0, Math.min(1, progress))
       lidPivot.rotation.x = -Math.PI / 2 * (1 - t)
@@ -934,17 +980,46 @@ export function buildFolded3DModel(
     const H = traySpec.H * scale
     const group = new THREE.Group()
     rootGroup.add(group)
-    const tray = makeMesh(new THREE.BoxGeometry(L, H, W)); tray.position.y = H / 2; group.add(tray)
+    const trayGroup = new THREE.Group()
+    group.add(trayGroup)
+    addOpenTray(trayGroup, L, W, H)
     const lidSpec = objectSpec("lid")
+    let movableGroup: THREE.Group | null = null
+    let closedX = 0
+    let closedY = 0
     if (lidSpec || analysis.modelId === "lidbase") {
       const lidL = (lidSpec?.L || traySpec.L + 5) * scale
       const lidW = (lidSpec?.W || traySpec.W + 5) * scale
       const lidH = (lidSpec?.H || Math.max(12, traySpec.H * 0.8)) * scale
-      const lid = makeMesh(new THREE.BoxGeometry(lidL, lidH, lidW)); lid.position.set(0, H + lidH / 2 + 0.04, 0); group.add(lid)
+      const lidGroup = new THREE.Group(); lidGroup.position.set(0, H + lidH + 0.04, 0); lidGroup.rotation.x = Math.PI; group.add(lidGroup)
+      addOpenTray(lidGroup, lidL, lidW, lidH)
+      movableGroup = lidGroup
+      closedY = lidGroup.position.y
+    } else if (analysis.modelId === "book-box") {
+      const cover = new THREE.Group()
+      cover.position.set(-L / 2, 0, -W / 2 - 0.025)
+      group.add(cover)
+      const back = makeMesh(new THREE.BoxGeometry(L, 0.012, W)); back.position.set(L / 2, -0.02, W / 2); cover.add(back)
+      const spine = makeMesh(new THREE.BoxGeometry(0.012, H, W)); spine.position.set(0, H / 2, W / 2); cover.add(spine)
+      const front = makeMesh(new THREE.BoxGeometry(L, 0.012, W)); front.position.set(L / 2, H, W / 2); cover.add(front)
+      movableGroup = cover
     } else {
-      const sleeve = makeMesh(new THREE.BoxGeometry(L * 1.04, H * 1.12, W * 1.04)); sleeve.position.set(L * 0.58, H / 2, 0); group.add(sleeve)
+      const sleeveGroup = new THREE.Group(); sleeveGroup.position.set(L * 0.64, 0, 0); group.add(sleeveGroup)
+      const sleeveL = L * 1.04, sleeveW = W * 1.04, sleeveH = H * 1.12, wall = 0.012
+      const top = makeMesh(new THREE.BoxGeometry(sleeveL, wall, sleeveW)); top.position.y = sleeveH; sleeveGroup.add(top)
+      const bottom = makeMesh(new THREE.BoxGeometry(sleeveL, wall, sleeveW)); sleeveGroup.add(bottom)
+      const front = makeMesh(new THREE.BoxGeometry(sleeveL, sleeveH, wall)); front.position.set(0, sleeveH / 2, sleeveW / 2); sleeveGroup.add(front)
+      const back = makeMesh(new THREE.BoxGeometry(sleeveL, sleeveH, wall)); back.position.set(0, sleeveH / 2, -sleeveW / 2); sleeveGroup.add(back)
+      movableGroup = sleeveGroup
+      closedX = sleeveGroup.position.x
     }
-    const updateFold = (progress: number) => { group.scale.y = Math.max(0.02, Math.min(1, progress)) }
+    const updateFold = (progress: number) => {
+      const t = Math.max(0, Math.min(1, progress))
+      if (!movableGroup) return
+      if (analysis.modelId === "lidbase") movableGroup.position.y = closedY + H * 1.6 * (1 - t)
+      else if (analysis.modelId === "book-box") movableGroup.rotation.z = -Math.PI * 0.78 * (1 - t)
+      else movableGroup.position.x = closedX + L * 0.82 * (1 - t)
+    }
     updateFold(1)
     return { rootGroup, updateFold, materials }
   }
@@ -956,11 +1031,12 @@ export function buildFolded3DModel(
     const localScale = 1.5 / Math.max(L, W)
     const group = new THREE.Group()
     rootGroup.add(group)
-    const shell = makeMesh(new THREE.SphereGeometry(0.5, 48, 24))
-    shell.scale.set(L * localScale, H * localScale, W * localScale)
+    const shell = makeMesh(new THREE.CylinderGeometry(H * localScale / 2, H * localScale / 2, L * localScale, 64, 1, false))
+    shell.rotation.z = Math.PI / 2
+    shell.scale.z = W / H
     shell.position.y = H * localScale / 2
     group.add(shell)
-    const updateFold = (progress: number) => { shell.scale.y = H * localScale * Math.max(0.03, Math.min(1, progress)) }
+    const updateFold = (progress: number) => { shell.scale.z = (W / H) * Math.max(0.03, Math.min(1, progress)) }
     updateFold(1)
     return { rootGroup, updateFold, materials }
   }
@@ -969,10 +1045,48 @@ export function buildFolded3DModel(
     const L = numberSpec("L", analysis.dims.length) * scale
     const W = numberSpec("W", analysis.dims.width) * scale
     const H = numberSpec("H", analysis.dims.height) * scale
-    const box = makeMesh(new THREE.BoxGeometry(L, H, W))
-    box.position.y = H / 2
-    rootGroup.add(box)
-    const updateFold = (progress: number) => { box.scale.y = Math.max(0.02, Math.min(1, progress)) }
+    const group = new THREE.Group()
+    rootGroup.add(group)
+    const wall = 0.012
+
+    if (analysis.modelId === "window-carton") {
+      const addPart = (geometry: THREE.BufferGeometry, x: number, y: number, z: number) => {
+        const mesh = makeMesh(geometry); mesh.position.set(x, y, z); group.add(mesh)
+      }
+      addPart(new THREE.BoxGeometry(L, wall, W), 0, wall / 2, 0)
+      addPart(new THREE.BoxGeometry(L, wall, W), 0, H, 0)
+      addPart(new THREE.BoxGeometry(L, H, wall), 0, H / 2, -W / 2)
+      addPart(new THREE.BoxGeometry(wall, H, W), -L / 2, H / 2, 0)
+      addPart(new THREE.BoxGeometry(wall, H, W), L / 2, H / 2, 0)
+      const frameBar = Math.min(L, H) * 0.14
+      addPart(new THREE.BoxGeometry(L, frameBar, wall), 0, frameBar / 2, W / 2)
+      addPart(new THREE.BoxGeometry(L, frameBar, wall), 0, H - frameBar / 2, W / 2)
+      addPart(new THREE.BoxGeometry(frameBar, H - frameBar * 2, wall), -L / 2 + frameBar / 2, H / 2, W / 2)
+      addPart(new THREE.BoxGeometry(frameBar, H - frameBar * 2, wall), L / 2 - frameBar / 2, H / 2, W / 2)
+    } else {
+      const addPart = (geometry: THREE.BufferGeometry, x: number, y: number, z: number) => {
+        const mesh = makeMesh(geometry); mesh.position.set(x, y, z); group.add(mesh)
+      }
+      addPart(new THREE.BoxGeometry(L, wall, W), 0, wall / 2, 0)
+      addPart(new THREE.BoxGeometry(L, wall, W), 0, H, 0)
+      addPart(new THREE.BoxGeometry(L, H, wall), 0, H / 2, -W / 2)
+      addPart(new THREE.BoxGeometry(L, H, wall), 0, H / 2, W / 2)
+      addPart(new THREE.BoxGeometry(wall, H, W), -L / 2, H / 2, 0)
+      addPart(new THREE.BoxGeometry(wall, H, W), L / 2, H / 2, 0)
+      if (analysis.modelId === "hanger-box") {
+        const headerW = L * 0.82
+        const headerH = Math.min(H * 0.32, L * 0.55)
+        const headerShape = new THREE.Shape()
+        headerShape.moveTo(-headerW / 2, 0); headerShape.lineTo(headerW / 2, 0); headerShape.lineTo(headerW / 2, headerH); headerShape.lineTo(-headerW / 2, headerH); headerShape.closePath()
+        const slot = new THREE.Path()
+        slot.absellipse(0, headerH * 0.58, headerW * 0.19, headerH * 0.1, 0, Math.PI * 2, false, 0)
+        headerShape.holes.push(slot)
+        const header = makeMesh(new THREE.ExtrudeGeometry(headerShape, { depth: wall, bevelEnabled: false }))
+        header.position.set(0, H, -wall / 2)
+        group.add(header)
+      }
+    }
+    const updateFold = (progress: number) => { group.scale.y = Math.max(0.02, Math.min(1, progress)) }
     updateFold(1)
     return { rootGroup, updateFold, materials }
   }
@@ -1343,6 +1457,12 @@ export function buildFolded3DModel(
     bMesh.castShadow = true
     centerGroup.add(fMesh)
     centerGroup.add(bMesh)
+
+    if (analysis.modelId === "spout-pouch") {
+      const spout = makeMesh(new THREE.CylinderGeometry(W * 0.055, W * 0.065, H * 0.13, 24))
+      spout.position.set(W * 0.3, H * 0.54, 0)
+      centerGroup.add(spout)
+    }
 
     const updateFold = (progress: number) => {
       const t = Math.max(0, Math.min(1, progress))
