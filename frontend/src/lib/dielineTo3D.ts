@@ -6,6 +6,17 @@ import * as THREE from "three"
 import { DielinePanelZone } from "./dielineGenerator"
 import { getCardboardBumpTexture } from "./cardboardTexture"
 
+export type DielineBoxType =
+  | "tube-box"
+  | "gable"
+  | "mailer-0427"
+  | "cylinder-wrap"
+  | "pouch"
+  | "flat-card"
+  | "polygon-prism"
+  | "folder"
+  | "generic-box"
+
 export interface DielineAnalysis {
   totalWidthMm: number
   totalHeightMm: number
@@ -15,7 +26,7 @@ export interface DielineAnalysis {
   verticalCreases: number[]
   horizontalCreases: number[]
   panels: DielinePanelZone[]
-  boxType: "gable" | "tube-box" | "mailer-0427" | "pouch" | "cylinder" | "generic-box"
+  boxType: DielineBoxType
   dims: {
     length: number // mm
     width: number  // mm
@@ -28,11 +39,104 @@ export interface DielineAnalysis {
   }
 }
 
+interface PathSegment {
+  x1: number
+  y1: number
+  x2: number
+  y2: number
+}
+
+/**
+ * Parses SVG path d attribute into linear coordinate segments
+ */
+export function parseSvgPathSegments(d: string): PathSegment[] {
+  const segments: PathSegment[] = []
+  const cmdReg = /([a-df-z])([^a-df-z]*)/gi
+  let match: RegExpExecArray | null
+  let curX = 0, curY = 0
+  let startX = 0, startY = 0
+
+  while ((match = cmdReg.exec(d)) !== null) {
+    const cmd = match[1]
+    const args = (match[2].match(/[-+]?\d*\.?\d+(?:e[-+]?\d+)?/gi) || []).map(Number)
+    const isRel = cmd === cmd.toLowerCase()
+    const type = cmd.toUpperCase()
+
+    if (type === "M") {
+      for (let i = 0; i < args.length; i += 2) {
+        const x = isRel && i > 0 ? curX + args[i] : (isRel ? curX + args[i] : args[i])
+        const y = isRel && i > 0 ? curY + args[i + 1] : (isRel ? curY + args[i + 1] : args[i + 1])
+        if (i === 0) {
+          curX = x
+          curY = y
+          startX = x
+          startY = y
+        } else {
+          segments.push({ x1: curX, y1: curY, x2: x, y2: y })
+          curX = x
+          curY = y
+        }
+      }
+    } else if (type === "L") {
+      for (let i = 0; i < args.length; i += 2) {
+        const x = isRel ? curX + args[i] : args[i]
+        const y = isRel ? curY + args[i + 1] : args[i + 1]
+        segments.push({ x1: curX, y1: curY, x2: x, y2: y })
+        curX = x
+        curY = y
+      }
+    } else if (type === "H") {
+      for (let i = 0; i < args.length; i++) {
+        const x = isRel ? curX + args[i] : args[i]
+        segments.push({ x1: curX, y1: curY, x2: x, y2: curY })
+        curX = x
+      }
+    } else if (type === "V") {
+      for (let i = 0; i < args.length; i++) {
+        const y = isRel ? curY + args[i] : args[i]
+        segments.push({ x1: curX, y1: curY, x2: curX, y2: y })
+        curY = y
+      }
+    } else if (type === "C") {
+      // Cubic Bezier: (cp1x, cp1y, cp2x, cp2y, endX, endY)
+      for (let i = 0; i < args.length; i += 6) {
+        const endX = isRel ? curX + args[i + 4] : args[i + 4]
+        const endY = isRel ? curY + args[i + 5] : args[i + 5]
+        segments.push({ x1: curX, y1: curY, x2: endX, y2: endY })
+        curX = endX
+        curY = endY
+      }
+    } else if (type === "S" || type === "Q") {
+      for (let i = 0; i < args.length; i += 4) {
+        const endX = isRel ? curX + args[i + 2] : args[i + 2]
+        const endY = isRel ? curY + args[i + 3] : args[i + 3]
+        segments.push({ x1: curX, y1: curY, x2: endX, y2: endY })
+        curX = endX
+        curY = endY
+      }
+    } else if (type === "A") {
+      // Arc: rx ry rot large sweep endX endY
+      for (let i = 0; i < args.length; i += 7) {
+        const endX = isRel ? curX + args[i + 5] : args[i + 5]
+        const endY = isRel ? curY + args[i + 6] : args[i + 6]
+        segments.push({ x1: curX, y1: curY, x2: endX, y2: endY })
+        curX = endX
+        curY = endY
+      }
+    } else if (type === "Z") {
+      segments.push({ x1: curX, y1: curY, x2: startX, y2: startY })
+      curX = startX
+      curY = startY
+    }
+  }
+  return segments
+}
+
 /**
  * Parses raw SVG dieline and extracts cut boundaries, crease lines, and semantic panels
  * Strictly follows Pacdora & Packaging CAD rules:
- * - Red / Magenta / Non-dash Solid = PISAU POTONG (Through Cut) -> Boundary & cutout profile (Dipotong, bukan dilipat)
- * - Green / Dashed (stroke-dasharray) = GARIS LIPAT (Crease / Score) -> Sendi lipatan kemasan 3D (Hinges)
+ * - Red / Magenta / Non-dash Solid = PISAU POTONG (Through Cut) -> Boundary & cutout profile
+ * - Green / Dashed (stroke-dasharray) / Fold Group = GARIS LIPAT (Crease / Score) -> Sendi lipatan kemasan 3D (Hinges)
  * - Cyan / Blue = BLEED / SAFE MARGIN (Batas lebihan cetak 3mm)
  */
 export function analyzeSvgDieline(svgText: string): DielineAnalysis {
@@ -46,8 +150,8 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
       verticalCreases: [],
       horizontalCreases: [],
       panels: [],
-      boxType: "generic-box",
-      dims: { length: 100, width: 60, height: 100 },
+      boxType: "flat-card",
+      dims: { length: 160, width: 1, height: 160 },
       cadStats: { cutSegmentsCount: 0, creaseSegmentsCount: 0, bleedSegmentsCount: 0 },
     }
   }
@@ -94,10 +198,8 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
   const tagReg = /<(\/)?([a-zA-Z0-9:-]+)([^>]*?)(\/)?>/g
   let match: RegExpExecArray | null
 
-  const cutXs: number[] = []
-  const cutYs: number[] = []
-  const rawVertSegments: Array<{ x: number; y1: number; y2: number }> = []
-  const rawHorizSegments: Array<{ y: number; x1: number; x2: number }> = []
+  const cutSegs: PathSegment[] = []
+  const creaseSegs: PathSegment[] = []
 
   let cutSegmentsCount = 0
   let creaseSegmentsCount = 0
@@ -117,8 +219,8 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
         const cls = (attrsStr.match(/\bclass=["\']([^"\']+)["\']/i) || [])[1] || ""
         const stroke = (attrsStr.match(/\bstroke=["\']([^"\']+)["\']/i) || [])[1] || ""
         const dash = (attrsStr.match(/\bstroke-dasharray=["\']([^"\']+)["\']/i) || [])[1] || ""
-        const isCut = /cut|die-cut|pisau/i.test(id + " " + cls) || /#(ff007f|e11d48|f43f5e|ff0000|d41a5a|magenta)/i.test(stroke)
-        const isCrease = /crease|fold|score|lipat/i.test(id + " " + cls) || /#(00a651|10b981|22c55e|00ff00|00adee)/i.test(stroke) || (dash.length > 0 && dash !== "none")
+        const isCut = /cut|die-cut|page-cut|pisau/i.test(id + " " + cls) || /#(ff007f|e11d48|f43f5e|ff0000|d41a5a|magenta)/i.test(stroke)
+        const isCrease = /crease|fold|page-fold|score|lipat/i.test(id + " " + cls) || /#(00a651|10b981|22c55e|00ff00)/i.test(stroke) || (dash.length > 0 && dash !== "none")
         groupStack.push({ id, cls, stroke, isCut, isCrease })
         if (isSelfClosing) groupStack.pop()
       }
@@ -131,86 +233,61 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
       const stroke = (attrsStr.match(/\bstroke=["\']([^"\']+)["\']/i) || [])[1] || ""
       const dash = (attrsStr.match(/\bstroke-dasharray=["\']([^"\']+)["\']/i) || [])[1] || ""
 
-      // Filter out dimensions, annotations, registration marks
-      if (/dim|annotation|crosshair|register|sheet/i.test(id + " " + cls)) {
+      // Filter out dimensions, annotations, registration marks, sheet, pagetext, labels, title-block
+      const fullContext = (id + " " + cls + " " + groupStack.map(g => g.id + " " + g.cls).join(" ")).toLowerCase()
+      if (/dim|annotation|crosshair|register|sheet|pagetext|labels|title-block|artwork/i.test(fullContext)) {
         continue
       }
 
       const isDashed = dash.length > 0 && dash !== "none"
-      const isRedStroke = /#(ff007f|e11d48|f43f5e|ff0000|d41a5a|magenta)/i.test(stroke)
-      const isGreenStroke = /#(00a651|10b981|22c55e|00ff00|008000)/i.test(stroke)
-      const isBlueStroke = /#(00a0e9|00adee|2563eb|3b82f6)/i.test(stroke)
+      const isRedStroke = /#(ff007f|e11d48|f43f5e|ff0000|d41a5a|magenta|red)/i.test(stroke)
+      const isGreenStroke = /#(00a651|10b981|22c55e|00ff00|008000|green)/i.test(stroke)
+      const isBleedGroup = /bleed|safe/i.test(fullContext)
 
       const parentCut = groupStack.some((g) => g.isCut)
       const parentCrease = groupStack.some((g) => g.isCrease)
 
-      // Pacdora Rule Classification:
-      // 1. Bleed: Blue/cyan stroke or bleed/safe class
-      // 2. Crease (LIPAT): Green stroke OR Dashed line OR parent/class crease/fold
-      // 3. Cut (POTONG): Red/Magenta stroke OR Solid non-dash cut/die-cut
-      const isBleed = /bleed|safe/i.test(id + " " + cls) || isBlueStroke
-      const isCrease = !isBleed && (parentCrease || isDashed || isGreenStroke || /crease|fold|score|lipat/i.test(id + " " + cls))
-      const isCut = !isBleed && !isCrease && (parentCut || isRedStroke || /cut|die-cut|pisau/i.test(id + " " + cls) || (!isDashed && stroke !== ""))
+      // Crease: Green stroke OR Dashed line OR inside fold/crease group (e.g. templatemaker #00adee inside page-fold)
+      const isCrease = !isBleedGroup && (parentCrease || isDashed || isGreenStroke || /crease|fold|page-fold|score|lipat/i.test(id + " " + cls))
+      // Cut: Red/Magenta stroke OR inside cut/die-cut group
+      const isCut = !isBleedGroup && !isCrease && (parentCut || isRedStroke || /cut|die-cut|page-cut|pisau/i.test(id + " " + cls))
+      const isBleed = isBleedGroup && !isCut && !isCrease
 
-      if (isBleed) bleedSegmentsCount++
-      else if (isCrease) creaseSegmentsCount++
-      else if (isCut) cutSegmentsCount++
-
+      let segs: PathSegment[] = []
       if (tag === "path") {
         const d = (attrsStr.match(/\bd=["\']([^"\']+)["\']/i) || [])[1] || ""
-        const nums = (d.match(/[-+]?\d*\.?\d+/g) || []).map(Number)
-        if (isCut) {
-          for (let i = 0; i < nums.length; i += 2) {
-            if (!isNaN(nums[i]) && !isNaN(nums[i + 1])) {
-              cutXs.push(nums[i])
-              cutYs.push(nums[i + 1])
-            }
-          }
-        }
-        if (isCrease) {
-          for (let i = 0; i < nums.length - 3; i += 2) {
-            const x1 = nums[i]
-            const y1 = nums[i + 1]
-            const x2 = nums[i + 2]
-            const y2 = nums[i + 3]
-            if (Math.abs(x1 - x2) < 2.0 && Math.abs(y2 - y1) > 8) {
-              rawVertSegments.push({ x: (x1 + x2) / 2, y1: Math.min(y1, y2), y2: Math.max(y1, y2) })
-            } else if (Math.abs(y1 - y2) < 2.0 && Math.abs(x2 - x1) > 8) {
-              rawHorizSegments.push({ y: (y1 + y2) / 2, x1: Math.min(x1, x2), x2: Math.max(x1, x2) })
-            }
-          }
-        }
+        segs = parseSvgPathSegments(d)
       } else if (tag === "line") {
         const x1 = parseFloat((attrsStr.match(/x1=["\']([\d.-]+)/i) || [])[1] || "0")
         const y1 = parseFloat((attrsStr.match(/y1=["\']([\d.-]+)/i) || [])[1] || "0")
         const x2 = parseFloat((attrsStr.match(/x2=["\']([\d.-]+)/i) || [])[1] || "0")
         const y2 = parseFloat((attrsStr.match(/y2=["\']([\d.-]+)/i) || [])[1] || "0")
-        if (isCut) {
-          cutXs.push(x1, x2)
-          cutYs.push(y1, y2)
-        }
-        if (isCrease) {
-          if (Math.abs(x1 - x2) < 2.0 && Math.abs(y2 - y1) > 8) {
-            rawVertSegments.push({ x: (x1 + x2) / 2, y1: Math.min(y1, y2), y2: Math.max(y1, y2) })
-          } else if (Math.abs(y1 - y2) < 2.0 && Math.abs(x2 - x1) > 8) {
-            rawHorizSegments.push({ y: (y1 + y2) / 2, x1: Math.min(x1, x2), x2: Math.max(x1, x2) })
-          }
-        }
+        segs = [{ x1, y1, x2, y2 }]
+      }
+
+      if (isBleed) {
+        bleedSegmentsCount += segs.length
+      } else if (isCrease) {
+        creaseSegmentsCount += segs.length
+        creaseSegs.push(...segs)
+      } else if (isCut) {
+        cutSegmentsCount += segs.length
+        cutSegs.push(...segs)
       }
     }
   }
 
-  // 3. Determine cut box
-  const validCutXs = cutXs.filter((x) => x >= vbMinX && x <= vbMinX + vbW)
-  const validCutYs = cutYs.filter((y) => y >= vbMinY && y <= vbMinY + vbH)
-
+  // 3. Determine cut box from cut segments
   let cutBox = { x: vbMinX + vbW * 0.08, y: vbMinY + vbH * 0.08, w: vbW * 0.84, h: vbH * 0.84 }
-  if (validCutXs.length > 0 && validCutYs.length > 0) {
-    const minX = Math.min(...validCutXs)
-    const maxX = Math.max(...validCutXs)
-    const minY = Math.min(...validCutYs)
-    const maxY = Math.max(...validCutYs)
-    if (maxX - minX > 20 && maxY - minY > 20) {
+  if (cutSegs.length > 0) {
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
+    cutSegs.forEach((s) => {
+      minX = Math.min(minX, s.x1, s.x2)
+      maxX = Math.max(maxX, s.x1, s.x2)
+      minY = Math.min(minY, s.y1, s.y2)
+      maxY = Math.max(maxY, s.y1, s.y2)
+    })
+    if (maxX - minX > 10 && maxY - minY > 10) {
       cutBox = { x: minX, y: minY, w: maxX - minX, h: maxY - minY }
     }
   }
@@ -228,109 +305,156 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
     return result
   }
 
-  const verticalCreases = clusterValues(rawVertSegments.map((s) => s.x)).filter(
+  const rawVCreases: number[] = []
+  const rawHCreases: number[] = []
+
+  creaseSegs.forEach((s) => {
+    if (Math.abs(s.x1 - s.x2) < 2.5 && Math.abs(s.y2 - s.y1) > 8) {
+      rawVCreases.push((s.x1 + s.x2) / 2)
+    } else if (Math.abs(s.y1 - s.y2) < 2.5 && Math.abs(s.x2 - s.x1) > 8) {
+      rawHCreases.push((s.y1 + s.y2) / 2)
+    }
+  })
+
+  const verticalCreases = clusterValues(rawVCreases).filter(
     (x) => x > cutBox.x + 3 && x < cutBox.x + cutBox.w - 3
   )
 
-  // Horizontal creases: find the two primary body creases (highest total horizontal spans)
-  const hSpans: Record<number, number> = {}
-  rawHorizSegments.forEach((s) => {
-    const yKey = Math.round(s.y / 2) * 2 // bucket by 2 units
-    const span = Math.abs(s.x2 - s.x1)
-    hSpans[yKey] = (hSpans[yKey] || 0) + span
-  })
+  const horizontalCreases = clusterValues(rawHCreases).filter(
+    (y) => y > cutBox.y + 3 && y < cutBox.y + cutBox.h - 3
+  )
 
-  // Pick top horizontal creases with largest spans that lie within cutBox
-  const validHKeys = Object.keys(hSpans)
-    .map(Number)
-    .filter((y) => y > cutBox.y + 5 && y < cutBox.y + cutBox.h - 5)
-    .sort((a, b) => (hSpans[b] || 0) - (hSpans[a] || 0))
-
-  let horizontalCreases: number[] = []
-  if (validHKeys.length >= 2) {
-    const topTwo = [validHKeys[0], validHKeys[1]].sort((a, b) => a - b)
-    horizontalCreases = topTwo
-  } else {
-    horizontalCreases = clusterValues(rawHorizSegments.map((s) => s.y)).filter(
-      (y) => y > cutBox.y + 5 && y < cutBox.y + cutBox.h - 5
-    )
-  }
-
-  // 5. Detect Box Type
+  // 5. Structure & Shape Topology Detection (No artificial forced classification!)
   const isGable = /gable|milk|susu|beverage/i.test(svgText)
   const isCylinder = /cylinder|bottle|can|kaleng|spray|cup/i.test(svgText)
   const isMailer = /0427|mailer|tuck-top|pizza/i.test(svgText)
+  const isPouch = /pouch|doypack|standing-pouch|sachet/i.test(svgText)
 
-  let boxType: DielineAnalysis["boxType"] = "generic-box"
-  if (isGable) boxType = "gable"
-  else if (isCylinder) boxType = "cylinder"
-  else if (isMailer) boxType = "mailer-0427"
-  else if (verticalCreases.length >= 3) boxType = "tube-box"
+  const cutAspect = cutBox.w / (cutBox.h || 1)
 
-  // 6. Build Panels and Dimensions
+  let boxType: DielineBoxType = "generic-box"
+
+  if (isMailer) {
+    boxType = "mailer-0427"
+  } else if (isGable) {
+    boxType = "gable"
+  } else if (verticalCreases.length === 0) {
+    if (isPouch) {
+      boxType = "pouch"
+    } else if (isCylinder || cutAspect > 1.35) {
+      boxType = "cylinder-wrap"
+    } else {
+      boxType = "flat-card"
+    }
+  } else if (verticalCreases.length === 1) {
+    boxType = "folder"
+  } else if (verticalCreases.length === 2) {
+    boxType = "folder"
+  } else if (verticalCreases.length === 4) {
+    boxType = "tube-box"
+  } else {
+    // 3 creases (triangular prism), 5 creases (pentagon), 6 creases (hexagonal), etc.
+    boxType = "polygon-prism"
+  }
+
+  // 6. Build Panels and Physical Dimensions
   const panels: DielinePanelZone[] = []
   let lengthMm = 100
   let widthMm = 60
   let heightMm = 120
 
-  const topCrease =
-    horizontalCreases.length > 0 ? horizontalCreases[0] : cutBox.y + cutBox.h * 0.18
+  const topCrease = horizontalCreases.length > 0 ? horizontalCreases[0] : cutBox.y
   const bottomCrease =
     horizontalCreases.length > 1
       ? horizontalCreases[horizontalCreases.length - 1]
-      : cutBox.y + cutBox.h * 0.82
+      : cutBox.y + cutBox.h
   const bodyH = Math.max(10, bottomCrease - topCrease)
 
-  if (verticalCreases.length >= 4) {
-    const v0 = verticalCreases[0]
-    const v1 = verticalCreases[1]
-    const v2 = verticalCreases[2]
-    const v3 = verticalCreases[3]
+  if (verticalCreases.length >= 1) {
+    // Dynamic N-panel partitioning along extracted vertical creases
+    const boundaries = [cutBox.x, ...verticalCreases, cutBox.x + cutBox.w]
+    const panelWidths = []
+    for (let i = 0; i < boundaries.length - 1; i++) {
+      panelWidths.push(boundaries[i + 1] - boundaries[i])
+    }
 
-    const glueW = Math.max(8, v0 - cutBox.x)
-    const leftW = Math.max(10, v1 - v0)
-    const frontW = Math.max(10, v2 - v1)
-    const rightW = Math.max(10, v3 - v2)
-    const backW = Math.max(10, cutBox.x + cutBox.w - v3)
+    // Check if panel 0 is a glue flap (significantly narrower than adjacent wall)
+    const isPanel0Glue = panelWidths.length >= 4 && panelWidths[0] < 0.42 * panelWidths[1] && panelWidths[0] / pxPerMm < 65
 
-    lengthMm = Math.round(frontW / pxPerMm)
-    widthMm = Math.round(leftW / pxPerMm)
+    panelWidths.forEach((w, i) => {
+      const pX = boundaries[i]
+      let label = `PANEL ${i + 1}`
+      let faceName = `panel-${i}`
+
+      if (isPanel0Glue && i === 0) {
+        label = "LIDAH LEM (GLUE FLAP)"
+        faceName = "glue-flap"
+      } else if (panelWidths.length === 5 && isPanel0Glue) {
+        // Standard 4-wall tube box
+        if (i === 1) { label = "SISI KIRI (LEFT)"; faceName = "left" }
+        else if (i === 2) { label = "MUKA DEPAN (FRONT)"; faceName = "front" }
+        else if (i === 3) { label = "SISI KANAN (RIGHT)"; faceName = "right" }
+        else if (i === 4) { label = "MUKA BELAKANG (BACK)"; faceName = "back" }
+      }
+
+      panels.push({
+        face: faceName,
+        x: pX,
+        y: topCrease,
+        width: w,
+        height: bodyH,
+        label,
+      })
+    })
+
+    if (panelWidths.length >= 4) {
+      lengthMm = Math.round((isPanel0Glue ? panelWidths[2] : panelWidths[0]) / pxPerMm)
+      widthMm = Math.round((isPanel0Glue ? panelWidths[1] : panelWidths[1]) / pxPerMm)
+    } else {
+      lengthMm = Math.round(panelWidths[0] / pxPerMm)
+      widthMm = Math.round((panelWidths[1] || panelWidths[0]) / pxPerMm)
+    }
     heightMm = Math.round(bodyH / pxPerMm)
-
-    const topFlapH = Math.max(5, topCrease - cutBox.y)
-    const bottomFlapH = Math.max(5, cutBox.y + cutBox.h - bottomCrease)
-
-    panels.push(
-      { face: "glue-flap", x: cutBox.x, y: topCrease, width: glueW, height: bodyH, label: "LIDAH LEM (GLUE FLAP)" },
-      { face: "left", x: v0, y: topCrease, width: leftW, height: bodyH, label: "SISI KIRI (LEFT)" },
-      { face: "front", x: v1, y: topCrease, width: frontW, height: bodyH, label: "MUKA DEPAN (FRONT)" },
-      { face: "right", x: v2, y: topCrease, width: rightW, height: bodyH, label: "SISI KANAN (RIGHT)" },
-      { face: "back", x: v3, y: topCrease, width: backW, height: bodyH, label: "MUKA BELAKANG (BACK)" },
-      { face: "top", x: v1, y: cutBox.y, width: frontW, height: topFlapH, label: "TUTUP ATAS (TOP)" },
-      { face: "bottom", x: v1, y: bottomCrease, width: frontW, height: bottomFlapH, label: "ALAS BAWAH (BOTTOM)" }
-    )
   } else {
-    // Proportional division into 4 tube panels + glue flap
-    const glueW = cutBox.w * 0.06
-    const pW = (cutBox.w - glueW) / 4
-    const topFlapH = cutBox.h * 0.18
-    const bottomFlapH = cutBox.h * 0.18
-    const calcBodyH = cutBox.h - topFlapH - bottomFlapH
-    const calcBodyY = cutBox.y + topFlapH
-
-    lengthMm = Math.round(pW / pxPerMm)
-    widthMm = Math.round(pW / pxPerMm)
-    heightMm = Math.round(calcBodyH / pxPerMm)
-
-    panels.push(
-      { face: "glue-flap", x: cutBox.x, y: calcBodyY, width: glueW, height: calcBodyH, label: "LIDAH LEM" },
-      { face: "left", x: cutBox.x + glueW, y: calcBodyY, width: pW, height: calcBodyH, label: "SISI KIRI (LEFT)" },
-      { face: "front", x: cutBox.x + glueW + pW, y: calcBodyY, width: pW, height: calcBodyH, label: "MUKA DEPAN (FRONT)" },
-      { face: "right", x: cutBox.x + glueW + pW * 2, y: calcBodyY, width: pW, height: calcBodyH, label: "SISI KANAN (RIGHT)" },
-      { face: "back", x: cutBox.x + glueW + pW * 3, y: calcBodyY, width: pW, height: calcBodyH, label: "MUKA BELAKANG (BACK)" },
-      { face: "top", x: cutBox.x + glueW + pW, y: cutBox.y, width: pW, height: topFlapH, label: "TUTUP ATAS (TOP)" },
-      { face: "bottom", x: cutBox.x + glueW + pW, y: calcBodyY + calcBodyH, width: pW, height: bottomFlapH, label: "ALAS BAWAH (BOTTOM)" }
-    )
+    // 0 vertical creases: Single piece (Wrap, Pouch, or Flat Card) - NEVER cut into fake 4 walls!
+    if (boxType === "cylinder-wrap") {
+      const diam = Math.round((cutBox.w / Math.PI) / pxPerMm)
+      lengthMm = diam
+      widthMm = diam
+      heightMm = Math.round(cutBox.h / pxPerMm)
+      panels.push({
+        face: "wrap-body",
+        x: cutBox.x,
+        y: cutBox.y,
+        width: cutBox.w,
+        height: cutBox.h,
+        label: "LABEL KELILING (CYLINDER WRAP)",
+      })
+    } else if (boxType === "pouch") {
+      lengthMm = Math.round(cutBox.w / pxPerMm)
+      widthMm = Math.round((cutBox.w * 0.28) / pxPerMm)
+      heightMm = Math.round(cutBox.h / pxPerMm)
+      panels.push({
+        face: "pouch-body",
+        x: cutBox.x,
+        y: cutBox.y,
+        width: cutBox.w,
+        height: cutBox.h,
+        label: "BADAN POUCH (STAND-UP POUCH)",
+      })
+    } else {
+      lengthMm = Math.round(cutBox.w / pxPerMm)
+      widthMm = 1 // Board thickness
+      heightMm = Math.round(cutBox.h / pxPerMm)
+      panels.push({
+        face: "flat-card",
+        x: cutBox.x,
+        y: cutBox.y,
+        width: cutBox.w,
+        height: cutBox.h,
+        label: "PAPAN KEMASAN (FLAT DIE-CUT BOARD)",
+      })
+    }
   }
 
   return {
@@ -343,7 +467,7 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
     horizontalCreases,
     panels,
     boxType,
-    dims: { length: lengthMm, width: widthMm, height: heightMm },
+    dims: { length: Math.max(10, lengthMm), width: Math.max(1, widthMm), height: Math.max(10, heightMm) },
     cadStats: {
       cutSegmentsCount,
       creaseSegmentsCount,
@@ -373,7 +497,6 @@ export function createPanelGeometry(
 
   const u0 = Math.max(0, Math.min(1, panelSvgX / svgTotalW))
   const u1 = Math.max(0, Math.min(1, (panelSvgX + pW) / svgTotalW))
-  // With flipY = false, Y=0 is top (V=0), Y=H is bottom (V=1)
   const v0 = Math.max(0, Math.min(1, panelSvgY / svgTotalH))
   const v1 = Math.max(0, Math.min(1, (panelSvgY + pH) / svgTotalH))
 
@@ -388,7 +511,6 @@ export function createPanelGeometry(
 
 /**
  * Creates an authentically die-cut packaging flap geometry with tapered or chamfered edges
- * (Dipotong sesuai profil pisau potong CAD, bukan sekadar kotak persegi kaku)
  */
 export function createDieCutFlapGeometry(
   widthWorld: number,
@@ -406,7 +528,6 @@ export function createDieCutFlapGeometry(
 
   if (flapType === "glue") {
     // Glue flap: hinged at x=0 (y in [-H/2, +H/2]), extends into -X (width G)
-    // Tapered at 15-20 degrees at top and bottom corners (DIPOTONG)
     const taper = Math.min(heightWorld * 0.12, widthWorld * 0.45)
     const shape = new THREE.Shape()
     shape.moveTo(0, -heightWorld / 2)
@@ -422,7 +543,6 @@ export function createDieCutFlapGeometry(
 
   if (flapType === "dust-top") {
     // Top dust flap: hinged at y=0 (x in [-W/2, +W/2]), extends into +Y (height H_flap)
-    // Chamfered cut corners at outer left and right edges (DIPOTONG)
     const chamfer = Math.min(widthWorld * 0.22, heightWorld * 0.4)
     const shape = new THREE.Shape()
     shape.moveTo(-widthWorld / 2, 0)
@@ -438,7 +558,6 @@ export function createDieCutFlapGeometry(
 
   if (flapType === "dust-bottom") {
     // Bottom dust flap: hinged at y=0 (x in [-W/2, +W/2]), extends into -Y (height H_flap)
-    // Chamfered cut corners at outer left and right edges (DIPOTONG)
     const chamfer = Math.min(widthWorld * 0.22, heightWorld * 0.4)
     const shape = new THREE.Shape()
     shape.moveTo(-widthWorld / 2, 0)
@@ -452,7 +571,6 @@ export function createDieCutFlapGeometry(
     return geo
   }
 
-  // Default rectangular plane
   return createPanelGeometry(widthWorld, heightWorld, panelSvgX, panelSvgY, svgTotalW, svgTotalH, pW, pH)
 }
 
@@ -482,9 +600,6 @@ function applyShapeUVs(
     const nx = (px - minX) / spanX
     const ny = (py - minY) / spanY
 
-    // In Three.js with flipY=false: V=0 is top, V=1 is bottom
-    // ny=1 is top of flap (py=maxY) -> v = panelSvgY / svgTotalH
-    // ny=0 is bottom of flap (py=minY) -> v = (panelSvgY + pH) / svgTotalH
     const u = Math.max(0, Math.min(1, (panelSvgX + nx * pW) / svgTotalW))
     const v = Math.max(0, Math.min(1, (panelSvgY + (1 - ny) * pH) / svgTotalH))
 
@@ -504,7 +619,7 @@ export interface FoldModelHierarchy {
 
 /**
  * Builds a dynamic 3D kinematic folding model from SVG analysis
- * Supports continuous fold angle transitions from flat dieline sheet (0%) to fully folded 3D box (100%)
+ * Supports continuous fold angle transitions from flat dieline sheet (0%) to fully folded 3D model (100%)
  */
 export function buildFolded3DModel(
   analysis: DielineAnalysis,
@@ -516,10 +631,10 @@ export function buildFolded3DModel(
   const materials: THREE.MeshPhysicalMaterial[] = []
 
   const isKraft = materialFinish === "kraft"
-  const kraftBumpMap = isKraft ? getCardboardBumpTexture(true) : null
-  const bumpScale = isKraft ? 0.032 : 0
+  const kraftBumpMap = isKraft ? getCardboardBumpTexture(false) : null
+  const bumpScale = isKraft ? 0.008 : 0
 
-  const defaultColor = isKraft ? "#be8d58" : boxColor
+  const defaultColor = isKraft ? "#c6a57f" : boxColor
   const roughness = isKraft ? 0.90 : materialFinish === "glossy" ? 0.08 : materialFinish === "metallic" ? 0.15 : 0.65
   const metalness = materialFinish === "metallic" ? 0.88 : 0.02
   const clearcoat = materialFinish === "glossy" ? 0.95 : 0.0
@@ -543,96 +658,72 @@ export function buildFolded3DModel(
     return mat
   }
 
-  const { svgCanvasW: svgW, svgCanvasH: svgH, panels, dims, boxType, cutBox } = analysis
-  const L_mm = dims.length
-  const W_mm = dims.width
-  const H_mm = dims.height
+  const { svgCanvasW: svgW, svgCanvasH: svgH, cutBox, verticalCreases, horizontalCreases, boxType } = analysis
 
-  // Normalization factor so box fits comfortably in ~1.5 world units
-  const maxDim = Math.max(L_mm, W_mm, H_mm, 80)
-  const scale = 1.5 / maxDim
-
-  const L = L_mm * scale
-  const W = W_mm * scale
-  const H = H_mm * scale
-
-  const panelMap: Record<string, DielinePanelZone> = {}
-  panels.forEach((p) => { panelMap[p.face] = p })
-
-  const frontP = panelMap.front || { face: "front", x: 120, y: 60, width: L_mm, height: H_mm }
-  const backP = panelMap.back || { face: "back", x: 260, y: 60, width: L_mm, height: H_mm }
-  const leftP = panelMap.left || { face: "left", x: 50, y: 60, width: W_mm, height: H_mm }
-  const rightP = panelMap.right || { face: "right", x: 190, y: 60, width: W_mm, height: H_mm }
-  const glueP = panelMap["glue-flap"] || { face: "glue-flap", x: 20, y: 60, width: W_mm * 0.25, height: H_mm }
-  const topP = panelMap.top || { face: "top", x: 120, y: 20, width: L_mm, height: W_mm }
-  const bottomP = panelMap.bottom || { face: "bottom", x: 120, y: 180, width: L_mm, height: W_mm }
-
-  const G = (glueP.width * (L / (frontP.width || 1))) || (W * 0.22)
-  const topFlapH = (topP.height * (H / (frontP.height || 1))) || W
-  const bottomFlapH = (bottomP.height * (H / (frontP.height || 1))) || W
+  // World scale so model fits within ~1.6 world units
+  const maxDim = Math.max(cutBox.w, cutBox.h, 50)
+  const scale = 1.6 / maxDim
 
   // ==========================================
   // CASE 1: MAILER BOX (FEFCO 0427)
-  // Base anchor panel: Bottom Base (rests on XZ floor)
   // ==========================================
   if (boxType === "mailer-0427") {
     const baseGroup = new THREE.Group()
     rootGroup.add(baseGroup)
 
-    // 1. Bottom Base Mesh (XZ ground)
-    const bottomGeo = createPanelGeometry(L, W, bottomP.x, bottomP.y, svgW, svgH, bottomP.width, bottomP.height)
+    const L = analysis.dims.length * scale
+    const W = analysis.dims.width * scale
+    const H = analysis.dims.height * scale
+
+    // Bottom Base Mesh (XZ ground)
+    const bottomGeo = new THREE.PlaneGeometry(L, W)
     bottomGeo.rotateX(Math.PI / 2)
     const bottomMesh = new THREE.Mesh(bottomGeo, createMaterial())
     bottomMesh.castShadow = true
     bottomMesh.receiveShadow = true
     baseGroup.add(bottomMesh)
 
-    // 2. Front Wall Hinge
+    // Front Wall Hinge
     const frontHinge = new THREE.Group()
     frontHinge.position.set(0, 0, W / 2)
     baseGroup.add(frontHinge)
-    const frontGeo = createPanelGeometry(L, H, frontP.x, frontP.y, svgW, svgH, frontP.width, frontP.height)
+    const frontGeo = new THREE.PlaneGeometry(L, H)
     frontGeo.translate(0, H / 2, 0)
-    const frontMesh = new THREE.Mesh(frontGeo, createMaterial())
-    frontHinge.add(frontMesh)
+    frontHinge.add(new THREE.Mesh(frontGeo, createMaterial()))
 
-    // 3. Back Wall Hinge
+    // Back Wall Hinge
     const backHinge = new THREE.Group()
     backHinge.position.set(0, 0, -W / 2)
     baseGroup.add(backHinge)
-    const backGeo = createPanelGeometry(L, H, backP.x, backP.y, svgW, svgH, backP.width, backP.height)
+    const backGeo = new THREE.PlaneGeometry(L, H)
     backGeo.translate(0, H / 2, 0)
-    const backMesh = new THREE.Mesh(backGeo, createMaterial())
-    backHinge.add(backMesh)
+    backHinge.add(new THREE.Mesh(backGeo, createMaterial()))
 
-    // 4. Top Lid Hinge
+    // Top Lid Hinge
     const topHinge = new THREE.Group()
     topHinge.position.set(0, H, 0)
     backHinge.add(topHinge)
-    const topGeo = createPanelGeometry(L, W, topP.x, topP.y, svgW, svgH, topP.width, topP.height)
+    const topGeo = new THREE.PlaneGeometry(L, W)
     topGeo.translate(0, W / 2, 0)
-    const topMesh = new THREE.Mesh(topGeo, createMaterial())
-    topHinge.add(topMesh)
+    topHinge.add(new THREE.Mesh(topGeo, createMaterial()))
 
-    // 5. Left Wall Hinge
+    // Left Wall Hinge
     const leftHinge = new THREE.Group()
     leftHinge.position.set(-L / 2, 0, 0)
     baseGroup.add(leftHinge)
-    const leftGeo = createPanelGeometry(W, H, leftP.x, leftP.y, svgW, svgH, leftP.width, leftP.height)
+    const leftGeo = new THREE.PlaneGeometry(W, H)
     leftGeo.rotateY(Math.PI / 2)
     leftGeo.translate(0, H / 2, 0)
-    const leftMesh = new THREE.Mesh(leftGeo, createMaterial())
-    leftHinge.add(leftMesh)
+    leftHinge.add(new THREE.Mesh(leftGeo, createMaterial()))
 
-    // 6. Right Wall Hinge
+    // Right Wall Hinge
     const rightHinge = new THREE.Group()
     rightHinge.position.set(L / 2, 0, 0)
     baseGroup.add(rightHinge)
-    const rightGeo = createPanelGeometry(W, H, rightP.x, rightP.y, svgW, svgH, rightP.width, rightP.height)
+    const rightGeo = new THREE.PlaneGeometry(W, H)
     rightGeo.rotateY(-Math.PI / 2)
     rightGeo.translate(0, H / 2, 0)
-    const rightMesh = new THREE.Mesh(rightGeo, createMaterial())
-    rightHinge.add(rightMesh)
+    rightHinge.add(new THREE.Mesh(rightGeo, createMaterial()))
 
     const updateFold = (progress: number) => {
       const t = Math.max(0, Math.min(1, progress))
@@ -648,221 +739,468 @@ export function buildFolded3DModel(
   }
 
   // ==========================================
-  // CASE 2: TUBE CARTONS & GABLE CARTONS
-  // 4 main vertical walls in horizontal chain:
-  // [Glue Flap (G)] | [Left (W)] | [Front (L)] | [Right (W)] | [Back (L)]
-  // Anchor panel: Front Panel (Panel 2) at (0, 0, 0)
+  // CASE 2: CYLINDRICAL WRAP / BOTTLE LABEL
+  // 0 vertical creases, wide wrap aspect ratio
+  // Continuous smooth cylindrical roll: t=0 (flat sheet) -> t=1 (3D cylinder)
   // ==========================================
+  if (boxType === "cylinder-wrap") {
+    const centerGroup = new THREE.Group()
+    rootGroup.add(centerGroup)
+
+    const W = cutBox.w * scale
+    const H = cutBox.h * scale
+    const R = W / (Math.PI * 2)
+
+    centerGroup.position.y = H / 2
+
+    const segsX = 64
+    const geo = new THREE.PlaneGeometry(W, H, segsX, 1)
+
+    // Map UVs 1:1 to SVG canvas cutBox
+    const uvs = geo.attributes.uv
+    const u0 = Math.max(0, Math.min(1, cutBox.x / svgW))
+    const u1 = Math.max(0, Math.min(1, (cutBox.x + cutBox.w) / svgW))
+    const v0 = Math.max(0, Math.min(1, cutBox.y / svgH))
+    const v1 = Math.max(0, Math.min(1, (cutBox.y + cutBox.h) / svgH))
+
+    for (let i = 0; i < uvs.count; i++) {
+      const col = i % (segsX + 1)
+      const row = Math.floor(i / (segsX + 1))
+      const uNorm = col / segsX
+      const vNorm = row
+      uvs.setXY(i, u0 + uNorm * (u1 - u0), v0 + vNorm * (v1 - v0))
+    }
+    uvs.needsUpdate = true
+
+    const mesh = new THREE.Mesh(geo, createMaterial())
+    mesh.castShadow = true
+    mesh.receiveShadow = true
+    centerGroup.add(mesh)
+
+    const origPositions = geo.attributes.position.clone()
+
+    const updateFold = (progress: number) => {
+      const t = Math.max(0, Math.min(1, progress))
+      const pos = geo.attributes.position
+
+      if (t < 0.002) {
+        for (let i = 0; i < pos.count; i++) {
+          pos.setXYZ(i, origPositions.getX(i), origPositions.getY(i), origPositions.getZ(i))
+        }
+        centerGroup.position.z = 0
+      } else {
+        const phi = Math.PI * 2 * t
+        const r = W / phi
+        for (let i = 0; i < pos.count; i++) {
+          const col = i % (segsX + 1)
+          const uNorm = col / segsX - 0.5
+          const angle = uNorm * phi
+          const x = r * Math.sin(angle)
+          const z = r * (1 - Math.cos(angle))
+          pos.setXYZ(i, x, origPositions.getY(i), z)
+        }
+        centerGroup.position.z = -R * t
+      }
+      pos.needsUpdate = true
+      geo.computeVertexNormals()
+    }
+
+    updateFold(1.0)
+    return { rootGroup, updateFold, materials }
+  }
+
+  // ==========================================
+  // CASE 3: STAND-UP POUCH / DOYPACK
+  // Flexible front & back panels with bottom gusset
+  // ==========================================
+  if (boxType === "pouch") {
+    const centerGroup = new THREE.Group()
+    rootGroup.add(centerGroup)
+
+    const W = cutBox.w * scale
+    const H = cutBox.h * scale
+    const depthMax = W * 0.28
+
+    centerGroup.position.y = H / 2
+
+    const segsX = 24
+    const segsY = 24
+
+    const fGeo = new THREE.PlaneGeometry(W, H, segsX, segsY)
+    const bGeo = new THREE.PlaneGeometry(W, H, segsX, segsY)
+
+    const u0 = Math.max(0, Math.min(1, cutBox.x / svgW))
+    const u1 = Math.max(0, Math.min(1, (cutBox.x + cutBox.w) / svgW))
+    const v0 = Math.max(0, Math.min(1, cutBox.y / svgH))
+    const v1 = Math.max(0, Math.min(1, (cutBox.y + cutBox.h) / svgH))
+
+    const setupUVs = (geo: THREE.PlaneGeometry) => {
+      const uvs = geo.attributes.uv
+      for (let i = 0; i < uvs.count; i++) {
+        const col = i % (segsX + 1)
+        const row = Math.floor(i / (segsX + 1))
+        uvs.setXY(i, u0 + (col / segsX) * (u1 - u0), v0 + (row / segsY) * (v1 - v0))
+      }
+      uvs.needsUpdate = true
+    }
+    setupUVs(fGeo)
+    setupUVs(bGeo)
+
+    const fMesh = new THREE.Mesh(fGeo, createMaterial())
+    const bMesh = new THREE.Mesh(bGeo, createMaterial())
+    fMesh.castShadow = true
+    bMesh.castShadow = true
+    centerGroup.add(fMesh)
+    centerGroup.add(bMesh)
+
+    const updateFold = (progress: number) => {
+      const t = Math.max(0, Math.min(1, progress))
+      const fPos = fGeo.attributes.position
+      const bPos = bGeo.attributes.position
+
+      for (let r = 0; r <= segsY; r++) {
+        const ny = r / segsY // 0 at top, 1 at bottom
+        // Pouch curves wider in middle & bottom, pinched flat at top zipper seal
+        const vWeight = Math.sin(ny * Math.PI) * (ny > 0.15 ? 1.0 : ny / 0.15)
+        for (let c = 0; c <= segsX; c++) {
+          const idx = r * (segsX + 1) + c
+          const nx = c / segsX // 0 to 1
+          const uWeight = Math.sin(nx * Math.PI)
+          const zDisp = depthMax * uWeight * vWeight * t * 0.5
+          fPos.setZ(idx, zDisp)
+          bPos.setZ(idx, -zDisp)
+        }
+      }
+      fPos.needsUpdate = true
+      bPos.needsUpdate = true
+      fGeo.computeVertexNormals()
+      bGeo.computeVertexNormals()
+    }
+
+    updateFold(1.0)
+    return { rootGroup, updateFold, materials }
+  }
+
+  // ==========================================
+  // CASE 4: FLAT PACKAGING BOARD / BLISTER CARD
+  // 0 vertical creases, single die-cut card
+  // ==========================================
+  if (boxType === "flat-card") {
+    const centerGroup = new THREE.Group()
+    rootGroup.add(centerGroup)
+
+    const W = cutBox.w * scale
+    const H = cutBox.h * scale
+    centerGroup.position.y = H / 2
+
+    const geo = createPanelGeometry(W, H, cutBox.x, cutBox.y, svgW, svgH, cutBox.w, cutBox.h)
+    const mesh = new THREE.Mesh(geo, createMaterial())
+    mesh.castShadow = true
+    mesh.receiveShadow = true
+    centerGroup.add(mesh)
+
+    const updateFold = (_progress: number) => {
+      // Flat card remains authentic planar board
+    }
+
+    updateFold(1.0)
+    return { rootGroup, updateFold, materials }
+  }
+
+  // ==========================================
+  // CASE 5: DYNAMIC KINEMATIC CHAIN (FOKUS NYAMBUNGIN)
+  // Connects N panels sequentially along their real crease lines
+  // Supports 4-wall boxes, hexagonal boxes, triangular prisms, folders, etc.
+  // ==========================================
+
+  const boundaries = [cutBox.x, ...verticalCreases, cutBox.x + cutBox.w]
+  const panelWidths = []
+  for (let i = 0; i < boundaries.length - 1; i++) {
+    panelWidths.push((boundaries[i + 1] - boundaries[i]) * scale)
+  }
+
+  const numPanels = panelWidths.length
+
+  // Creases & Body Height
+  const topCreaseY = horizontalCreases.length > 0 ? horizontalCreases[0] : cutBox.y
+  const botCreaseY =
+    horizontalCreases.length > 1
+      ? horizontalCreases[horizontalCreases.length - 1]
+      : cutBox.y + cutBox.h
+
+  const bodyH = Math.max(10 * scale, (botCreaseY - topCreaseY) * scale)
+  const topFlapH = Math.max(0, (topCreaseY - cutBox.y) * scale)
+  const botFlapH = Math.max(0, ((cutBox.y + cutBox.h) - botCreaseY) * scale)
+
+  // Detect glue flap at panel 0
+  const hasGlueFlap = numPanels >= 4 && panelWidths[0] < 0.42 * panelWidths[1]
+  const glueWidth = hasGlueFlap ? panelWidths[0] : 0
+
+  // Main body walls
+  const wallIndices: number[] = []
+  for (let i = (hasGlueFlap ? 1 : 0); i < numPanels; i++) {
+    wallIndices.push(i)
+  }
+
+  const numWalls = wallIndices.length
+  // Step fold angle per hinge (e.g. 4 walls -> 90°, 6 walls -> 60°, 3 walls -> 120°)
+  const stepFoldAngle = numWalls >= 3 ? (Math.PI * 2) / numWalls : Math.PI
 
   const centerGroup = new THREE.Group()
   rootGroup.add(centerGroup)
 
-  const frontGroup = new THREE.Group()
-  frontGroup.position.y = H / 2
-  centerGroup.add(frontGroup)
+  const anchorIdx = wallIndices[0]
+  const anchorW = panelWidths[anchorIdx]
 
-  // 1. Front Wall Mesh (Width L, Height H, centered at local 0,0,0)
-  const frontGeo = createPanelGeometry(L, H, frontP.x, frontP.y, svgW, svgH, frontP.width, frontP.height)
-  const frontMesh = new THREE.Mesh(frontGeo, createMaterial())
-  frontMesh.castShadow = true
-  frontMesh.receiveShadow = true
-  frontGroup.add(frontMesh)
+  const anchorGroup = new THREE.Group()
+  anchorGroup.position.y = bodyH / 2
+  centerGroup.add(anchorGroup)
 
-  // 2. Right Wall Hinge (attached to right edge of Front: X = +L/2)
-  const rightHinge = new THREE.Group()
-  rightHinge.position.set(L / 2, 0, 0)
-  frontGroup.add(rightHinge)
+  // 1. Anchor Wall Mesh (centered at 0,0,0 inside anchorGroup)
+  const anchorGeo = createPanelGeometry(
+    anchorW,
+    bodyH,
+    boundaries[anchorIdx],
+    topCreaseY,
+    svgW,
+    svgH,
+    boundaries[anchorIdx + 1] - boundaries[anchorIdx],
+    botCreaseY - topCreaseY
+  )
+  const anchorMesh = new THREE.Mesh(anchorGeo, createMaterial())
+  anchorMesh.castShadow = true
+  anchorMesh.receiveShadow = true
+  anchorGroup.add(anchorMesh)
 
-  const rightGeo = createPanelGeometry(W, H, rightP.x, rightP.y, svgW, svgH, rightP.width, rightP.height)
-  rightGeo.translate(W / 2, 0, 0)
-  const rightMesh = new THREE.Mesh(rightGeo, createMaterial())
-  rightMesh.castShadow = true
-  rightMesh.receiveShadow = true
-  rightHinge.add(rightMesh)
+  // Anchor Top & Bottom Flaps
+  let anchorTopHinge: THREE.Group | null = null
+  let anchorBotHinge: THREE.Group | null = null
 
-  // 3. Back Wall Hinge (attached to right edge of Right Wall: X = +W)
-  const backHinge = new THREE.Group()
-  backHinge.position.set(W, 0, 0)
-  rightHinge.add(backHinge)
+  if (topFlapH > 0.02) {
+    anchorTopHinge = new THREE.Group()
+    anchorTopHinge.position.set(0, bodyH / 2, 0)
+    anchorGroup.add(anchorTopHinge)
 
-  const backGeo = createPanelGeometry(L, H, backP.x, backP.y, svgW, svgH, backP.width, backP.height)
-  backGeo.translate(L / 2, 0, 0)
-  const backMesh = new THREE.Mesh(backGeo, createMaterial())
-  backMesh.castShadow = true
-  backMesh.receiveShadow = true
-  backHinge.add(backMesh)
-
-  // 4. Left Wall Hinge (attached to left edge of Front: X = -L/2)
-  const leftHinge = new THREE.Group()
-  leftHinge.position.set(-L / 2, 0, 0)
-  frontGroup.add(leftHinge)
-
-  const leftGeo = createPanelGeometry(W, H, leftP.x, leftP.y, svgW, svgH, leftP.width, leftP.height)
-  leftGeo.translate(-W / 2, 0, 0)
-  const leftMesh = new THREE.Mesh(leftGeo, createMaterial())
-  leftMesh.castShadow = true
-  leftMesh.receiveShadow = true
-  leftHinge.add(leftMesh)
-
-  // 5. Glue Flap Hinge (attached to left edge of Left Wall: X = -W)
-  // DIE-CUT: Tapered corners at top and bottom (Dipotong, bukan persegi kaku)
-  const glueHinge = new THREE.Group()
-  glueHinge.position.set(-W, 0, 0)
-  leftHinge.add(glueHinge)
-
-  const glueGeo = createDieCutFlapGeometry(G, H, glueP.x, glueP.y, svgW, svgH, glueP.width, glueP.height, "glue")
-  const glueMesh = new THREE.Mesh(glueGeo, createMaterial())
-  glueHinge.add(glueMesh)
-
-  // 6. Top Flaps / Lids / Gable Slopes
-  // Front Top Flap:
-  const frontTopHinge = new THREE.Group()
-  frontTopHinge.position.set(0, H / 2, 0)
-  frontGroup.add(frontTopHinge)
-
-  const gableRoofH = boxType === "gable" ? W * 0.72 : topFlapH
-  const fTopGeo = createPanelGeometry(L, gableRoofH, frontP.x, topP.y, svgW, svgH, frontP.width, topP.height)
-  fTopGeo.translate(0, gableRoofH / 2, 0)
-  const fTopMesh = new THREE.Mesh(fTopGeo, createMaterial())
-  frontTopHinge.add(fTopMesh)
-
-  // Back Top Flap (Gable back slope or top closure):
-  const backTopHinge = new THREE.Group()
-  backTopHinge.position.set(L / 2, H / 2, 0)
-  backHinge.add(backTopHinge)
-
-  const bTopGeo = createPanelGeometry(L, gableRoofH, backP.x, topP.y, svgW, svgH, backP.width, topP.height)
-  bTopGeo.translate(0, gableRoofH / 2, 0)
-  const bTopMesh = new THREE.Mesh(bTopGeo, createMaterial())
-  backTopHinge.add(bTopMesh)
-
-  // Gable Carton Top Spout Fin (heat seal at ridge)
-  let fFinMesh: THREE.Mesh | null = null
-  let bFinMesh: THREE.Mesh | null = null
-  if (boxType === "gable") {
-    const finH = W * 0.18
-    const fFinGeo = createPanelGeometry(L, finH, frontP.x, cutBox.y, svgW, svgH, frontP.width, cutBox.h * 0.05)
-    fFinGeo.translate(0, finH / 2, 0)
-    fFinMesh = new THREE.Mesh(fFinGeo, createMaterial())
-    fFinMesh.position.set(0, gableRoofH, 0)
-    frontTopHinge.add(fFinMesh)
-
-    const bFinGeo = createPanelGeometry(L, finH, backP.x, cutBox.y, svgW, svgH, backP.width, cutBox.h * 0.05)
-    bFinGeo.translate(0, finH / 2, 0)
-    bFinMesh = new THREE.Mesh(bFinGeo, createMaterial())
-    bFinMesh.position.set(0, gableRoofH, 0)
-    backTopHinge.add(bFinMesh)
+    const tGeo = createPanelGeometry(
+      anchorW,
+      topFlapH,
+      boundaries[anchorIdx],
+      cutBox.y,
+      svgW,
+      svgH,
+      boundaries[anchorIdx + 1] - boundaries[anchorIdx],
+      topCreaseY - cutBox.y
+    )
+    tGeo.translate(0, topFlapH / 2, 0)
+    anchorTopHinge.add(new THREE.Mesh(tGeo, createMaterial()))
   }
 
-  // Left & Right Top Dust Flaps:
-  // DIE-CUT: Chamfered cut corners at outer edges
-  const leftTopHinge = new THREE.Group()
-  leftTopHinge.position.set(-W / 2, H / 2, 0)
-  leftHinge.add(leftTopHinge)
+  if (botFlapH > 0.02) {
+    anchorBotHinge = new THREE.Group()
+    anchorBotHinge.position.set(0, -bodyH / 2, 0)
+    anchorGroup.add(anchorBotHinge)
 
-  const lTopGeo = createDieCutFlapGeometry(W, topFlapH * 0.75, leftP.x, topP.y, svgW, svgH, leftP.width, topP.height, "dust-top")
-  const lTopMesh = new THREE.Mesh(lTopGeo, createMaterial())
-  leftTopHinge.add(lTopMesh)
+    const bGeo = createPanelGeometry(
+      anchorW,
+      botFlapH,
+      boundaries[anchorIdx],
+      botCreaseY,
+      svgW,
+      svgH,
+      boundaries[anchorIdx + 1] - boundaries[anchorIdx],
+      cutBox.y + cutBox.h - botCreaseY
+    )
+    bGeo.translate(0, -botFlapH / 2, 0)
+    anchorBotHinge.add(new THREE.Mesh(bGeo, createMaterial()))
+  }
 
-  const rightTopHinge = new THREE.Group()
-  rightTopHinge.position.set(W / 2, H / 2, 0)
-  rightHinge.add(rightTopHinge)
+  // 2. Glue Flap Hinge (to the left of anchor wall: X = -anchorW/2)
+  let glueHinge: THREE.Group | null = null
+  if (hasGlueFlap) {
+    glueHinge = new THREE.Group()
+    glueHinge.position.set(-anchorW / 2, 0, 0)
+    anchorGroup.add(glueHinge)
 
-  const rTopGeo = createDieCutFlapGeometry(W, topFlapH * 0.75, rightP.x, topP.y, svgW, svgH, rightP.width, topP.height, "dust-top")
-  const rTopMesh = new THREE.Mesh(rTopGeo, createMaterial())
-  rightTopHinge.add(rTopMesh)
+    const gGeo = createDieCutFlapGeometry(
+      glueWidth,
+      bodyH,
+      boundaries[0],
+      topCreaseY,
+      svgW,
+      svgH,
+      boundaries[1] - boundaries[0],
+      botCreaseY - topCreaseY,
+      "glue"
+    )
+    const glueMesh = new THREE.Mesh(gGeo, createMaterial())
+    glueHinge.add(glueMesh)
+  }
 
-  // 7. Bottom Flaps (Fold under the box to close base)
-  // Front Bottom Flap:
-  const frontBottomHinge = new THREE.Group()
-  frontBottomHinge.position.set(0, -H / 2, 0)
-  frontGroup.add(frontBottomHinge)
+  // 3. Right Kinematic Chain: Panels chained sequentially along their shared crease line ("NYAMBUNGIN")
+  const rightHinges: Array<{
+    group: THREE.Group
+    topHinge: THREE.Group | null
+    botHinge: THREE.Group | null
+    panelIdx: number
+  }> = []
 
-  const fBotGeo = createPanelGeometry(L, bottomFlapH, frontP.x, bottomP.y, svgW, svgH, frontP.width, bottomP.height)
-  fBotGeo.translate(0, -bottomFlapH / 2, 0)
-  const fBotMesh = new THREE.Mesh(fBotGeo, createMaterial())
-  frontBottomHinge.add(fBotMesh)
+  let prevHingeGroup: THREE.Group = anchorGroup
+  let prevOffset = anchorW / 2
 
-  // Back Bottom Flap:
-  const backBottomHinge = new THREE.Group()
-  backBottomHinge.position.set(L / 2, -H / 2, 0)
-  backHinge.add(backBottomHinge)
+  for (let k = 1; k < wallIndices.length; k++) {
+    const pIdx = wallIndices[k]
+    const pW = panelWidths[pIdx]
 
-  const bBotGeo = createPanelGeometry(L, bottomFlapH, backP.x, bottomP.y, svgW, svgH, backP.width, bottomP.height)
-  bBotGeo.translate(0, -bottomFlapH / 2, 0)
-  const bBotMesh = new THREE.Mesh(bBotGeo, createMaterial())
-  backBottomHinge.add(bBotMesh)
+    const hGroup = new THREE.Group()
+    hGroup.position.set(prevOffset, 0, 0)
+    prevHingeGroup.add(hGroup)
 
-  // Left & Right Bottom Dust Flaps:
-  // DIE-CUT: Chamfered cut corners at outer edges
-  const leftBottomHinge = new THREE.Group()
-  leftBottomHinge.position.set(-W / 2, -H / 2, 0)
-  leftHinge.add(leftBottomHinge)
+    // Panel mesh extends from local X=0 to X=pW
+    const pGeo = createPanelGeometry(
+      pW,
+      bodyH,
+      boundaries[pIdx],
+      topCreaseY,
+      svgW,
+      svgH,
+      boundaries[pIdx + 1] - boundaries[pIdx],
+      botCreaseY - topCreaseY
+    )
+    pGeo.translate(pW / 2, 0, 0)
+    const pMesh = new THREE.Mesh(pGeo, createMaterial())
+    pMesh.castShadow = true
+    pMesh.receiveShadow = true
+    hGroup.add(pMesh)
 
-  const lBotGeo = createDieCutFlapGeometry(W, bottomFlapH * 0.75, leftP.x, bottomP.y, svgW, svgH, leftP.width, bottomP.height, "dust-bottom")
-  const lBotMesh = new THREE.Mesh(lBotGeo, createMaterial())
-  leftBottomHinge.add(lBotMesh)
+    // Top flap for this panel
+    let pTopHinge: THREE.Group | null = null
+    if (topFlapH > 0.02) {
+      pTopHinge = new THREE.Group()
+      pTopHinge.position.set(pW / 2, bodyH / 2, 0)
+      hGroup.add(pTopHinge)
 
-  const rightBottomHinge = new THREE.Group()
-  rightBottomHinge.position.set(W / 2, -H / 2, 0)
-  rightHinge.add(rightBottomHinge)
+      const isDustFlap = k % 2 === 1 && numWalls === 4
+      const ptGeo = isDustFlap
+        ? createDieCutFlapGeometry(
+            pW,
+            topFlapH * 0.8,
+            boundaries[pIdx],
+            cutBox.y,
+            svgW,
+            svgH,
+            boundaries[pIdx + 1] - boundaries[pIdx],
+            topCreaseY - cutBox.y,
+            "dust-top"
+          )
+        : createPanelGeometry(
+            pW,
+            topFlapH,
+            boundaries[pIdx],
+            cutBox.y,
+            svgW,
+            svgH,
+            boundaries[pIdx + 1] - boundaries[pIdx],
+            topCreaseY - cutBox.y
+          )
+      if (!isDustFlap) ptGeo.translate(0, topFlapH / 2, 0)
+      pTopHinge.add(new THREE.Mesh(ptGeo, createMaterial()))
+    }
 
-  const rBotGeo = createDieCutFlapGeometry(W, bottomFlapH * 0.75, rightP.x, bottomP.y, svgW, svgH, rightP.width, bottomP.height, "dust-bottom")
-  const rBotMesh = new THREE.Mesh(rBotGeo, createMaterial())
-  rightBottomHinge.add(rBotMesh)
+    // Bottom flap for this panel
+    let pBotHinge: THREE.Group | null = null
+    if (botFlapH > 0.02) {
+      pBotHinge = new THREE.Group()
+      pBotHinge.position.set(pW / 2, -bodyH / 2, 0)
+      hGroup.add(pBotHinge)
 
-  // Calculate flat 2D layout center offset along X so flat sheet is centered at X=0
-  const flatMinX = -L / 2 - W - G
-  const flatMaxX = L / 2 + W + L
+      const isDustFlap = k % 2 === 1 && numWalls === 4
+      const pbGeo = isDustFlap
+        ? createDieCutFlapGeometry(
+            pW,
+            botFlapH * 0.8,
+            boundaries[pIdx],
+            botCreaseY,
+            svgW,
+            svgH,
+            boundaries[pIdx + 1] - boundaries[pIdx],
+            cutBox.y + cutBox.h - botCreaseY,
+            "dust-bottom"
+          )
+        : createPanelGeometry(
+            pW,
+            botFlapH,
+            boundaries[pIdx],
+            botCreaseY,
+            svgW,
+            svgH,
+            boundaries[pIdx + 1] - boundaries[pIdx],
+            cutBox.y + cutBox.h - botCreaseY
+          )
+      if (!isDustFlap) pbGeo.translate(0, -botFlapH / 2, 0)
+      pBotHinge.add(new THREE.Mesh(pbGeo, createMaterial()))
+    }
+
+    rightHinges.push({
+      group: hGroup,
+      topHinge: pTopHinge,
+      botHinge: pBotHinge,
+      panelIdx: pIdx,
+    })
+
+    prevHingeGroup = hGroup
+    prevOffset = pW
+  }
+
+  // Flat sheet center along X so flat dieline is centered at X=0
+  const flatTotalW = panelWidths.reduce((a, b) => a + b, 0)
+  const flatMinX = -anchorW / 2 - glueWidth
+  const flatMaxX = flatMinX + flatTotalW
   const flatCenterX = (flatMinX + flatMaxX) / 2
 
-  // Update Fold Kinematics
-  // t = 0.0: Flat 2D dieline sheet (rotations = 0, flat in XY plane)
-  // t = 1.0: Fully folded 3D carton (walls at 90°, lids and base closed)
+  // Center of mass when fully folded
+  const sideW = panelWidths[wallIndices[1]] || anchorW
+  const closedCenterZ = numWalls === 4 ? sideW / 2 : (anchorW / (2 * Math.sin(stepFoldAngle / 2)))
+
   const updateFold = (progress: number) => {
     const t = Math.max(0, Math.min(1, progress))
 
-    // 1. Vertical wall hinges fold 90° into rectangular tube
-    rightHinge.rotation.y = (Math.PI / 2) * t
-    backHinge.rotation.y = (Math.PI / 2) * t
-    leftHinge.rotation.y = -((Math.PI / 2) * t)
-    glueHinge.rotation.y = -((Math.PI / 2) * t)
+    // 1. Chained body wall hinges rotate around Y
+    rightHinges.forEach((rh) => {
+      rh.group.rotation.y = stepFoldAngle * t
+    })
 
-    // 2. Top Flaps / Lids / Roof
-    if (boxType === "gable") {
-      // Slopes fold inward ~42° towards apex ridge
-      const gableAngle = (Math.PI / 4.2) * t
-      frontTopHinge.rotation.x = -gableAngle
-      backTopHinge.rotation.x = -gableAngle
-
-      // Counter-rotate the top spout fin so they stand vertical together at the ridge
-      if (fFinMesh) fFinMesh.rotation.x = gableAngle
-      if (bFinMesh) bFinMesh.rotation.x = gableAngle
-
-      // Side dust flaps fold inwards
-      leftTopHinge.rotation.x = -((Math.PI / 2) * t)
-      rightTopHinge.rotation.x = -((Math.PI / 2) * t)
-    } else {
-      // Standard folding box top lid
-      frontTopHinge.rotation.x = -((Math.PI / 2) * t)
-      backTopHinge.rotation.x = -((Math.PI / 2) * t)
-      leftTopHinge.rotation.x = -((Math.PI / 2) * t)
-      rightTopHinge.rotation.x = -((Math.PI / 2) * t)
+    // 2. Glue flap folds inward
+    if (glueHinge) {
+      glueHinge.rotation.y = -stepFoldAngle * t
     }
 
-    // 3. Bottom Flaps fold 90° under the box to seal base
-    frontBottomHinge.rotation.x = (Math.PI / 2) * t
-    backBottomHinge.rotation.x = (Math.PI / 2) * t
-    leftBottomHinge.rotation.x = (Math.PI / 2) * t
-    rightBottomHinge.rotation.x = (Math.PI / 2) * t
+    // 3. Top Flaps
+    if (boxType === "gable") {
+      const gableAngle = (Math.PI / 4.2) * t
+      if (anchorTopHinge) anchorTopHinge.rotation.x = -gableAngle
+      rightHinges.forEach((rh, idx) => {
+        if (!rh.topHinge) return
+        if (idx === 1) rh.topHinge.rotation.x = -gableAngle // Opposite main slope
+        else rh.topHinge.rotation.x = -((Math.PI / 2) * t) // Side slopes
+      })
+    } else {
+      if (anchorTopHinge) anchorTopHinge.rotation.x = -((Math.PI / 2) * t)
+      rightHinges.forEach((rh) => {
+        if (rh.topHinge) rh.topHinge.rotation.x = -((Math.PI / 2) * t)
+      })
+    }
 
-    // 4. Smoothly shift center so 2D flat sheet is centered at X=0, Z=0,
-    // and folded 3D box center of mass is centered at X=0, Z=0
-    centerGroup.position.z = (W / 2) * t
+    // 4. Bottom Flaps
+    if (anchorBotHinge) anchorBotHinge.rotation.x = (Math.PI / 2) * t
+    rightHinges.forEach((rh) => {
+      if (rh.botHinge) rh.botHinge.rotation.x = (Math.PI / 2) * t
+    })
+
+    // 5. Smoothly interpolate position between 2D flat center and 3D closed center
     centerGroup.position.x = -flatCenterX * (1 - t)
+    centerGroup.position.z = closedCenterZ * t
   }
 
-  // Initialize at 100% folded
   updateFold(1.0)
 
   return {

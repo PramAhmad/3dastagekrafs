@@ -10,7 +10,7 @@ export interface DielineParams {
 }
 
 export interface DielinePanelZone {
-  face: "front" | "back" | "left" | "right" | "top" | "bottom" | "glue-flap" | "dust-flap"
+  face: "front" | "back" | "left" | "right" | "top" | "bottom" | "glue-flap" | "dust-flap" | (string & {})
   x: number
   y: number
   width: number

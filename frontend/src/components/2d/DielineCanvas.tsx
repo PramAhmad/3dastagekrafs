@@ -640,7 +640,7 @@ export default function DielineCanvas({
     }
   }, [svgMeta, category, length, width, height, scaleMmToPx])
 
-  // Photorealistic Cardboard & Kraft Pattern Generators for 2D Dieline Sheet
+  // Photorealistic Pacdora-Style Cardboard & Kraft Pattern Generators for 2D Dieline Sheet
   const cardboardDataUrl = useMemo(() => {
     if (typeof document === "undefined") return ""
     const canvas = document.createElement("canvas")
@@ -651,8 +651,8 @@ export default function DielineCanvas({
     applyCardboardBackground(ctx, 512, 512, {
       baseColor: boxColor,
       materialFinish: "kraft",
-      materialType: "corrugated",
-      isCorrugated: true,
+      materialType: "kraft",
+      isCorrugated: false,
       seed: 8888,
     })
     return canvas.toDataURL("image/jpeg", 0.90)

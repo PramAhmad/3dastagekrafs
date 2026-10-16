@@ -450,7 +450,23 @@ export default function SvgToModelPage() {
                     Spesifikasi 3D Terdeteksi Otomatis:
                   </span>
                   <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[8.5px] font-mono font-bold uppercase">
-                    {analysis.boxType.toUpperCase()}
+                    {analysis.boxType === "mailer-0427"
+                      ? "FEFCO 0427 MAILER BOX"
+                      : analysis.boxType === "gable"
+                      ? "GABLE-TOP CARTON"
+                      : analysis.boxType === "tube-box"
+                      ? "4-PANEL FOLDING CARTON"
+                      : analysis.boxType === "cylinder-wrap"
+                      ? "CYLINDRICAL WRAP LABEL"
+                      : analysis.boxType === "pouch"
+                      ? "STAND-UP POUCH / DOYPACK"
+                      : analysis.boxType === "flat-card"
+                      ? "FLAT DIE-CUT BOARD"
+                      : analysis.boxType === "folder"
+                      ? `${analysis.verticalCreases.length + 1}-PANEL FOLDER`
+                      : analysis.boxType === "polygon-prism"
+                      ? `${analysis.verticalCreases.length + 1}-PANEL POLYGON PRISM`
+                      : analysis.boxType.toUpperCase()}
                   </span>
                 </div>
 
