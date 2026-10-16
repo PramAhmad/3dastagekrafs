@@ -517,7 +517,7 @@ function ContinuousBoxModel({
   const isCorrugated = materialType === "corrugated"
   const isKraft = materialFinish === "kraft" || materialType === "corrugated" || materialType === "kraft"
   const kraftBumpMap = isKraft ? getKraftBumpTexture(isCorrugated) : null
-  const kraftBumpScale = isCorrugated ? 0.035 : 0.022
+  const kraftBumpScale = 0.008
 
   const roughness = isGlossy ? 0.06 : isKraft ? 0.88 : isMetallic ? 0.15 : 0.65
   const metalness = isMetallic ? 0.88 : isGlossy ? 0.05 : 0.0
@@ -705,9 +705,9 @@ function ContinuousBoxModel({
       metalness,
       clearcoat,
       clearcoatRoughness: 0.1,
-      sheen: isKraft ? 0.38 : 0.0,
-      sheenRoughness: 0.72,
-      sheenColor: new THREE.Color("#d4aa73"),
+      sheen: isKraft ? 0.30 : 0.0,
+      sheenRoughness: 0.80,
+      sheenColor: new THREE.Color("#d8b485"),
       bumpMap: isKraft ? kraftBumpMap : null,
       bumpScale: isKraft ? kraftBumpScale : 0,
     })
@@ -719,9 +719,9 @@ function ContinuousBoxModel({
       metalness,
       clearcoat,
       clearcoatRoughness: 0.1,
-      sheen: isKraft ? 0.38 : 0.0,
-      sheenRoughness: 0.72,
-      sheenColor: new THREE.Color("#d4aa73"),
+      sheen: isKraft ? 0.30 : 0.0,
+      sheenRoughness: 0.80,
+      sheenColor: new THREE.Color("#d8b485"),
       bumpMap: isKraft ? kraftBumpMap : null,
       bumpScale: isKraft ? kraftBumpScale : 0,
     })
@@ -732,9 +732,9 @@ function ContinuousBoxModel({
       metalness,
       clearcoat,
       clearcoatRoughness: 0.1,
-      sheen: isKraft ? 0.38 : 0.0,
-      sheenRoughness: 0.72,
-      sheenColor: new THREE.Color("#d4aa73"),
+      sheen: isKraft ? 0.30 : 0.0,
+      sheenRoughness: 0.80,
+      sheenColor: new THREE.Color("#d8b485"),
       bumpMap: isKraft ? kraftBumpMap : null,
       bumpScale: isKraft ? kraftBumpScale : 0,
     })
@@ -743,9 +743,9 @@ function ContinuousBoxModel({
       color: faceColors?.inside || (isKraft ? "#b88959" : "#e8dfd5"),
       roughness: 0.90,
       metalness: 0.0,
-      sheen: isKraft ? 0.35 : 0.0,
-      sheenRoughness: 0.75,
-      sheenColor: new THREE.Color("#d4aa73"),
+      sheen: isKraft ? 0.28 : 0.0,
+      sheenRoughness: 0.80,
+      sheenColor: new THREE.Color("#d8b485"),
       side: THREE.DoubleSide,
       bumpMap: isKraft ? kraftBumpMap : null,
       bumpScale: isKraft ? kraftBumpScale * 0.7 : 0,
@@ -1217,7 +1217,7 @@ function ContinuousJarModel({
           clearcoat={clearcoat}
           clearcoatRoughness={0.1}
           bumpMap={isKraft ? kraftBumpMap : null}
-          bumpScale={isKraft ? 0.022 : 0}
+          bumpScale={isKraft ? 0.008 : 0}
         />
       </mesh>
 
@@ -1312,7 +1312,7 @@ function ContinuousPouchModel({
           metalness={metalness}
           clearcoat={clearcoat}
           bumpMap={isKraft ? kraftBumpMap : null}
-          bumpScale={isKraft ? 0.022 : 0}
+          bumpScale={isKraft ? 0.008 : 0}
         />
       </mesh>
 
@@ -1324,7 +1324,7 @@ function ContinuousPouchModel({
           roughness={0.3}
           metalness={isMetallic ? 0.8 : 0.1}
           bumpMap={isKraft ? kraftBumpMap : null}
-          bumpScale={isKraft ? 0.015 : 0}
+          bumpScale={isKraft ? 0.006 : 0}
         />
       </mesh>
 
@@ -1337,7 +1337,7 @@ function ContinuousPouchModel({
       {/* Bottom Oval Gusset Base */}
       <mesh position={[0, -(sy * 0.85) / 2, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
         <cylinderGeometry args={[sz * 0.9, sz * 0.9, 0.02, 32]} />
-        <meshPhysicalMaterial color={boxColor} roughness={0.7} bumpMap={isKraft ? kraftBumpMap : null} bumpScale={isKraft ? 0.015 : 0} />
+        <meshPhysicalMaterial color={boxColor} roughness={0.7} bumpMap={isKraft ? kraftBumpMap : null} bumpScale={isKraft ? 0.006 : 0} />
       </mesh>
     </group>
   )
@@ -1956,7 +1956,7 @@ function CustomMeshModel({
   const isCorrugated = materialType === "corrugated"
   const isKraft = materialFinish === "kraft" || materialType === "corrugated" || materialType === "kraft"
   const kraftBumpMap = isKraft ? getKraftBumpTexture(isCorrugated) : null
-  const kraftBumpScale = isCorrugated ? 0.035 : 0.022
+  const kraftBumpScale = 0.008
 
   // Dynamic Material Properties
   const roughness =
@@ -2218,13 +2218,13 @@ function CustomMeshModel({
         mat.roughness = roughness
         mat.metalness = metalness
         mat.clearcoat = clearcoat
-        mat.sheen = isKraft ? 0.38 : 0.0
-        mat.sheenRoughness = 0.72
-        mat.sheenColor = new THREE.Color("#d4aa73")
+        mat.sheen = isKraft ? 0.30 : 0.0
+        mat.sheenRoughness = 0.80
+        mat.sheenColor = new THREE.Color("#d8b485")
         if (isKraft && kraftBumpMap) {
           kraftBumpMap.wrapS = THREE.RepeatWrapping
           kraftBumpMap.wrapT = THREE.RepeatWrapping
-          kraftBumpMap.repeat.set(4, 4)
+          kraftBumpMap.repeat.set(3, 3)
           mat.bumpMap = kraftBumpMap
           mat.bumpScale = kraftBumpScale
         } else {

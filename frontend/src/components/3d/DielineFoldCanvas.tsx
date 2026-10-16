@@ -172,11 +172,11 @@ export default function DielineFoldCanvas({
       const ctx = canvas.getContext("2d")
       if (!ctx) return
 
-      // Apply authentic procedural packaging material background (paper fibers, pulp flecks, flutes)
+      // Apply authentic procedural packaging material background (paper fibers, pulp flecks)
       applyCardboardBackground(ctx, canvas.width, canvas.height, {
         baseColor: boxColor,
         materialFinish: materialFinish,
-        isCorrugated: materialFinish === "kraft",
+        isCorrugated: false,
       })
 
       // Draw SVG dieline graphics
