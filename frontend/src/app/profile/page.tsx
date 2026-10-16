@@ -10,6 +10,8 @@ import {
   saveProjectToHistory,
   logoutUser,
 } from "@/lib/auth"
+import { getUmkmByEmail, getRemainingTrialDays, isUmkmTrialActive, extendUmkmTrial } from "@/lib/umkm"
+import { UmkmRegistration } from "@/types/umkm"
 import { UserSession, SavedProject } from "@/types/auth"
 import {
   Box,
@@ -39,6 +41,9 @@ import {
   Building,
   MapPin,
   Camera,
+  AlertTriangle,
+  ShieldCheck,
+  MessageSquare,
 } from "lucide-react"
 
 export default function ProfilePage() {
@@ -48,6 +53,7 @@ export default function ProfilePage() {
   const [projects, setProjects] = useState<SavedProject[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [loading, setLoading] = useState(true)
+  const [linkedUmkm, setLinkedUmkm] = useState<UmkmRegistration | null>(null)
 
   // Profile Edit Form State
   const [name, setName] = useState("")
@@ -74,6 +80,11 @@ export default function ProfilePage() {
     setBio(currentUser.bio || "Produsen kemasan produk kreatif & retail.")
     setAvatar(currentUser.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80")
     setProjects(getUserSavedProjects(currentUser.id))
+
+    // Check linked UMKM registration & trial status
+    const umkm = getUmkmByEmail(currentUser.email)
+    setLinkedUmkm(umkm)
+
     setLoading(false)
   }, [router])
 
@@ -257,6 +268,161 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+
+        {/* 2-WEEK PROTOTYPE TRIAL STATUS CARD */}
+        {linkedUmkm ? (
+          (() => {
+            const remainingDays = getRemainingTrialDays(linkedUmkm)
+            const isTrialValid = isUmkmTrialActive(linkedUmkm)
+            const isInactive = linkedUmkm.status === "INACTIVE"
+            const isPending = linkedUmkm.status === "PENDING"
+            const daysUsed = Math.max(0, Math.min(14, 14 - remainingDays))
+            const percentUsed = Math.min(100, Math.max(0, Math.round((daysUsed / 14) * 100)))
+
+            if (isInactive) {
+              return (
+                <div className="bg-rose-50 border-2 border-rose-300 rounded-3xl p-6 sm:p-7 shadow-lg space-y-4 text-rose-950">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-rose-200 text-rose-700 flex items-center justify-center shrink-0">
+                        <AlertTriangle className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-black text-sm text-rose-900">Masa Coba Trial 2 Minggu Telah Berakhir</h3>
+                          <span className="px-2.5 py-0.5 rounded-full bg-rose-200 text-rose-800 text-[10px] font-mono font-extrabold">
+                            STATUS: INACTIVE
+                          </span>
+                        </div>
+                        <p className="text-xs text-rose-700 mt-0.5">
+                          Masa coba prototype untuk <strong>{linkedUmkm.businessName}</strong> berakhir pada{" "}
+                          {linkedUmkm.trialEndsAt
+                            ? new Date(linkedUmkm.trialEndsAt).toLocaleDateString("id-ID", {
+                                day: "numeric",
+                                month: "long",
+                                year: "numeric",
+                              })
+                            : "-"}
+                          .
+                        </p>
+                      </div>
+                    </div>
+
+                    <a
+                      href={`https://wa.me/6281234567890?text=Halo%20Admin%20AstaKraft,%20saya%20ingin%20meminta%20perpanjangan%20masa%20trial%20prototype%20atau%20aktivasi%20akun%20untuk%20${encodeURIComponent(linkedUmkm.businessName)}%20(${encodeURIComponent(linkedUmkm.ownerName)}).`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors shrink-0"
+                    >
+                      <MessageSquare className="w-4 h-4 text-white" />
+                      <span>Hubungi Admin (Perpanjang Trial)</span>
+                    </a>
+                  </div>
+
+                  <p className="text-xs text-rose-800/90 leading-relaxed bg-white/70 rounded-2xl p-3 border border-rose-200">
+                    Akses fitur perancangan visual 3D dan ekspor lembar kerja PDF/pola potong di editor saat ini dinonaktifkan (Inactive). Silakan hubungi tim Admin AstaKraft untuk memperpanjang masa trial prototype atau mengaktifkan kemitraan penuh.
+                  </p>
+                </div>
+              )
+            }
+
+            if (isPending) {
+              return (
+                <div className="bg-amber-50 border-2 border-amber-300 rounded-3xl p-6 shadow-lg space-y-3 text-amber-950">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-amber-200 text-amber-800 flex items-center justify-center shrink-0">
+                      <Clock className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-sm text-amber-900">Pendaftaran Mitra UMKM Dalam Antrean Verifikasi</h3>
+                      <p className="text-xs text-amber-800">
+                        Pendaftaran usaha <strong>{linkedUmkm.businessName}</strong> sedang ditinjau tim kurasi (1×24 jam). Masa coba trial prototype 2 minggu (14 hari) akan langsung aktif begitu disetujui.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )
+            }
+
+            return (
+              <div className="bg-white rounded-3xl border-2 border-emerald-300 p-6 sm:p-7 shadow-xl space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-black text-sm text-[#1F3A5C]">Masa Coba Trial Prototype UMKM (2 Minggu)</h3>
+                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-mono font-extrabold border border-emerald-300">
+                          SISA {remainingDays} HARI
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#718BAA] mt-0.5">
+                        Berlaku hingga:{" "}
+                        <strong className="text-[#1F3A5C]">
+                          {linkedUmkm.trialEndsAt
+                            ? new Date(linkedUmkm.trialEndsAt).toLocaleDateString("id-ID", {
+                                day: "numeric",
+                                month: "long",
+                                year: "numeric",
+                              })
+                            : "-"}
+                        </strong>
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => router.push("/editor")}
+                    className="px-4 py-2.5 rounded-xl bg-[#1F3A5C] hover:bg-[#2F79A6] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all shrink-0 active:scale-95"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-[#F7CB45]" />
+                    <span>Buka 3D Studio Prototype</span>
+                  </button>
+                </div>
+
+                {/* Progress Bar: Days Elapsed */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex justify-between text-[11px] text-[#718BAA] font-semibold">
+                    <span>Hari ke-{daysUsed} dari 14 Hari Masa Coba</span>
+                    <span className="text-emerald-700 font-bold">{remainingDays} hari tersisa</span>
+                  </div>
+                  <div className="w-full h-2.5 bg-[#EEF4F8] rounded-full overflow-hidden border border-[#D5E4F0]">
+                    <div
+                      className="h-full bg-gradient-to-r from-emerald-500 to-[#2F79A6] rounded-full transition-all duration-500"
+                      style={{ width: `${percentUsed}%` }}
+                    />
+                  </div>
+                </div>
+
+                <p className="text-xs text-[#4B6B94] leading-relaxed">
+                  Selama masa coba trial 2 minggu ini, Anda bebas merancang visual 3D kemasan, mengatur dimensi pola potong (dieline), dan mengekspor lembar kerja PDF untuk validasi prototype produk usaha Anda. Setelah 2 minggu, akun akan berstatus <strong>Inactive</strong> jika belum diperpanjang.
+                </p>
+              </div>
+            )
+          })()
+        ) : (
+          <div className="bg-white/95 rounded-3xl border border-white/80 p-5 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-[#EEF4F8] text-[#2F79A6] flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-5 h-5 text-[#F7CB45]" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-sm text-[#1F3A5C]">Program Kemitraan UMKM: Free Trial 2 Minggu</h3>
+                <p className="text-xs text-[#718BAA]">
+                  Daftarkan usaha Anda untuk mendapatkan fasilitas masa coba prototype gratis selama 14 hari penuh!
+                </p>
+              </div>
+            </div>
+            <a
+              href="/daftar-umkm"
+              className="px-4 py-2 rounded-xl bg-[#1F3A5C] hover:bg-[#2F79A6] text-white text-xs font-bold whitespace-nowrap shadow-xs"
+            >
+              Daftar Mitra UMKM
+            </a>
+          </div>
+        )}
 
         {/* Tab Navigation */}
         <div className="flex items-center gap-2 border-b border-white/30 pb-2">

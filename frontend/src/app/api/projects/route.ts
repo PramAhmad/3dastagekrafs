@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { readServerData, writeServerData } from "@/lib/serverStorage"
-import { SavedProject, INITIAL_PROJECTS } from "@/lib/auth"
+import { SavedProject } from "@/types/auth"
+import { getSeedProjectData } from "@/seeds/projectSeed"
 
 const FILE_NAME = "projects.json"
 
@@ -8,7 +9,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const userId = searchParams.get("userId")
-    const list = await readServerData<SavedProject[]>(FILE_NAME, INITIAL_PROJECTS)
+    const list = await readServerData<SavedProject[]>(FILE_NAME, getSeedProjectData())
 
     if (userId) {
       const filtered = list.filter((p) => p.userId === userId || p.userId === "usr_umkm_01")
@@ -24,7 +25,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const all = await readServerData<SavedProject[]>(FILE_NAME, INITIAL_PROJECTS)
+    const all = await readServerData<SavedProject[]>(FILE_NAME, getSeedProjectData())
     const now = new Date().toISOString()
 
     let savedItem: SavedProject
@@ -73,7 +74,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Parameter 'id' wajib diisi" }, { status: 400 })
     }
 
-    const all = await readServerData<SavedProject[]>(FILE_NAME, INITIAL_PROJECTS)
+    const all = await readServerData<SavedProject[]>(FILE_NAME, getSeedProjectData())
     const updated = all.filter((p) => p.id !== id)
     await writeServerData(FILE_NAME, updated)
 

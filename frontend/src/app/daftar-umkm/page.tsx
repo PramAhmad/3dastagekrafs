@@ -144,6 +144,10 @@ export default function DaftarUmkmPage() {
                 <span className="font-bold text-[#1F3A5C]">1 × 24 Jam Kerja</span>
               </div>
               <div className="flex justify-between text-[#1F3A5C]/80">
+                <span>Fasilitas Masa Coba:</span>
+                <span className="font-bold text-emerald-700">Trial Prototype 2 Minggu (14 Hari)</span>
+              </div>
+              <div className="flex justify-between text-[#1F3A5C]/80">
                 <span>Notifikasi Persetujuan:</span>
                 <span className="font-bold text-[#2F79A6]">WhatsApp ({phone})</span>
               </div>
@@ -170,13 +174,13 @@ export default function DaftarUmkmPage() {
             <div className="space-y-2 pb-6 border-b border-[#4394C3]/20">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EEF4F8] border border-[#4394C3]/30 text-[10.5px] font-bold text-[#1F3A5C]">
                 <ShieldCheck className="w-3.5 h-3.5 text-[#F7CB45]" />
-                <span>Program Kemitraan Desain & Produksi Kemasan UMKM</span>
+                <span>Program Kemitraan Desain & Produksi Kemasan UMKM • Trial Prototype 2 Minggu</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-black text-[#1F3A5C] tracking-tight">
                 Formulir Pendaftaran Mitra UMKM
               </h1>
               <p className="text-[#1F3A5C]/70 text-xs">
-                Daftarkan usaha Anda untuk mendapatkan akses gratis ke Studio 3D, generator pola pisau pond (dieline 2D), serta harga cetak khusus batch skala UMKM.
+                Daftarkan usaha Anda untuk mendapatkan fasilitas masa coba gratis (trial) prototype kemasan selama 2 minggu (14 hari), akses Studio 3D parametrik, generator pola pisau pond (dieline 2D), serta harga cetak khusus batch skala UMKM.
               </p>
             </div>
 

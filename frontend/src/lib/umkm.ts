@@ -1,84 +1,79 @@
-import { UmkmRegistration, UmkmStatus } from "@/types/umkm"
+import { UmkmRegistration, UmkmStatus, SubscriptionPlan } from "@/types/umkm"
+import { SEED_UMKM_REGISTRATIONS, getSeedUmkmData } from "@/seeds/umkmSeed"
 
-export type { UmkmRegistration, UmkmStatus }
+export type { UmkmRegistration, UmkmStatus, SubscriptionPlan }
+export { SEED_UMKM_REGISTRATIONS, getSeedUmkmData }
+
+// For backwards compatibility
+export const INITIAL_UMKM_REGISTRATIONS = SEED_UMKM_REGISTRATIONS
 
 const UMKM_STORAGE_KEY = "kemasan3d_umkm_registrations"
+export const TRIAL_DURATION_DAYS = 14 // 2 Minggu Trial Prototype
 
-export const INITIAL_UMKM_REGISTRATIONS: UmkmRegistration[] = [
-  {
-    id: "umkm_001",
-    ownerName: "Budi Santoso",
-    email: "budi.umkm@gmail.com",
-    phone: "081234567890",
-    businessName: "Kopi Robusta Puntang",
-    businessCategory: "Makanan & Minuman",
-    city: "Bandung, Jawa Barat",
-    fullAddress: "Jl. Raya Pangalengan No. 45, Bandung",
-    productDescription: "Kopi sangrai arabika & robusta kemasan standing pouch zipper kedap udara.",
-    monthlyProductionEst: "500 - 1.000 pouch/bulan",
-    nibOrDoc: "NIB-91203920194",
-    status: "APPROVED",
-    registeredAt: new Date(Date.now() - 86400000 * 5).toISOString(),
-    reviewedAt: new Date(Date.now() - 86400000 * 4).toISOString(),
-  },
-  {
-    id: "umkm_002",
-    ownerName: "Siti Rahmawati",
-    email: "siti.rahma@skincarenature.id",
-    phone: "085712349988",
-    businessName: "GlowHerb Organics",
-    businessCategory: "Kosmetik & Skincare",
-    city: "Yogyakarta, DIY",
-    fullAddress: "Jl. Kaliurang KM 7.5 No. 12, Sleman",
-    productDescription: "Serum herbal & face cream wadah jar kosmetik kaca doff.",
-    monthlyProductionEst: "1.000 - 3.000 jar/bulan",
-    nibOrDoc: "NIB-10293847561",
-    status: "PENDING",
-    registeredAt: new Date(Date.now() - 3600000 * 3).toISOString(),
-  },
-  {
-    id: "umkm_003",
-    ownerName: "Hendro Wijaya",
-    email: "hendro@snackkriuk.com",
-    phone: "081399887766",
-    businessName: "Keripik Singkong Renyah",
-    businessCategory: "Makanan & Minuman",
-    city: "Malang, Jawa Timur",
-    fullAddress: "Jl. Soekarno Hatta No. 88, Malang",
-    productDescription: "Camilan keripik singkong aneka rasa kemasan foil kraft.",
-    monthlyProductionEst: "3.000 - 5.000 pcs/bulan",
-    nibOrDoc: "NIB-5544332211",
-    status: "PENDING",
-    registeredAt: new Date(Date.now() - 3600000 * 12).toISOString(),
-  },
-  {
-    id: "umkm_004",
-    ownerName: "Ahmad Fauzi",
-    email: "ahmad@parfums.co.id",
-    phone: "082133445566",
-    businessName: "Artisan Scents Batavia",
-    businessCategory: "Fashion & Aksesoris",
-    city: "Jakarta Selatan, DKI Jakarta",
-    fullAddress: "Jl. Kemang Raya No. 10B, Jaksel",
-    productDescription: "Parfum artisan botol pump kaca dengan outer box karton hardbox.",
-    monthlyProductionEst: "200 - 500 box/bulan",
-    status: "APPROVED",
-    registeredAt: new Date(Date.now() - 86400000 * 10).toISOString(),
-    reviewedAt: new Date(Date.now() - 86400000 * 9).toISOString(),
-  },
-]
+/**
+ * Menghitung sisa hari masa trial 2 minggu UMKM
+ */
+export function getRemainingTrialDays(umkm: UmkmRegistration): number {
+  if (!umkm.trialEndsAt) return 0
+  const diffMs = new Date(umkm.trialEndsAt).getTime() - Date.now()
+  return Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+}
+
+/**
+ * Cek apakah UMKM sedang dalam masa trial aktif
+ */
+export function isUmkmTrialActive(umkm: UmkmRegistration): boolean {
+  if (umkm.status !== "APPROVED") return false
+  if (umkm.subscriptionPlan && umkm.subscriptionPlan !== "TRIAL") return true
+  if (!umkm.trialEndsAt) return false
+  return new Date(umkm.trialEndsAt).getTime() > Date.now()
+}
+
+/**
+ * Periksa dan ubah status UMKM yang telah melewati masa trial 14 hari menjadi INACTIVE
+ */
+export function checkAndExpireTrials(umkms: UmkmRegistration[]): { updated: UmkmRegistration[]; hasChanges: boolean } {
+  let hasChanges = false
+  const now = Date.now()
+
+  const updated = umkms.map((u) => {
+    // Jika masih status APPROVED dan paket TRIAL tapi sudah melewati trialEndsAt (2 minggu)
+    if (u.status === "APPROVED" && (!u.subscriptionPlan || u.subscriptionPlan === "TRIAL") && u.trialEndsAt) {
+      if (new Date(u.trialEndsAt).getTime() <= now) {
+        hasChanges = true
+        return {
+          ...u,
+          status: "INACTIVE" as UmkmStatus,
+          adminNotes: u.adminNotes || "Masa coba trial prototype 2 minggu telah berakhir (Inactive).",
+        }
+      }
+    }
+    return u
+  })
+
+  return { updated, hasChanges }
+}
 
 export function getAllUmkm(): UmkmRegistration[] {
-  if (typeof window === "undefined") return INITIAL_UMKM_REGISTRATIONS
+  if (typeof window === "undefined") {
+    return checkAndExpireTrials(getSeedUmkmData()).updated
+  }
   try {
     const raw = localStorage.getItem(UMKM_STORAGE_KEY)
+    let list: UmkmRegistration[]
     if (!raw) {
-      localStorage.setItem(UMKM_STORAGE_KEY, JSON.stringify(INITIAL_UMKM_REGISTRATIONS))
-      return INITIAL_UMKM_REGISTRATIONS
+      list = getSeedUmkmData()
+    } else {
+      list = JSON.parse(raw) as UmkmRegistration[]
     }
-    return JSON.parse(raw) as UmkmRegistration[]
+
+    const { updated, hasChanges } = checkAndExpireTrials(list)
+    if (hasChanges || !raw) {
+      localStorage.setItem(UMKM_STORAGE_KEY, JSON.stringify(updated))
+    }
+    return updated
   } catch (err) {
-    return INITIAL_UMKM_REGISTRATIONS
+    return checkAndExpireTrials(getSeedUmkmData()).updated
   }
 }
 
@@ -88,10 +83,11 @@ export async function fetchUmkmList(): Promise<UmkmRegistration[]> {
     if (res.ok) {
       const json = await res.json()
       if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+        const { updated } = checkAndExpireTrials(json.data)
         if (typeof window !== "undefined") {
-          localStorage.setItem(UMKM_STORAGE_KEY, JSON.stringify(json.data))
+          localStorage.setItem(UMKM_STORAGE_KEY, JSON.stringify(updated))
         }
-        return json.data
+        return updated
       }
     }
   } catch (e) {}
@@ -102,11 +98,17 @@ export function registerNewUmkm(
   data: Omit<UmkmRegistration, "id" | "status" | "registeredAt" | "reviewedAt">
 ): UmkmRegistration {
   const all = getAllUmkm()
+  const now = new Date()
+  const trialEnds = new Date(now.getTime() + TRIAL_DURATION_DAYS * 86400000)
+
   const newUmkm: UmkmRegistration = {
     ...data,
     id: "umkm_" + Math.random().toString(36).substring(2, 9),
     status: "PENDING",
-    registeredAt: new Date().toISOString(),
+    registeredAt: now.toISOString(),
+    trialStartedAt: now.toISOString(),
+    trialEndsAt: trialEnds.toISOString(),
+    subscriptionPlan: "TRIAL",
   }
 
   all.unshift(newUmkm)
@@ -135,11 +137,27 @@ export function updateUmkmStatus(
   const idx = all.findIndex((u) => u.id === id)
   if (idx < 0) return null
 
+  const target = all[idx]
+  let trialStartedAt = target.trialStartedAt
+  let trialEndsAt = target.trialEndsAt
+
+  // Jika diubah jadi APPROVED dan belum ada trial atau trial sudah habis, berikan 14 hari baru
+  if (status === "APPROVED") {
+    const now = Date.now()
+    if (!trialEndsAt || new Date(trialEndsAt).getTime() <= now) {
+      trialStartedAt = new Date().toISOString()
+      trialEndsAt = new Date(now + TRIAL_DURATION_DAYS * 86400000).toISOString()
+    }
+  }
+
   const updated: UmkmRegistration = {
-    ...all[idx],
+    ...target,
     status,
-    adminNotes: adminNotes ?? all[idx].adminNotes,
+    adminNotes: adminNotes !== undefined ? adminNotes : target.adminNotes,
     reviewedAt: new Date().toISOString(),
+    trialStartedAt,
+    trialEndsAt,
+    subscriptionPlan: target.subscriptionPlan || "TRIAL",
   }
 
   all[idx] = updated
@@ -152,7 +170,58 @@ export function updateUmkmStatus(
     fetch("/api/umkm", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, status, adminNotes: updated.adminNotes }),
+      body: JSON.stringify({
+        id,
+        status,
+        adminNotes: updated.adminNotes,
+        trialStartedAt: updated.trialStartedAt,
+        trialEndsAt: updated.trialEndsAt,
+        subscriptionPlan: updated.subscriptionPlan,
+      }),
+    }).catch(() => {})
+  }
+
+  return updated
+}
+
+/**
+ * Perpanjang masa trial prototype untuk UMKM tertentu (default: +14 hari)
+ */
+export function extendUmkmTrial(id: string, additionalDays: number = TRIAL_DURATION_DAYS): UmkmRegistration | null {
+  const all = getAllUmkm()
+  const idx = all.findIndex((u) => u.id === id)
+  if (idx < 0) return null
+
+  const target = all[idx]
+  const currentExpiry = target.trialEndsAt ? new Date(target.trialEndsAt).getTime() : Date.now()
+  const baseTime = currentExpiry > Date.now() ? currentExpiry : Date.now()
+  const newEndsAt = new Date(baseTime + additionalDays * 86400000).toISOString()
+
+  const updated: UmkmRegistration = {
+    ...target,
+    status: "APPROVED",
+    trialStartedAt: target.trialStartedAt || new Date().toISOString(),
+    trialEndsAt: newEndsAt,
+    adminNotes: `Trial diperpanjang +${additionalDays} hari oleh Admin pada ${new Date().toLocaleDateString("id-ID")}`,
+    reviewedAt: new Date().toISOString(),
+  }
+
+  all[idx] = updated
+  if (typeof window !== "undefined") {
+    localStorage.setItem(UMKM_STORAGE_KEY, JSON.stringify(all))
+  }
+
+  if (typeof window !== "undefined") {
+    fetch("/api/umkm", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id,
+        status: updated.status,
+        trialStartedAt: updated.trialStartedAt,
+        trialEndsAt: updated.trialEndsAt,
+        adminNotes: updated.adminNotes,
+      }),
     }).catch(() => {})
   }
 

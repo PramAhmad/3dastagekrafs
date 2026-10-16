@@ -12,6 +12,8 @@ import AstaLoadingScreen from "@/components/ui/AstaLoadingScreen"
 import UserImageLibrary from "@/components/editor/UserImageLibrary"
 import { formatRupiah } from "@/lib/utils"
 import { getCurrentUser, getProjectById, saveProjectToHistory, getUserSavedProjects, logoutUser } from "@/lib/auth"
+import { getUmkmByEmail, getRemainingTrialDays, isUmkmTrialActive } from "@/lib/umkm"
+import { UmkmRegistration } from "@/types/umkm"
 import { UserSession, SavedProject } from "@/types/auth"
 import { BRAND_COLORS } from "@/lib/theme"
 import { DEFAULT_PACKAGING_TEMPLATES } from "@/types/admin"
@@ -64,6 +66,9 @@ import {
   HelpCircle,
   FileText,
   Tag,
+  AlertTriangle,
+  Clock,
+  MessageSquare,
 } from "lucide-react"
 
 interface PricingQuote {
@@ -266,6 +271,10 @@ function EditorComponent() {
   const [authChecking, setAuthChecking] = useState(true)
   const [isStudioLoading, setIsStudioLoading] = useState(true)
 
+  // UMKM Trial & Status State
+  const [linkedUmkm, setLinkedUmkm] = useState<UmkmRegistration | null>(null)
+  const [showInactiveTrialModal, setShowInactiveTrialModal] = useState(false)
+
   // Current Project Info
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(projectIdParam || null)
   const [projectName, setProjectName] = useState("Desain Kemasan Saya")
@@ -330,6 +339,13 @@ function EditorComponent() {
     }
     setCurrentUser(user)
     setAuthChecking(false)
+
+    // Check linked UMKM trial status
+    const umkm = getUmkmByEmail(user.email)
+    setLinkedUmkm(umkm)
+    if (umkm && umkm.status === "INACTIVE") {
+      setShowInactiveTrialModal(true)
+    }
 
     // Load custom templates if exists in LocalStorage
     const savedCustomTemplates = localStorage.getItem("kemasan3d_custom_templates") || localStorage.getItem("kemasan3d_admin_templates")
@@ -462,6 +478,10 @@ function EditorComponent() {
   // Save Project to History
   const handleSaveProject = () => {
     if (!currentUser) return
+    if (linkedUmkm && linkedUmkm.status === "INACTIVE") {
+      setShowInactiveTrialModal(true)
+      return
+    }
     const saved = saveProjectToHistory({
       id: currentProjectId || undefined,
       userId: currentUser.id,
@@ -795,6 +815,10 @@ function EditorComponent() {
 
   // Download STL export
   const handleDownloadSTL = () => {
+    if (linkedUmkm && linkedUmkm.status === "INACTIVE") {
+      setShowInactiveTrialModal(true)
+      return
+    }
     const stlHeader = "solid ExportedPackagingModel\n"
     const stlFooter = "endsolid ExportedPackagingModel\n"
     const facetSample = `  facet normal 0 0 1\n    outer loop\n      vertex 0 0 ${height}\n      vertex ${length} 0 ${height}\n      vertex ${length} ${width} ${height}\n    endloop\n  endfacet\n`
@@ -813,6 +837,10 @@ function EditorComponent() {
 
   // Export PDF blueprint with 2D Dieline, specifications, and 3D preview
   const handleExportPDF = () => {
+    if (linkedUmkm && linkedUmkm.status === "INACTIVE") {
+      setShowInactiveTrialModal(true)
+      return
+    }
     try {
       const doc = new jsPDF({
         orientation: "landscape",
@@ -1732,6 +1760,28 @@ function EditorComponent() {
 
         {/* Right Actions: Clean, Uncluttered Header */}
         <div className="flex items-center gap-2">
+          {/* UMKM Trial Status Badge */}
+          {linkedUmkm?.status === "INACTIVE" ? (
+            <button
+              onClick={() => setShowInactiveTrialModal(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-800 text-xs font-bold animate-pulse cursor-pointer shadow-xs transition-colors"
+              title="Masa trial 2 minggu telah berakhir (Inactive). Klik untuk info."
+            >
+              <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+              <span className="hidden sm:inline">Trial Berakhir (Inactive)</span>
+              <span className="sm:hidden">Inactive</span>
+            </button>
+          ) : linkedUmkm?.status === "APPROVED" ? (
+            <a
+              href="/profile"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-bold shadow-xs transition-colors"
+              title="Masa coba trial prototype 2 minggu"
+            >
+              <Clock className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Trial: Sisa {getRemainingTrialDays(linkedUmkm)} Hari</span>
+            </a>
+          ) : null}
+
           {/* Shortcuts Info Button */}
           <button
             onClick={() => setShowShortcutsModal(true)}
@@ -2239,6 +2289,77 @@ function EditorComponent() {
                   className="px-4 py-1.5 rounded-xl bg-[#1F3A5C] text-white font-bold hover:bg-[#2F79A6] transition-colors"
                 >
                   Tutup
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* INACTIVE TRIAL MODAL BLOCKER */}
+        {showInactiveTrialModal && linkedUmkm && (
+          <div className="fixed inset-0 z-50 bg-[#1F3A5C]/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl border border-rose-200 shadow-2xl max-w-lg w-full p-6 sm:p-8 space-y-5 text-xs text-[#1F3A5C] animate-in zoom-in-95 duration-200">
+              <div className="flex items-center justify-between pb-3 border-b border-[#D5E4F0]">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-sm text-rose-950">Masa Coba (Trial) 2 Minggu Telah Berakhir</h3>
+                    <span className="text-[10px] font-mono font-bold text-rose-700">STATUS AKUN: INACTIVE</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowInactiveTrialModal(false)}
+                  className="p-1.5 rounded-lg text-[#718BAA] hover:text-[#1F3A5C] hover:bg-[#EEF4F8]"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3 leading-relaxed text-[#4B6B94]">
+                <p>
+                  Halo <strong className="text-[#1F3A5C]">{linkedUmkm.ownerName}</strong> ({linkedUmkm.businessName}), masa coba trial 2 minggu (14 hari) untuk pembuatan prototype kemasan Anda telah berakhir pada{" "}
+                  <strong className="text-rose-700">
+                    {linkedUmkm.trialEndsAt
+                      ? new Date(linkedUmkm.trialEndsAt).toLocaleDateString("id-ID", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        })
+                      : "tempo waktu lalu"}
+                  </strong>
+                  .
+                </p>
+                <div className="bg-rose-50 border border-rose-200 rounded-2xl p-3.5 text-rose-900 space-y-1">
+                  <span className="font-bold block">Akses yang dinonaktifkan:</span>
+                  <ul className="list-disc pl-4 space-y-0.5 text-[11px]">
+                    <li>Menyimpan perubahan desain kemasan baru ke riwayat profil</li>
+                    <li>Mengekspor pola potong 2D / lembar kerja blueprint PDF</li>
+                    <li>Mengekspor file model 3D (.STL) untuk mesin cetak prototype</li>
+                  </ul>
+                </div>
+                <p className="text-[11px]">
+                  Untuk memperpanjang masa coba trial prototype Anda atau mengaktifkan kemitraan cetak kemasan batch UMKM, silakan hubungi tim Admin kami melalui WhatsApp.
+                </p>
+              </div>
+
+              <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
+                <a
+                  href={`https://wa.me/6281234567890?text=Halo%20Admin%20AstaKraft,%20masa%20trial%20prototype%202%20minggu%20usaha%20saya%20${encodeURIComponent(linkedUmkm.businessName)}%20(${encodeURIComponent(linkedUmkm.ownerName)})%20telah%20berakhir.%20Saya%20ingin%20meminta%20perpanjangan%20trial%20atau%20aktivasi%20akun.`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center justify-center gap-2 shadow-sm transition-colors text-xs"
+                >
+                  <MessageSquare className="w-4 h-4 text-white" />
+                  <span>Minta Perpanjangan Trial (WhatsApp)</span>
+                </a>
+
+                <button
+                  onClick={() => router.push("/profile")}
+                  className="py-3 px-4 rounded-xl bg-[#EEF4F8] hover:bg-[#D5E4F0] text-[#1F3A5C] font-bold text-xs transition-colors cursor-pointer"
+                >
+                  Lihat Profil Saya
                 </button>
               </div>
             </div>

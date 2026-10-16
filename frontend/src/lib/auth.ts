@@ -1,6 +1,11 @@
 import { UserSession, SavedProject } from "@/types/auth"
+import { SEED_SAVED_PROJECTS, getSeedProjectData } from "@/seeds/projectSeed"
 
 export type { UserSession, SavedProject }
+export { SEED_SAVED_PROJECTS, getSeedProjectData }
+
+// For backwards compatibility
+export const INITIAL_PROJECTS = SEED_SAVED_PROJECTS
 
 const AUTH_STORAGE_KEY = "kemasan3d_user_session"
 const PROJECTS_STORAGE_KEY = "kemasan3d_saved_projects"
@@ -13,54 +18,6 @@ export const DEMO_USER: UserSession = {
   role: "user",
   avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80",
 }
-
-// Initial sample projects history
-export const INITIAL_PROJECTS: SavedProject[] = [
-  {
-    id: "proj_sample_01",
-    userId: "usr_umkm_01",
-    name: "Kardus Packaging Sabun Organik",
-    templateId: "box_rectangular_v1",
-    templateName: "Kotak Persegi (Mailer Box)",
-    category: "BOX",
-    description: "Desain kardus kraft untuk sabun herbal alami batch 500 pcs.",
-    dimensions: {
-      length: 80,
-      width: 55,
-      height: 35,
-      radius: 25,
-      wallThickness: 1.8,
-    },
-    materialId: "corrugated",
-    materialName: "Corrugated Cardboard",
-    boxColor: "#ba8b57",
-    objects: [],
-    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-    updatedAt: new Date(Date.now() - 3600000 * 4).toISOString(),
-  },
-  {
-    id: "proj_sample_02",
-    userId: "usr_umkm_01",
-    name: "Standing Pouch Kopi Robusta 250g",
-    templateId: "pouch_standing_v1",
-    templateName: "Standing Pouch Zipper",
-    category: "POUCH",
-    description: "Kantong kedap udara zipper hitam doff dengan logo emas.",
-    dimensions: {
-      length: 95,
-      width: 45,
-      height: 140,
-      radius: 20,
-      wallThickness: 1.5,
-    },
-    materialId: "black_matte",
-    materialName: "Black Matte Soft-Touch",
-    boxColor: "#1c1917",
-    objects: [],
-    createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
-    updatedAt: new Date(Date.now() - 86400000 * 1).toISOString(),
-  },
-]
 
 // -------------------------------------------------------------
 // Auth Helpers
@@ -106,16 +63,16 @@ export function logoutUser(): void {
 // Project History Storage Helpers
 // -------------------------------------------------------------
 export function getAllSavedProjects(): SavedProject[] {
-  if (typeof window === "undefined") return INITIAL_PROJECTS
+  if (typeof window === "undefined") return getSeedProjectData()
   try {
     const raw = localStorage.getItem(PROJECTS_STORAGE_KEY)
     if (!raw) {
-      localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(INITIAL_PROJECTS))
-      return INITIAL_PROJECTS
+      localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(getSeedProjectData()))
+      return getSeedProjectData()
     }
     return JSON.parse(raw) as SavedProject[]
   } catch (err) {
-    return INITIAL_PROJECTS
+    return getSeedProjectData()
   }
 }
 

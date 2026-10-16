@@ -45,8 +45,8 @@ export default function KemasanCatalogPage() {
   const [searchQuery, setSearchQuery] = useState<string>("")
   
   // Load More State (Display 8 initially, then load more until all 12 are visible)
-  const INITIAL_DISPLAY_COUNT = 8
-  const [visibleCount, setVisibleCount] = useState<number>(INITIAL_DISPLAY_COUNT)
+  const DEFAULT_PAGE_SIZE = 8
+  const [visibleCount, setVisibleCount] = useState<number>(DEFAULT_PAGE_SIZE)
   
   // Selected detail modal
   const [selectedDetailModal, setSelectedDetailModal] = useState<PackagingTemplate | null>(null)
@@ -323,7 +323,7 @@ export default function KemasanCatalogPage() {
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value)
-                setVisibleCount(INITIAL_DISPLAY_COUNT)
+                setVisibleCount(DEFAULT_PAGE_SIZE)
               }}
               placeholder="Cari nama kemasan, jenis toples, botol, mailer box..."
               className="w-full pl-9 pr-8 py-2 rounded-xl bg-[#EEF4F8] border border-[#D5E4F0] text-xs text-[#1F3A5C] font-medium placeholder:text-[#718BAA] focus:outline-none focus:border-[#4394C3] focus:bg-white transition-colors"
@@ -348,7 +348,7 @@ export default function KemasanCatalogPage() {
               value={selectedMaterialFilter}
               onChange={(e) => {
                 setSelectedMaterialFilter(e.target.value)
-                setVisibleCount(INITIAL_DISPLAY_COUNT)
+                setVisibleCount(DEFAULT_PAGE_SIZE)
               }}
               className="bg-[#EEF4F8] border border-[#D5E4F0] rounded-xl px-3 py-1.5 text-xs font-bold text-[#1F3A5C] focus:outline-none focus:border-[#4394C3] cursor-pointer"
             >
@@ -371,7 +371,7 @@ export default function KemasanCatalogPage() {
                 key={cat.id}
                 onClick={() => {
                   setCategoryFilter(cat.id)
-                  setVisibleCount(INITIAL_DISPLAY_COUNT)
+                  setVisibleCount(DEFAULT_PAGE_SIZE)
                 }}
                 className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold text-xs whitespace-nowrap transition-all shrink-0 ${
                   isSelected
