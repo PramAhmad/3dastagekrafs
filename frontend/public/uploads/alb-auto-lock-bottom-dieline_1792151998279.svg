@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ns0:svg xmlns:ns0="http://www.w3.org/2000/svg" baseProfile="full" height="293.000mm" version="1.1" viewBox="0 0 311.000 293.000" width="311.000mm" xmlns="http://www.w3.org/2000/svg" data-astakraf-standard="v1.0"><g id="layer-sheet"><rect width="311" height="293" fill="#ffffff"/></g>
+  <ns0:defs/>
+  <ns0:rect fill="white" height="293.0" width="311.0" x="0" y="0"/>
+  <ns0:g fill="#334155" id="INFO">
+    
+    
+    
+    
+    
+  </ns0:g>
+  <ns0:g color="#dc4eb8" id="BLEED">
+    <ns0:polyline fill="none" points="16.6152,228.4264 26.1366,258.8948 28.0015,260.829 62.0015,272.829 63.4679,272.9633 101.4679,266.9633 103.1213,266.1213 103.9633,264.4679 108.4715,235.9156 113.096,253.7529 115.5757,255.9698 143.5757,259.9698 145.854,259.3585 146.9861,257.289 149.0311,236.1572 156.1366,258.8948 158.0015,260.829 192.0015,272.829 193.4679,272.9633 231.4679,266.9633 233.1213,266.1213 233.9633,264.4679 238.4715,235.9156 243.096,253.7529 245.5757,255.9698 273.5757,259.9698 275.854,259.3585 276.9861,257.289 279.7957,228.2562 280.1213,228.1213 281.0,226.0 281.0,221.1623 293.9487,216.846 295.4337,215.7541 296.0,214.0 296.0,97.0 295.379,95.1723 293.773,94.1013 281.0,90.6952 281.0,86.0 280.1213,83.8787 278.6703,83.2777 275.9748,62.612 274.9794,60.7457 273.0,60.0 243.0,60.0 241.0206,60.7457 240.0252,62.612 237.7667,79.9269 235.9334,71.3714 234.886,69.667 233.0,69.0 153.0,69.0 151.114,69.667 150.0666,71.3714 148.2333,79.9269 145.9748,62.612 144.9794,60.7457 143.0,60.0 113.0,60.0 111.0206,60.7457 110.0252,62.612 108.0,78.1385 108.0,49.0 107.6833,47.6584 101.6833,35.6584 99.0,34.0 27.0,34.0 24.3167,35.6584 18.3167,47.6584 18.0,49.0 18.0,83.0 15.8787,83.8787 15.0,86.0 15.0,226.0 15.8787,228.1213 16.6152,228.4264" stroke="#dc4eb8" stroke-dasharray="1.3,1.1" stroke-width="0.16"/>
+  </ns0:g>
+  <ns0:g fill="none" id="GLUE" stroke="#9199a4">
+    <ns0:polyline fill="none" points="291.0,98.0 291.0,214.0 280.0,214.0 280.0,98.0 291.0,98.0" stroke="#9199a4" stroke-dasharray="2,1" stroke-width="0.22"/>
+    <ns0:polyline fill="none" points="75.6,242.0 99.0,255.0 96.0,260.0 72.0,249.0 75.6,242.0" stroke="#9199a4" stroke-dasharray="2,1" stroke-width="0.22"/>
+    <ns0:polyline fill="none" points="205.6,242.0 229.0,255.0 226.0,260.0 202.0,249.0 205.6,242.0" stroke="#9199a4" stroke-dasharray="2,1" stroke-width="0.22"/>
+  </ns0:g>
+  <ns0:g fill="none" id="SEAL" stroke="#9c62be"/>
+  <ns0:g fill="none" id="SAFE" stroke="#21a068"/>
+  <ns0:g fill="none" id="ARTWORK_AREA" stroke="#334155"/>
+  <ns0:g fill="none" id="CREASE" stroke="#176ac8">
+    <ns0:polyline fill="none" points="108.0,86.0 108.0,226.0" stroke="#176ac8" stroke-dasharray="3,1.6" stroke-width="0.32"/>
+    <ns0:polyline fill="none" points="148.0,86.0 148.0,226.0" stroke="#176ac8" stroke-dasharray="3,1.6" stroke-width="0.32"/>
+    <ns0:polyline fill="none" points="238.0,86.0 238.0,226.0" stroke="#176ac8" stroke-dasharray="3,1.6" stroke-width="0.32"/>
+    <ns0:polyline fill="none" points="278.0,86.0 278.0,226.0" stroke="#176ac8" stroke-dasharray="3,1.6" stroke-width="0.32"/>
+    <ns0:polyline fill="none" points="21.0,86.0 105.0,86.0" stroke="#176ac8" stroke-dasharray="3,1.6" stroke-width="0.32"/>
+    <ns0:polyline fill="none" points="27.0,51.0 99.0,51.0" stroke="#176ac8" stroke-dasharray="3,1.6" stroke-width="0.32"/>
+    <ns0:polyline fill="none" points="110.0,86.0 146.0,86.0" stroke="#176ac8" stroke-dasharray="3,1.6" stroke-width="0.32"/>
+    <ns0:polyline fill="none" points="150.0,86.0 236.0,86.0" stroke="#176ac8" stroke-dasharray="3,1.6" stroke-width="0.32"/>
+    <ns0:polyline fill="none" points="240.0,86.0 276.0,86.0" stroke="#176ac8" stroke-dasharray="3,1.6" stroke-width="0.32"/>
+    <ns0:polyline fill="none" points="19.0,226.0 107.0,226.0" stroke="#176ac8" stroke-dasharray="3,1.6" stroke-width="0.32"/>
+    <ns0:polyline fill="none" points="61.0,230.0 101.0,263.0" stroke="#176ac8" stroke-dasharray="3,1.6" stroke-width="0.32"/>
+    <ns0:polyline fill="none" points="109.0,226.0 147.0,226.0" stroke="#176ac8" stroke-dasharray="3,1.6" stroke-width="0.32"/>
+    <ns0:polyline fill="none" points="114.0,230.0 143.0,255.0" stroke="#176ac8" stroke-dasharray="3,1.6" stroke-width="0.32"/>
+    <ns0:polyline fill="none" points="149.0,226.0 237.0,226.0" stroke="#176ac8" stroke-dasharray="3,1.6" stroke-width="0.32"/>
+    <ns0:polyline fill="none" points="191.0,230.0 231.0,263.0" stroke="#176ac8" stroke-dasharray="3,1.6" stroke-width="0.32"/>
+    <ns0:polyline fill="none" points="239.0,226.0 277.0,226.0" stroke="#176ac8" stroke-dasharray="3,1.6" stroke-width="0.32"/>
+    <ns0:polyline fill="none" points="244.0,230.0 273.0,255.0" stroke="#176ac8" stroke-dasharray="3,1.6" stroke-width="0.32"/>
+  </ns0:g>
+  <ns0:g fill="none" id="PERF" stroke="#ed8d20"/>
+  <ns0:g fill="none" id="KISS_CUT" stroke="#cb7619"/>
+  <ns0:g fill="none" id="CUT" stroke="#d8313d">
+    <ns0:polyline fill="none" points="99.0,37.0 27.0,37.0 21.0,49.0 21.0,86.0 18.0,86.0 18.0,226.0 19.0,226.0 29.0,258.0 63.0,270.0 101.0,264.0 107.0,226.0 109.0,226.0 116.0,253.0 144.0,257.0 147.0,226.0 149.0,226.0 159.0,258.0 193.0,270.0 231.0,264.0 237.0,226.0 239.0,226.0 246.0,253.0 274.0,257.0 277.0,226.0 278.0,226.0 278.0,219.0 293.0,214.0 293.0,97.0 278.0,93.0 278.0,86.0 276.0,86.0 273.0,63.0 243.0,63.0 240.0,86.0 236.0,86.0 233.0,72.0 153.0,72.0 150.0,86.0 146.0,86.0 143.0,63.0 113.0,63.0 110.0,86.0 105.0,86.0 105.0,49.0 99.0,37.0" stroke="#d8313d" stroke-width="0.35"/>
+  </ns0:g>
+  
+<g id="layer-panels"><rect id="face-front" data-face="front" data-label="DEPAN (FRONT)" x="85.31" y="72.74" width="87.08" height="70.32" fill="rgba(37,99,235,0.03)" stroke="rgba(37,99,235,0.3)" stroke-width="0.4"/></g><g id="layer-artwork"><rect id="base-face-color" x="20" y="20" width="217.7" height="175.79999999999998" rx="1.5" fill="#ffffff" stroke="none"/></g></ns0:svg>

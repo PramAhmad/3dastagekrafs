@@ -1518,19 +1518,26 @@ export function buildFolded3DModel(
     centerGroup.add(bMesh)
 
     if (analysis.modelId === "spout-pouch") {
-      const spout = makeMesh(new THREE.CylinderGeometry(W * 0.05, W * 0.065, H * 0.13, 24))
-      spout.rotation.z = Math.PI / 2
-      spout.position.set(W * 0.48, H * 0.38, 0)
+      const spoutH = H * 0.12
+      const spout = makeMesh(new THREE.CylinderGeometry(W * 0.05, W * 0.065, spoutH, 24))
+      spout.position.set(0, H / 2 + spoutH / 2, 0)
       centerGroup.add(spout)
-      const cap = makeMesh(new THREE.CylinderGeometry(W * 0.075, W * 0.075, H * 0.055, 24))
-      cap.rotation.z = Math.PI / 2
-      cap.position.set(W * 0.56, H * 0.38, 0)
+      const capH = H * 0.045
+      const cap = makeMesh(new THREE.CylinderGeometry(W * 0.075, W * 0.075, capH, 24))
+      cap.position.set(0, H / 2 + spoutH + capH / 2, 0)
       centerGroup.add(cap)
     } else if (analysis.modelId === "coffee-bag") {
-      const valve = makeMesh(new THREE.CylinderGeometry(W * 0.07, W * 0.07, 0.018, 32))
-      valve.rotation.x = Math.PI / 2
-      valve.position.set(0, H * 0.22, depthMax * 0.5 + 0.012)
-      centerGroup.add(valve)
+      const valveY = H * 0.2
+      const valveZ = depthMax * 0.48 + 0.014
+      const valveBody = makeMesh(new THREE.CylinderGeometry(W * 0.055, W * 0.055, 0.018, 32))
+      valveBody.rotation.x = Math.PI / 2
+      valveBody.position.set(0, valveY, valveZ)
+      centerGroup.add(valveBody)
+      const ventMaterial = new THREE.MeshPhysicalMaterial({ color: "#302d29", roughness: 0.82, side: THREE.DoubleSide })
+      materials.push(ventMaterial)
+      const vent = new THREE.Mesh(new THREE.CircleGeometry(W * 0.018, 24), ventMaterial)
+      vent.position.set(0, valveY, valveZ + 0.011)
+      centerGroup.add(vent)
     }
 
     const updateFold = (progress: number) => {
@@ -1587,7 +1594,7 @@ export function buildFolded3DModel(
       back.position.z = -depth * 0.35
       centerGroup.add(back)
 
-      const updateFold = (_progress: number) => {}
+      const updateFold = (_progress: number) => { }
       return { rootGroup, updateFold, materials }
     }
 
@@ -1624,7 +1631,7 @@ export function buildFolded3DModel(
       geo.translate(0, 0, -depth / 2)
       centerGroup.add(makeMesh(geo))
 
-      const updateFold = (_progress: number) => {}
+      const updateFold = (_progress: number) => { }
       return { rootGroup, updateFold, materials }
     }
 
@@ -1822,26 +1829,26 @@ export function buildFolded3DModel(
       const isDustFlap = k % 2 === 1 && numWalls === 4
       const ptGeo = isDustFlap
         ? createDieCutFlapGeometry(
-            pW,
-            topFlapH * 0.8,
-            boundaries[pIdx],
-            cutBox.y,
-            svgW,
-            svgH,
-            boundaries[pIdx + 1] - boundaries[pIdx],
-            topCreaseY - cutBox.y,
-            "dust-top"
-          )
+          pW,
+          topFlapH * 0.8,
+          boundaries[pIdx],
+          cutBox.y,
+          svgW,
+          svgH,
+          boundaries[pIdx + 1] - boundaries[pIdx],
+          topCreaseY - cutBox.y,
+          "dust-top"
+        )
         : createPanelGeometry(
-            pW,
-            topFlapH,
-            boundaries[pIdx],
-            cutBox.y,
-            svgW,
-            svgH,
-            boundaries[pIdx + 1] - boundaries[pIdx],
-            topCreaseY - cutBox.y
-          )
+          pW,
+          topFlapH,
+          boundaries[pIdx],
+          cutBox.y,
+          svgW,
+          svgH,
+          boundaries[pIdx + 1] - boundaries[pIdx],
+          topCreaseY - cutBox.y
+        )
       if (!isDustFlap) ptGeo.translate(0, topFlapH / 2, 0)
       pTopHinge.add(new THREE.Mesh(ptGeo, createMaterial()))
     }
@@ -1856,26 +1863,26 @@ export function buildFolded3DModel(
       const isDustFlap = k % 2 === 1 && numWalls === 4
       const pbGeo = isDustFlap
         ? createDieCutFlapGeometry(
-            pW,
-            botFlapH * 0.8,
-            boundaries[pIdx],
-            botCreaseY,
-            svgW,
-            svgH,
-            boundaries[pIdx + 1] - boundaries[pIdx],
-            cutBox.y + cutBox.h - botCreaseY,
-            "dust-bottom"
-          )
+          pW,
+          botFlapH * 0.8,
+          boundaries[pIdx],
+          botCreaseY,
+          svgW,
+          svgH,
+          boundaries[pIdx + 1] - boundaries[pIdx],
+          cutBox.y + cutBox.h - botCreaseY,
+          "dust-bottom"
+        )
         : createPanelGeometry(
-            pW,
-            botFlapH,
-            boundaries[pIdx],
-            botCreaseY,
-            svgW,
-            svgH,
-            boundaries[pIdx + 1] - boundaries[pIdx],
-            cutBox.y + cutBox.h - botCreaseY
-          )
+          pW,
+          botFlapH,
+          boundaries[pIdx],
+          botCreaseY,
+          svgW,
+          svgH,
+          boundaries[pIdx + 1] - boundaries[pIdx],
+          cutBox.y + cutBox.h - botCreaseY
+        )
       if (!isDustFlap) pbGeo.translate(0, -botFlapH / 2, 0)
       pBotHinge.add(new THREE.Mesh(pbGeo, createMaterial()))
     }

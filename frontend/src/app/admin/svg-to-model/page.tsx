@@ -71,6 +71,27 @@ const SAMPLE_PRESETS = [
     category: "BOX",
     dims: { w: 220, d: 150, h: 160 },
   },
+  {
+    id: 'standup-pouch',
+    name: 'Stand-Up Pouch / Doypack',
+    desc: 'Kantong berdiri fleksibel dengan gusset bawah, zipper atas, dan panel depan/belakang.',
+    svgUrl: '/uploads/standup-pouch-doypack-glb-dieline_1792096696849.svg',
+    category: 'POUCH',
+  },
+  {
+    id: 'coffee-bag',
+    name: 'Coffee Bag (Kantong Kopi + Valve Udara)',
+    desc: 'Stand-up pouch kopi 250g-500g dengan degassing valve 1-arah di panel depan.',
+    svgUrl: '/uploads/coffee-bag-dieline.svg',
+    category: 'POUCH',
+  },
+  {
+    id: 'spout-pouch',
+    name: 'Spout Pouch (Pouch Nozzle Tengah)',
+    desc: 'Stand-up pouch minuman/saus dengan spout nozzle di pusat panel depan.',
+    svgUrl: '/uploads/spout-pouch-dieline.svg',
+    category: 'POUCH',
+  },
 ]
 
 function DielinePreviewViewport({ svg, className = "" }: { svg: string; className?: string }) {
