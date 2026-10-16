@@ -77,7 +77,7 @@ export default function AdminSidebar({ templateCount = 8, orderCount = 3, pendin
       label: "SVG to Model Template",
       href: "/admin/svg-to-model",
       icon: Sparkles,
-      badge: "PACDORA",
+      badge: "AUTO 3D",
       badgeColor: "bg-purple-500/20 text-purple-700",
       active: pathname.startsWith("/admin/svg-to-model"),
     },

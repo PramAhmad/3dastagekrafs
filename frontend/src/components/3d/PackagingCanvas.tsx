@@ -525,17 +525,17 @@ function ContinuousBoxModel({
   const roughness = isGlossy
     ? 0.06
     : isCorrugated
-    ? 0.88
+    ? 0.92
     : isKraftPaper
-    ? 0.78
+    ? 0.88
     : isMetallic
     ? 0.15
     : 0.65
   const metalness = isMetallic ? 0.88 : isGlossy ? 0.05 : 0.0
   const clearcoat = isGlossy ? 1.0 : 0.0
-  const sheen = isCorrugated ? 0.25 : isKraftPaper ? 0.35 : 0.0
-  const sheenRoughness = isCorrugated ? 0.80 : 0.75
-  const sheenColor = isCorrugated ? new THREE.Color("#dfbe94") : new THREE.Color("#eedab7")
+  const sheen = isCorrugated ? 0.20 : isKraftPaper ? 0.28 : 0.0
+  const sheenRoughness = isCorrugated ? 0.85 : 0.80
+  const sheenColor = isCorrugated ? new THREE.Color("#cca37b") : new THREE.Color("#dfc29f")
 
   const loadedImages = useImageCache(objects)
 
@@ -754,7 +754,7 @@ function ContinuousBoxModel({
     })
 
     const insideMat = new THREE.MeshPhysicalMaterial({
-      color: faceColors?.inside || (isCardboardFamily ? (isCorrugated ? "#aa7742" : "#b88959") : "#e8dfd5"),
+      color: faceColors?.inside || (isCardboardFamily ? (isCorrugated ? "#736048" : "#7d6b54") : "#e8dfd5"),
       roughness: 0.90,
       metalness: 0.0,
       sheen: isCardboardFamily ? sheen * 0.8 : 0.0,
@@ -903,7 +903,7 @@ function ContinuousBoxModel({
           onPointerUp={handlePointerUp}
         />
       ) : (
-        /* Full Articulated 2D Dieline <-> 3D Box Folding Hierarchy (Pacdora-Style) */
+        /* Full Articulated 2D Dieline <-> 3D Box Folding Hierarchy */
         <group>
           {/* 1. CENTER BOTTOM BASE (Fixed at Origin on Ground Plane) */}
           <group position={[0, -sy / 2 * fold + panelThick / 2, 0]}>
@@ -1891,7 +1891,7 @@ function CustomMeshModel({
           }
 
           const maxDim = Math.max(size.x, size.y, size.z, 1e-4)
-          // Pacdora calibration: target dimension is ~1.55 world units in front of camera
+          // Viewport calibration: target dimension is ~1.55 world units in front of camera
           const normScale = maxDim > 0 ? 1.55 / maxDim : 1.0
 
           setInitialDims({
@@ -1924,7 +1924,7 @@ function CustomMeshModel({
           const report = analyzeModelUV(scene, modelUrl)
           if (onUVDiagnostic) onUVDiagnostic(report)
 
-          // Pacdora & Standard packaging calibration:
+          // Standard packaging CAD calibration:
           // Measure true bounding box (e.g. 200mm height or 1280px mesh)
           const box = new THREE.Box3().setFromObject(scene)
           const size = new THREE.Vector3()
@@ -1981,9 +1981,9 @@ function CustomMeshModel({
   const roughness = isGlossy
     ? 0.06
     : isCorrugated
-    ? 0.88
+    ? 0.92
     : isKraftPaper
-    ? 0.78
+    ? 0.88
     : isMetallic
     ? 0.15
     : materialFinish === "frosted"
@@ -1991,9 +1991,9 @@ function CustomMeshModel({
     : 0.65
   const metalness = isCardboardFamily ? 0.0 : materialFinish === "metallic" ? 0.88 : 0.04
   const clearcoat = isCardboardFamily ? 0.0 : materialFinish === "glossy" ? 0.95 : 0.0
-  const sheen = isCorrugated ? 0.25 : isKraftPaper ? 0.35 : 0.0
-  const sheenRoughness = isCorrugated ? 0.80 : 0.75
-  const sheenColor = isCorrugated ? new THREE.Color("#dfbe94") : new THREE.Color("#eedab7")
+  const sheen = isCorrugated ? 0.20 : isKraftPaper ? 0.28 : 0.0
+  const sheenRoughness = isCorrugated ? 0.85 : 0.80
+  const sheenColor = isCorrugated ? new THREE.Color("#cca37b") : new THREE.Color("#dfc29f")
 
   // 3. Dynamic Offscreen Texture Baking (Manifest UV Bridge + SVG Dieline + Decal Artwork)
   useEffect(() => {
@@ -2466,7 +2466,7 @@ function CustomMeshModel({
   const rawD = initialDims && initialDims.depth > 0 ? initialDims.depth : 1
   const rawMax = Math.max(rawW, rawH, rawD, 1e-4)
 
-  // Target base visual dimension in Three.js world units (Pacdora-Style Prominent Zoom)
+  // Target base visual dimension in Three.js world units
   const targetDefaultVisual = 1.55
   const baseNorm = targetDefaultVisual / rawMax
 
@@ -2498,7 +2498,7 @@ function CustomMeshModel({
   const visualZ = rawD * Math.abs(sz)
   const maxVisual = Math.max(visualX, visualY, visualZ)
 
-  // STRICT PACDORA MAX BOUND CAP:
+  // STRICT ADAPTIVE MAX BOUND CAP:
   // Guarantees that any 1280px asset will fill ~70-75% of viewport without overflowing
   const effectiveMaxBound = maxVisualBound > 0 ? maxVisualBound : 1.70
   const effectiveMinBound = 0.85
@@ -2606,7 +2606,7 @@ export default function PackagingCanvas({
     return migrateLegacyManifest(manifest, model3dUrl || "model.glb")
   }, [manifest, model3dUrl])
 
-  // Pacdora-style 360 Turntable Intro Spin on load
+  // 360 Turntable Intro Spin on load
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsIntroSpinning(false)

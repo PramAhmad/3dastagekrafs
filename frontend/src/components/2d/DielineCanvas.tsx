@@ -258,11 +258,11 @@ export default function DielineCanvas({
   const scaleMmToPx = activeScale
 
   // --------------------------------------------------------------------------
-  // PACDORA-STYLE REVERSE SVG & PACKAGING DIELINE GENERATION
+  // REVERSE SVG & PACKAGING DIELINE GENERATION
   // If SVG dieline exists, canvas prioritizes & aligns to the SVG vector dimensions
   // --------------------------------------------------------------------------
   const dieline = useMemo(() => {
-    // 0. CUSTOM UPLOADED VECTOR SVG DIELINE (Pacdora Reverse-Engineered System)
+    // 0. CUSTOM UPLOADED VECTOR SVG DIELINE (CAD Reverse-Engineered System)
     if (svgMeta) {
       const svgW = svgMeta.width
       const svgH = svgMeta.height
@@ -337,7 +337,7 @@ export default function DielineCanvas({
     const isCylinder = category === "JAR" || category === "BOTTLE" || category === "CAN"
     const isPouch = category === "POUCH"
 
-    // 1. PACDORA OPEN MAILER BOX (FEFCO 0427 / Roll End Tuck Top)
+    // 1. OPEN MAILER BOX (FEFCO 0427 / Roll End Tuck Top)
     // Structure:
     // Center: Bottom Base (L x W)
     // Top: Front Wall (L x H) + Inside Locking Rollover Flap (L x H)
@@ -640,7 +640,7 @@ export default function DielineCanvas({
     }
   }, [svgMeta, category, length, width, height, scaleMmToPx])
 
-  // Photorealistic Pacdora-Style Cardboard & Kraft Pattern Generators for 2D Dieline Sheet
+  // Photorealistic Cardboard & Kraft Pattern Generators for 2D Dieline Sheet
   const cardboardDataUrl = useMemo(() => {
     if (typeof document === "undefined") return ""
     const canvas = document.createElement("canvas")
@@ -881,7 +881,7 @@ export default function DielineCanvas({
         </defs>
 
         <g filter="url(#cardboardShadow)">
-          {/* 1. CUSTOM UPLOADED VECTOR SVG DIELINE (PACDORA REVERSE SYSTEM) */}
+          {/* 1. CUSTOM UPLOADED VECTOR SVG DIELINE */}
           {svgMeta && (
             <>
               {/* Base packaging sheet background colored with authentic material texture */}
@@ -932,7 +932,7 @@ export default function DielineCanvas({
               })}
 
               <g
-                id="pacdora-reverse-svg-layer"
+                id="dieline-reverse-svg-layer"
                 transform={`scale(${activeScale})`}
                 dangerouslySetInnerHTML={{ __html: svgMeta.innerSvg }}
               />
@@ -1002,7 +1002,7 @@ export default function DielineCanvas({
                   strokeOpacity="0.4"
                 />
 
-                {/* Selected Face Pacdora Blue Active Outline & Dimension Callouts */}
+                {/* Selected Face Active Blue Outline & Dimension Callouts */}
                 {isSelected && (
                   <g className="pointer-events-none">
                     {/* Active Blue Selection Outline */}
@@ -1233,7 +1233,7 @@ export default function DielineCanvas({
       </svg>
 
       {/* ------------------------------------------------------------- */}
-      {/* FLOATING PACDORA "[ 🌈 Face color ]" POPOVER BUTTON (ABOVE FACE) */}
+      {/* FLOATING "[ 🌈 Face color ]" POPOVER BUTTON (ABOVE FACE) */}
       {/* ------------------------------------------------------------- */}
       {activeFace && (
         <div
@@ -1374,7 +1374,7 @@ export default function DielineCanvas({
       )}
 
       {/* ------------------------------------------------------------- */}
-      {/* PACDORA-STYLE FLOATING BOTTOM TOOLBAR (Select, Pan, Undo, Zoom) */}
+      {/* FLOATING BOTTOM TOOLBAR (Select, Pan, Undo, Zoom) */}
       {/* ------------------------------------------------------------- */}
       <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 bg-white/95 px-3 py-1.5 rounded-2xl border border-neutral-200/90 shadow-[0_4px_16px_rgba(0,0,0,0.08)] backdrop-blur-md">
         {/* Select Tool */}

@@ -695,7 +695,7 @@ export default function SvgToModelPage() {
                 </span>
                 <div className="flex items-center gap-1">
                   {[
-                    { id: "kraft", label: "Corrugated Kraft (Pacdora)", color: "#be8d58" },
+                    { id: "kraft", label: "Karton Kraft Cokelat", color: "#be8d58" },
                     { id: "matte", label: "Ivory / Duplex Putih", color: "#f8f9fa" },
                     { id: "glossy", label: "Glossy Coated UV", color: "#ffffff" },
                     { id: "metallic", label: "Metallic Gold Foil", color: "#d4af37" },

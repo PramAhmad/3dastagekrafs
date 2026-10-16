@@ -149,7 +149,7 @@ func main() {
 		authGroup.POST("/login", authHandler.Login)
 	}
 
-	// Packaging Templates Catalog & Management (Pacdora-style presets)
+	// Packaging Templates Catalog & Management (AstaKraft presets)
 	templateGroup := router.Group("/api/v1/templates")
 	{
 		templateGroup.GET("", templateHandler.ListTemplates)

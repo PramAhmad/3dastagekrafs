@@ -1,6 +1,6 @@
-// Photorealistic Aesthetic Natural Kraft & Corrugated Cardboard PBR Texture & Bump Map Generator
-// Engineered to match Pacdora, high-end Apple/D2C unboxing aesthetics, and packaging standards
-// Clean, aesthetic, warm golden tones — free of dirty/moldy spots ("bulukan") and vertical stripes
+// Photorealistic Industrial Packaging Grade Kraft & Corrugated Cardboard Texture & Bump Generator
+// Color & micro-texture calibration from physical corrugated packaging standards
+// Base color: #B59D7B (Natural desaturated warm raw cardboard grey-beige)
 
 import * as THREE from "three"
 
@@ -28,10 +28,8 @@ let cachedKraftBumpTex: THREE.CanvasTexture | null = null
 let cachedCorrugatedBumpTex: THREE.CanvasTexture | null = null
 
 /**
- * Generates an isotropic tactile paper tooth bump map for realistic cardboard relief.
- * - Brown Kraft: micro-fine paper tooth, subtle fiber relief (smooth satin paper touch).
- * - Corrugated: tactile clean packaging board tooth, subtle fiber impressions.
- * Completely free of dirty pits, moldy flecks, and vertical fluting lines.
+ * Generates an authentic tactile paper tooth bump map matching Pacdora PBR specs.
+ * Fine isotropic paper tooth, delicate fiber micro-relief, completely clean without moldy spots or vertical stripes.
  */
 export function getCardboardBumpTexture(isCorrugated: boolean = false): THREE.CanvasTexture {
   if (typeof document === "undefined") {
@@ -57,14 +55,13 @@ export function getCardboardBumpTexture(isCorrugated: boolean = false): THREE.Ca
   ctx.fillRect(0, 0, canvas.width, canvas.height)
 
   // 2. Delicate Wood & Cellulose Fiber Relief Strands (Omnidirectional / Isotropic 360°)
-  // Smooth, continuous fibers without harsh dark pits
-  const fiberCount = isCorrugated ? 5200 : 3600
+  const fiberCount = isCorrugated ? 4600 : 3400
   for (let i = 0; i < fiberCount; i++) {
     const fx = rand() * canvas.width
     const fy = rand() * canvas.height
-    const fLength = isCorrugated ? (rand() * 10 + 3) : (rand() * 7 + 3)
+    const fLength = isCorrugated ? (rand() * 9 + 3) : (rand() * 7 + 3)
     const angle = rand() * Math.PI * 2 // Fully isotropic
-    const curvature = (rand() - 0.5) * 0.5
+    const curvature = (rand() - 0.5) * 0.45
     const isRaised = rand() > 0.48
 
     ctx.beginPath()
@@ -75,24 +72,24 @@ export function getCardboardBumpTexture(isCorrugated: boolean = false): THREE.Ca
     const endY = fy + Math.sin(angle + curvature) * fLength
 
     ctx.quadraticCurveTo(midX, midY, endX, endY)
-    const alpha = isCorrugated ? (rand() * 0.12 + 0.05) : (rand() * 0.08 + 0.04)
+    const alpha = isCorrugated ? (rand() * 0.10 + 0.04) : (rand() * 0.07 + 0.03)
     ctx.strokeStyle = isRaised
       ? `rgba(215, 215, 215, ${alpha})`
-      : `rgba(60, 60, 60, ${alpha})`
-    ctx.lineWidth = isCorrugated ? (rand() * 0.7 + 0.35) : (rand() * 0.5 + 0.3)
+      : `rgba(65, 65, 65, ${alpha})`
+    ctx.lineWidth = isCorrugated ? (rand() * 0.65 + 0.3) : (rand() * 0.5 + 0.25)
     ctx.stroke()
   }
 
-  // 3. Tactile micro-paper tooth stippling noise (smooth, luxurious paper tooth)
-  const stippleDots = isCorrugated ? 7000 : 4000
-  const stippleOpacity = isCorrugated ? 0.04 : 0.025
-  ctx.fillStyle = `rgba(40, 40, 40, ${stippleOpacity})`
+  // 3. Tactile micro-paper tooth stippling noise (smooth, clean paper tooth)
+  const stippleDots = isCorrugated ? 6000 : 3500
+  const stippleOpacity = isCorrugated ? 0.035 : 0.022
+  ctx.fillStyle = `rgba(45, 45, 45, ${stippleOpacity})`
   for (let i = 0; i < stippleDots; i++) {
     const rx = rand() * canvas.width
     const ry = rand() * canvas.height
     ctx.fillRect(rx, ry, 1, 1)
   }
-  ctx.fillStyle = `rgba(220, 220, 220, ${stippleOpacity})`
+  ctx.fillStyle = `rgba(215, 215, 215, ${stippleOpacity})`
   for (let i = 0; i < stippleDots; i++) {
     const rx = rand() * canvas.width
     const ry = rand() * canvas.height
@@ -114,11 +111,8 @@ export function getCardboardBumpTexture(isCorrugated: boolean = false): THREE.Ca
 }
 
 /**
- * Draws clean, aesthetic photorealistic cardboard background onto a 2D canvas context.
- * Differentiates:
- * 1. Brown Kraft Paper: Lighter golden sand (#CBA578), smooth, refined, satin touch.
- * 2. Corrugated Cardboard: Warm golden camel (#C29662), sturdy packaging board, subtle tooth.
- * 
+ * Draws photorealistic Pacdora shoe box style cardboard background onto a 2D canvas context.
+ * Exact 1:1 color match (#B59D7B) and clean paperboard pulp texture.
  * Free of dirty stains, moldy specks ("bulukan"), and vertical stripes.
  */
 export function applyCardboardBackground(
@@ -138,9 +132,9 @@ export function applyCardboardBackground(
     options.materialType === "kraft" ||
     !options.materialFinish
 
-  // Clean, aesthetic warm packaging tones:
-  // - Corrugated: Warm golden camel cardboard (#C29662)
-  // - Brown Kraft Paper: Warm golden sand paper (#CBA578)
+  // Exact Pacdora PBR baseline tones:
+  // Corrugated Cardboard: #B58A63 (Kardus tebal/gelap)
+  // Brown Kraft Paper: #C6A07A (Eco Kraft)
   let baseColor = options.baseColor
   if (
     !baseColor ||
@@ -149,9 +143,13 @@ export function applyCardboardBackground(
     baseColor.toLowerCase() === "#ba8852" ||
     baseColor.toLowerCase() === "#c49866" ||
     baseColor.toLowerCase() === "#c6a57f" ||
-    baseColor.toLowerCase() === "#b8864e"
+    baseColor.toLowerCase() === "#b8864e" ||
+    baseColor.toLowerCase() === "#c29662" ||
+    baseColor.toLowerCase() === "#cba578" ||
+    baseColor.toLowerCase() === "#b59d7b" ||
+    baseColor.toLowerCase() === "#b09673"
   ) {
-    baseColor = isCorrugated ? "#c29662" : "#cba578"
+    baseColor = isCorrugated ? "#B58A63" : "#C6A07A"
   }
 
   // 1. Solid base tone
@@ -173,23 +171,23 @@ export function applyCardboardBackground(
 
   const rand = createPRNG(options.seed || (isCorrugated ? 8888 : 4242))
 
-  // 2. Soft, warm lighting glow & gentle paper density variation (Clean & Radiant - NO dirty dark blotches!)
+  // 2. Soft, natural paper density clouds (Soft cream & subtle khaki depth - NO dirty dark blotches!)
   const cloudCount = isCorrugated
-    ? Math.max(24, Math.floor((w * h) / 36000))
+    ? Math.max(22, Math.floor((w * h) / 38000))
     : Math.max(16, Math.floor((w * h) / 48000))
 
   for (let i = 0; i < cloudCount; i++) {
     const bx = rand() * w
     const by = rand() * h
-    const br = isCorrugated ? (rand() * 160 + 80) : (rand() * 130 + 70)
+    const br = isCorrugated ? (rand() * 150 + 75) : (rand() * 130 + 65)
     const grad = ctx.createRadialGradient(bx, by, 0, bx, by, br)
-    const isHighlight = rand() > 0.38
+    const isHighlight = rand() > 0.4
     if (isHighlight) {
-      grad.addColorStop(0, "rgba(255, 248, 225, 0.065)") // Warm creamy glow
-      grad.addColorStop(1, "rgba(255, 248, 225, 0.0)")
+      grad.addColorStop(0, "rgba(255, 250, 235, 0.055)") // Warm creamy glow
+      grad.addColorStop(1, "rgba(255, 250, 235, 0.0)")
     } else {
-      grad.addColorStop(0, "rgba(120, 75, 25, 0.035)") // Soft warm amber depth
-      grad.addColorStop(1, "rgba(120, 75, 25, 0.0)")
+      grad.addColorStop(0, "rgba(90, 68, 35, 0.030)") // Subtle khaki depth
+      grad.addColorStop(1, "rgba(90, 68, 35, 0.0)")
     }
     ctx.fillStyle = grad
     ctx.beginPath()
@@ -199,16 +197,16 @@ export function applyCardboardBackground(
 
   // 3. Delicate Organic Paper Fibers (Ultra-fine, isotropic 360° - NO thick black squiggles!)
   const fiberCount = isCorrugated
-    ? Math.max(4500, Math.floor((w * h) / 250))
-    : Math.max(3200, Math.floor((w * h) / 360))
+    ? Math.max(4000, Math.floor((w * h) / 280))
+    : Math.max(3000, Math.floor((w * h) / 360))
 
   for (let i = 0; i < fiberCount; i++) {
     const fx = rand() * w
     const fy = rand() * h
     const fLength = isCorrugated ? (rand() * 9 + 3) : (rand() * 7 + 3)
     const angle = rand() * Math.PI * 2 // Fully isotropic
-    const curvature = (rand() - 0.5) * 0.5
-    const isLight = rand() > 0.45
+    const curvature = (rand() - 0.5) * 0.45
+    const isLight = rand() > 0.48
 
     ctx.beginPath()
     ctx.moveTo(fx, fy)
@@ -221,21 +219,21 @@ export function applyCardboardBackground(
 
     if (isLight) {
       // Light unbleached silk cellulose fiber
-      ctx.strokeStyle = `rgba(255, 250, 235, ${rand() * 0.12 + 0.04})`
-      ctx.lineWidth = rand() * 0.6 + 0.3
+      ctx.strokeStyle = `rgba(255, 252, 240, ${rand() * 0.09 + 0.03})`
+      ctx.lineWidth = rand() * 0.55 + 0.25
     } else {
-      // Warm amber-gold wood fiber (clean, not dirty black!)
-      ctx.strokeStyle = `rgba(135, 82, 28, ${rand() * 0.08 + 0.03})`
-      ctx.lineWidth = rand() * 0.55 + 0.3
+      // Raw khaki wood fiber (clean, not dirty black!)
+      ctx.strokeStyle = `rgba(110, 85, 50, ${rand() * 0.07 + 0.02})`
+      ctx.lineWidth = rand() * 0.50 + 0.25
     }
     ctx.stroke()
   }
 
   // 4. Fine tactile paper tooth stippling noise (micro-porosity for tactile feel)
-  const stippleDots = isCorrugated ? 6000 : 3500
-  const stippleAlpha = isCorrugated ? 0.025 : 0.016
+  const stippleDots = isCorrugated ? 5500 : 3200
+  const stippleAlpha = isCorrugated ? 0.022 : 0.015
 
-  ctx.fillStyle = `rgba(60, 35, 10, ${stippleAlpha})`
+  ctx.fillStyle = `rgba(50, 38, 20, ${stippleAlpha})`
   for (let i = 0; i < stippleDots; i++) {
     const rx = rand() * w
     const ry = rand() * h

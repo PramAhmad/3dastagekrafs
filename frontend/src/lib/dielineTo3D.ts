@@ -1,5 +1,4 @@
 // AstaKraf Universal SVG Dieline to 3D Folding Packaging Engine
-// Inspired by Pacdora Dieline-to-3D-Mockup CAD Architecture
 // Converts 2D SVG Dielines (Cut & Crease vectors) into 3D Folded Packaging Meshes with Realtime Kinematic Hinges
 
 import * as THREE from "three"
@@ -134,7 +133,7 @@ export function parseSvgPathSegments(d: string): PathSegment[] {
 
 /**
  * Parses raw SVG dieline and extracts cut boundaries, crease lines, and semantic panels
- * Strictly follows Pacdora & Packaging CAD rules:
+ * Strictly follows Packaging CAD & Structural Diemaking rules:
  * - Red / Magenta / Non-dash Solid = PISAU POTONG (Through Cut) -> Boundary & cutout profile
  * - Green / Dashed (stroke-dasharray) / Fold Group = GARIS LIPAT (Crease / Score) -> Sendi lipatan kemasan 3D (Hinges)
  * - Cyan / Blue = BLEED / SAFE MARGIN (Batas lebihan cetak 3mm)
@@ -635,9 +634,9 @@ export function buildFolded3DModel(
   const kraftBumpMap = isKraft ? getCardboardBumpTexture(isCorrugated) : null
   const bumpScale = isCorrugated ? 0.0065 : isKraft ? 0.0035 : 0
 
-  const defaultColor = isCorrugated ? "#c29662" : isKraft ? "#cba578" : boxColor
-  const roughness = isCorrugated ? 0.88 : isKraft ? 0.78 : materialFinish === "glossy" ? 0.08 : materialFinish === "metallic" ? 0.15 : 0.65
-  const metalness = materialFinish === "metallic" ? 0.88 : 0.02
+  const defaultColor = isCorrugated ? "#B58A63" : isKraft ? "#C6A07A" : boxColor
+  const roughness = isCorrugated ? 0.92 : isKraft ? 0.88 : materialFinish === "glossy" ? 0.08 : materialFinish === "metallic" ? 0.15 : 0.65
+  const metalness = materialFinish === "metallic" ? 0.88 : 0.0
   const clearcoat = materialFinish === "glossy" ? 0.95 : 0.0
 
   const createMaterial = () => {
@@ -648,9 +647,9 @@ export function buildFolded3DModel(
       metalness,
       clearcoat,
       clearcoatRoughness: 0.1,
-      sheen: isKraft ? 0.28 : 0.0,
+      sheen: isKraft ? (isCorrugated ? 0.20 : 0.28) : 0.0,
       sheenRoughness: 0.8,
-      sheenColor: new THREE.Color("#d4aa73"),
+      sheenColor: new THREE.Color(isCorrugated ? "#cca37b" : "#dfc29f"),
       bumpMap: kraftBumpMap,
       bumpScale: bumpScale,
       side: THREE.DoubleSide,

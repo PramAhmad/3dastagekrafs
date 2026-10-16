@@ -1,6 +1,6 @@
-# 📦 Panduan Arsitektur 2D Dieline, 3D Rendering & Pipeline Pembuatan Aset Kemasan (Pacdora-Style)
+# 📦 Panduan Arsitektur 2D Dieline, 3D Rendering & Pipeline Pembuatan Aset Kemasan (AstaKraft CAD)
 
-Dokumen ini menjelaskan secara mendalam bagaimana sistem editor kemasan 2D/3D pada platform ini bekerja, sinkronisasi tekstur real-time, asal aset saat ini, serta panduan praktis langkah demi langkah untuk memproduksi ratusan model kemasan 3D baru seperti Pacdora.
+Dokumen ini menjelaskan secara mendalam bagaimana sistem editor kemasan 2D/3D pada platform ini bekerja, sinkronisasi tekstur real-time, asal aset saat ini, serta panduan praktis langkah demi langkah untuk memproduksi ratusan model kemasan 3D baru.
 
 ---
 
@@ -69,7 +69,7 @@ Saat ini, platform menggunakan **2 Jenis Model**:
 
 ---
 
-## 4. 🚀 Cara Membuat & Menambah Koleksi Model Kemasan Baru Seperti Pacdora
+## 4. 🚀 Cara Membuat & Menambah Koleksi Model Kemasan Baru
 
 Untuk memiliki perpustakaan model yang sangat lengkap (seperti standing pouch, botol pump, tube kosmetik, can/kaleng, mailer box kancing, pillow box, hard box magnet):
 
