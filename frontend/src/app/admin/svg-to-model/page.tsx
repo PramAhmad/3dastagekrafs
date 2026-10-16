@@ -27,6 +27,7 @@ import {
 } from "lucide-react"
 
 import DielineFoldCanvas from "@/components/3d/DielineFoldCanvas"
+import AdminDrawer from "@/components/admin/AdminDrawer"
 import { analyzeSvgDieline, DielineAnalysis } from "@/lib/dielineTo3D"
 import { generateParametricDieline } from "@/lib/dielineGenerator"
 import { autoFixDielineSvg } from "@/lib/dielineAutoFixer"
@@ -76,6 +77,7 @@ export default function SvgToModelPage() {
   const [svgString, setSvgString] = useState<string>("")
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(true)
   const [analysis, setAnalysis] = useState<DielineAnalysis | null>(null)
+  const [isInspectorOpen, setIsInspectorOpen] = useState<boolean>(true)
 
   // Folding Animation State
   const [foldProgress, setFoldProgress] = useState<number>(1.0) // 1.0 = 100% folded
@@ -338,8 +340,114 @@ export default function SvgToModelPage() {
     }
   }
 
+  const inspectorContent = (
+    <div className="space-y-4">
+      {/* 1. File Upload Dropzone */}
+      <div className="space-y-1.5">
+        <span className="text-[10.5px] font-bold text-[#1F3A5C] uppercase tracking-wider flex items-center gap-1.5">
+          <Upload className="w-3.5 h-3.5 text-[#2F79A6]" />
+          1. Upload Pola Dieline SVG Anda:
+        </span>
+        <label className="border-2 border-dashed border-[#4394C3]/40 hover:border-[#4394C3] bg-[#EEF4F8] hover:bg-[#E2EDF5] rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer transition-all group text-center">
+          <FileCode className="w-7 h-7 text-[#2F79A6] group-hover:scale-110 mb-1.5 transition-transform" />
+          <span className="text-xs font-bold text-[#1F3A5C]">Klik atau Drag & Drop File SVG</span>
+          <span className="text-[9.5px] text-[#718BAA] mt-0.5">
+            Mendukung file ekspor dari Adobe Illustrator, ArtiosCAD, & CorelDraw
+          </span>
+          <input type="file" accept=".svg,image/svg+xml" onChange={handleFileUpload} className="hidden" />
+        </label>
+      </div>
+
+      {/* 2. Preset Samples Selector */}
+      <div className="space-y-1.5">
+        <span className="text-[10px] font-bold text-[#718BAA] uppercase tracking-wider">
+          Atau pilih contoh pola packaging siap pakai:
+        </span>
+        <div className="grid grid-cols-2 gap-1.5">
+          {SAMPLE_PRESETS.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => loadPreset(p.id)}
+              className={`p-2.5 rounded-xl border text-left transition-all ${
+                selectedPresetId === p.id
+                  ? "bg-purple-50/60 border-purple-400 text-purple-950 ring-1 ring-purple-300"
+                  : "bg-white border-[#D5E4F0] hover:bg-[#EEF4F8] text-[#1F3A5C]"
+              }`}
+            >
+              <p className="text-[10px] font-bold truncate">{p.name}</p>
+              <p className="text-[8.5px] text-[#718BAA] line-clamp-1 mt-0.5">{p.desc}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 3. Auto-Detected Specifications */}
+      {analysis && (
+        <div className="bg-[#EEF4F8] p-3 rounded-2xl border border-[#D5E4F0] space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[10.5px] font-bold text-[#1F3A5C] flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              Spesifikasi 3D Terdeteksi Otomatis:
+            </span>
+            <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[8.5px] font-mono font-bold uppercase">
+              {analysis.boxType === "mailer-0427"
+                ? "FEFCO 0427 MAILER BOX"
+                : analysis.boxType === "gable"
+                ? "GABLE-TOP CARTON"
+                : analysis.boxType === "tube-box"
+                ? "4-PANEL FOLDING CARTON"
+                : analysis.boxType === "cylinder-wrap"
+                ? "CYLINDRICAL WRAP LABEL"
+                : analysis.boxType === "pouch"
+                ? "STAND-UP POUCH / DOYPACK"
+                : analysis.boxType === "flat-card"
+                ? "FLAT DIE-CUT BOARD"
+                : analysis.boxType === "folder"
+                ? `${analysis.verticalCreases.length + 1}-PANEL FOLDER`
+                : analysis.boxType === "polygon-prism"
+                ? `${analysis.verticalCreases.length + 1}-PANEL POLYGON PRISM`
+                : analysis.boxType.toUpperCase()}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-1.5 text-center">
+            <div className="bg-white p-2 rounded-xl border border-[#D5E4F0]"><span className="text-[8.5px] text-[#718BAA] block">Panjang (L)</span><span className="text-xs font-mono font-extrabold text-[#1F3A5C]">{analysis.dims.length} mm</span></div>
+            <div className="bg-white p-2 rounded-xl border border-[#D5E4F0]"><span className="text-[8.5px] text-[#718BAA] block">Lebar/Tebal (W)</span><span className="text-xs font-mono font-extrabold text-[#1F3A5C]">{analysis.dims.width} mm</span></div>
+            <div className="bg-white p-2 rounded-xl border border-[#D5E4F0]"><span className="text-[8.5px] text-[#718BAA] block">Tinggi (H)</span><span className="text-xs font-mono font-extrabold text-[#1F3A5C]">{analysis.dims.height} mm</span></div>
+          </div>
+
+          <div className="space-y-1 text-[9.5px] text-[#4B6B94] pt-1">
+            <div className="flex justify-between"><span>Ukuran Lembaran Pola:</span><span className="font-mono font-bold text-[#1F3A5C]">{analysis.totalWidthMm} × {analysis.totalHeightMm} mm</span></div>
+            <div className="flex justify-between"><span>Garis Lipat Vertikal:</span><span className="font-mono font-bold text-[#1F3A5C]">{analysis.verticalCreases.length} sumbu lipat</span></div>
+            <div className="flex justify-between"><span>Jumlah Sisi Panel:</span><span className="font-mono font-bold text-[#1F3A5C]">{analysis.panels.length} zona semantik</span></div>
+          </div>
+
+          <div className="pt-2 border-t border-[#D5E4F0]/80 space-y-1.5">
+            <span className="text-[9px] font-extrabold text-[#1F3A5C] uppercase tracking-wider block">Aturan Garis CAD (Standar Industri):</span>
+            <div className="space-y-1">
+              <div className="flex items-center justify-between p-1.5 rounded-lg bg-white border border-[#D5E4F0] text-[8.5px]"><div className="flex items-center gap-1.5"><div className="w-5 h-0.5 bg-[#e11d48] rounded-full shrink-0" /><div><span className="font-bold text-[#1F3A5C]">Merah Solid: Pisau Potong (Through Cut)</span><span className="text-[7.5px] text-[#718BAA] block">Memotong kontur luar & sudut flap (Dipotong, bukan dilipat)</span></div></div><span className="px-1.5 py-0.5 rounded bg-red-50 text-red-600 font-mono font-bold text-[8px]">{analysis.cadStats?.cutSegmentsCount || 0} potong</span></div>
+              <div className="flex items-center justify-between p-1.5 rounded-lg bg-white border border-[#D5E4F0] text-[8.5px]"><div className="flex items-center gap-1.5"><div className="w-5 h-0.5 border-t-2 border-dashed border-[#10b981] shrink-0" /><div><span className="font-bold text-[#1F3A5C]">Hijau Dashed: Garis Lipat (Score / Crease)</span><span className="text-[7.5px] text-[#718BAA] block">Ditekan membentuk sendi lipatan 3D (Hinges)</span></div></div><span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-mono font-bold text-[8px]">{analysis.cadStats?.creaseSegmentsCount || 0} lipatan</span></div>
+              {analysis.cadStats?.bleedSegmentsCount > 0 && <div className="flex items-center justify-between p-1.5 rounded-lg bg-white border border-[#D5E4F0] text-[8.5px]"><div className="flex items-center gap-1.5"><div className="w-5 h-0.5 border-t border-dotted border-[#00a0e9] shrink-0" /><div><span className="font-bold text-[#1F3A5C]">Biru / Cyan: Batas Bleed & Margin</span><span className="text-[7.5px] text-[#718BAA] block">Toleransi area lebihan cetak 3mm</span></div></div><span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-mono font-bold text-[8px]">{analysis.cadStats?.bleedSegmentsCount} bleed</span></div>}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-1 pt-1">
+            {analysis.panels.map((p, i) => <span key={i} className="px-1.5 py-0.5 rounded-md bg-white border border-[#D5E4F0] text-[8px] font-mono font-bold text-[#2F79A6]">{p.face.toUpperCase()} ({Math.round(p.width)}×{Math.round(p.height)}mm)</span>)}
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-1.5">
+        <span className="text-[10px] font-bold text-[#718BAA] uppercase tracking-wider">Preview Pola Lembaran 2D (Cut & Crease):</span>
+        <div className="w-full aspect-4/3 bg-[#F8FAFC] rounded-2xl border border-[#D5E4F0] p-2 flex items-center justify-center overflow-hidden relative shadow-inner">
+          {svgString ? <div className="w-full h-full flex items-center justify-center [&>svg]:max-w-full [&>svg]:max-h-full" dangerouslySetInnerHTML={{ __html: svgString }} /> : <div className="text-center text-[#718BAA] space-y-1"><RefreshCw className="w-6 h-6 animate-spin mx-auto text-[#2F79A6]" /><p className="text-[10px]">Memuat pola SVG...</p></div>}
+        </div>
+      </div>
+    </div>
+  )
+
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden bg-[#EEF4F8] text-[#1F3A5C] font-sans antialiased text-xs select-none">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#EEF4F8] text-[#1F3A5C] font-sans antialiased text-xs select-none">
       {/* Toast Notification */}
       {toastMsg && (
         <div
@@ -357,245 +465,98 @@ export default function SvgToModelPage() {
       )}
 
       {/* Top Header Bar */}
-      <div className="h-14 shrink-0 bg-white border-b border-[#D5E4F0] px-6 flex items-center justify-between z-20 shadow-xs">
+      <div className="min-h-14 shrink-0 bg-white border-b border-[#D5E4F0] px-3 sm:px-6 py-2 flex flex-wrap items-center justify-between gap-2 z-20 shadow-xs">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 border border-purple-200 flex items-center justify-center shrink-0">
             <Sparkles className="w-5 h-5" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-sm font-extrabold text-[#1F3A5C]">SVG to 3D Model Template Generator</h1>
-              <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[9px] font-mono font-bold uppercase tracking-wider">
+          <div className="min-w-0">
+            <div className="flex min-w-0 items-center gap-2">
+              <h1 className="min-w-0 truncate text-sm font-extrabold text-[#1F3A5C]">SVG to 3D Model Template Generator</h1>
+              <span className="hidden shrink-0 px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[9px] font-mono font-bold uppercase tracking-wider sm:inline-block">
                 ASTAKRAF 3D ENGINE
               </span>
             </div>
-            <p className="text-[10px] text-[#718BAA]">
+            <p className="hidden truncate text-[10px] text-[#718BAA] sm:block">
               Upload pola vector SVG dieline, sistem otomatis mendeteksi garis potong & garis lipat lalu melipatnya menjadi 3D nyata.
             </p>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <button
+            type="button"
+            onClick={() => setIsInspectorOpen(true)}
+            className="flex h-10 items-center gap-1.5 rounded-xl border border-[#D5E4F0] bg-white px-2.5 text-xs font-bold text-[#1F3A5C] shadow-xs transition-all hover:bg-[#EEF4F8] lg:hidden"
+            aria-label="Open SVG parser inspector"
+            title="Open SVG parser inspector"
+          >
+            <Sliders className="h-3.5 w-3.5 text-[#2F79A6]" aria-hidden="true" />
+            <span className="hidden sm:inline">Inspector</span>
+          </button>
+          <button
+            type="button"
             onClick={handleDownloadGlb}
             disabled={isExporting || !analysis}
-            className="px-3 py-1.5 rounded-xl border border-[#D5E4F0] bg-white hover:bg-[#EEF4F8] text-[#1F3A5C] font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs"
+            className="flex h-10 items-center gap-1.5 rounded-xl border border-[#D5E4F0] bg-white px-2.5 text-xs font-bold text-[#1F3A5C] shadow-xs transition-all hover:bg-[#EEF4F8] disabled:cursor-not-allowed disabled:opacity-60 sm:px-3"
+            aria-label="Export 3D GLB"
+            title="Export 3D (.GLB)"
           >
-            {isExporting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5 text-[#2F79A6]" />}
-            <span>Export 3D (.GLB)</span>
+            {isExporting ? <RefreshCw className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Download className="h-3.5 w-3.5 text-[#2F79A6]" aria-hidden="true" />}
+            <span className="hidden sm:inline">Export 3D (.GLB)</span>
           </button>
 
           <button
+            type="button"
             onClick={handleOpenSaveModal}
             disabled={!analysis}
-            className="px-4 py-1.5 rounded-xl bg-[#1F3A5C] hover:bg-[#152840] text-[#F7CB45] font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-sm"
+            className="flex h-10 items-center gap-1.5 rounded-xl bg-[#1F3A5C] px-2.5 text-xs font-extrabold text-[#F7CB45] shadow-sm transition-all hover:bg-[#152840] disabled:cursor-not-allowed disabled:opacity-60 sm:px-4"
+            aria-label="Save as model template"
+            title="Simpan Sebagai Model Template"
           >
-            <FolderPlus className="w-3.5 h-3.5" />
-            <span>Simpan Sebagai Model Template</span>
+            <FolderPlus className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="hidden md:inline">Simpan Sebagai Model Template</span>
+            <span className="md:hidden">Simpan</span>
           </button>
         </div>
       </div>
 
       {/* Main Split Layout */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Column: 2D Dieline Parser & Spec Sheet (w-96) */}
-        <div className="w-[420px] shrink-0 bg-white border-r border-[#D5E4F0] flex flex-col justify-between overflow-y-auto p-4 space-y-4">
-          <div className="space-y-4">
-            {/* 1. File Upload Dropzone */}
-            <div className="space-y-1.5">
-              <span className="text-[10.5px] font-bold text-[#1F3A5C] uppercase tracking-wider flex items-center gap-1.5">
-                <Upload className="w-3.5 h-3.5 text-[#2F79A6]" />
-                1. Upload Pola Dieline SVG Anda:
-              </span>
-              <label className="border-2 border-dashed border-[#4394C3]/40 hover:border-[#4394C3] bg-[#EEF4F8] hover:bg-[#E2EDF5] rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer transition-all group text-center">
-                <FileCode className="w-7 h-7 text-[#2F79A6] group-hover:scale-110 mb-1.5 transition-transform" />
-                <span className="text-xs font-bold text-[#1F3A5C]">Klik atau Drag & Drop File SVG</span>
-                <span className="text-[9.5px] text-[#718BAA] mt-0.5">
-                  Mendukung file ekspor dari Adobe Illustrator, ArtiosCAD, & CorelDraw
-                </span>
-                <input type="file" accept=".svg,image/svg+xml" onChange={handleFileUpload} className="hidden" />
-              </label>
-            </div>
-
-            {/* 2. Preset Samples Selector */}
-            <div className="space-y-1.5">
-              <span className="text-[10px] font-bold text-[#718BAA] uppercase tracking-wider">
-                Atau pilih contoh pola packaging siap pakai:
-              </span>
-              <div className="grid grid-cols-2 gap-1.5">
-                {SAMPLE_PRESETS.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => loadPreset(p.id)}
-                    className={`p-2.5 rounded-xl border text-left transition-all ${
-                      selectedPresetId === p.id
-                        ? "bg-purple-50/60 border-purple-400 text-purple-950 ring-1 ring-purple-300"
-                        : "bg-white border-[#D5E4F0] hover:bg-[#EEF4F8] text-[#1F3A5C]"
-                    }`}
-                  >
-                    <p className="text-[10px] font-bold truncate">{p.name}</p>
-                    <p className="text-[8.5px] text-[#718BAA] line-clamp-1 mt-0.5">{p.desc}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 3. Auto-Detected Specifications */}
-            {analysis && (
-              <div className="bg-[#EEF4F8] p-3 rounded-2xl border border-[#D5E4F0] space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10.5px] font-bold text-[#1F3A5C] flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    Spesifikasi 3D Terdeteksi Otomatis:
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[8.5px] font-mono font-bold uppercase">
-                    {analysis.boxType === "mailer-0427"
-                      ? "FEFCO 0427 MAILER BOX"
-                      : analysis.boxType === "gable"
-                      ? "GABLE-TOP CARTON"
-                      : analysis.boxType === "tube-box"
-                      ? "4-PANEL FOLDING CARTON"
-                      : analysis.boxType === "cylinder-wrap"
-                      ? "CYLINDRICAL WRAP LABEL"
-                      : analysis.boxType === "pouch"
-                      ? "STAND-UP POUCH / DOYPACK"
-                      : analysis.boxType === "flat-card"
-                      ? "FLAT DIE-CUT BOARD"
-                      : analysis.boxType === "folder"
-                      ? `${analysis.verticalCreases.length + 1}-PANEL FOLDER`
-                      : analysis.boxType === "polygon-prism"
-                      ? `${analysis.verticalCreases.length + 1}-PANEL POLYGON PRISM`
-                      : analysis.boxType.toUpperCase()}
-                  </span>
-                </div>
-
-                {/* Dimensions Metric Grid */}
-                <div className="grid grid-cols-3 gap-1.5 text-center">
-                  <div className="bg-white p-2 rounded-xl border border-[#D5E4F0]">
-                    <span className="text-[8.5px] text-[#718BAA] block">Panjang (L)</span>
-                    <span className="text-xs font-mono font-extrabold text-[#1F3A5C]">{analysis.dims.length} mm</span>
-                  </div>
-                  <div className="bg-white p-2 rounded-xl border border-[#D5E4F0]">
-                    <span className="text-[8.5px] text-[#718BAA] block">Lebar/Tebal (W)</span>
-                    <span className="text-xs font-mono font-extrabold text-[#1F3A5C]">{analysis.dims.width} mm</span>
-                  </div>
-                  <div className="bg-white p-2 rounded-xl border border-[#D5E4F0]">
-                    <span className="text-[8.5px] text-[#718BAA] block">Tinggi (H)</span>
-                    <span className="text-xs font-mono font-extrabold text-[#1F3A5C]">{analysis.dims.height} mm</span>
-                  </div>
-                </div>
-
-                {/* Dieline Details */}
-                <div className="space-y-1 text-[9.5px] text-[#4B6B94] pt-1">
-                  <div className="flex justify-between">
-                    <span>Ukuran Lembaran Pola:</span>
-                    <span className="font-mono font-bold text-[#1F3A5C]">{analysis.totalWidthMm} × {analysis.totalHeightMm} mm</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Garis Lipat Vertikal:</span>
-                    <span className="font-mono font-bold text-[#1F3A5C]">{analysis.verticalCreases.length} sumbu lipat</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Jumlah Sisi Panel:</span>
-                    <span className="font-mono font-bold text-[#1F3A5C]">{analysis.panels.length} zona semantik</span>
-                  </div>
-                </div>
-
-                {/* CAD Rules Inspector: Red Solid (Cut) vs Green Dashed (Crease) */}
-                <div className="pt-2 border-t border-[#D5E4F0]/80 space-y-1.5">
-                  <span className="text-[9px] font-extrabold text-[#1F3A5C] uppercase tracking-wider block">
-                    Aturan Garis CAD (Standar Industri):
-                  </span>
-                  <div className="space-y-1">
-                    {/* Red Line: Through Cut */}
-                    <div className="flex items-center justify-between p-1.5 rounded-lg bg-white border border-[#D5E4F0] text-[8.5px]">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-5 h-0.5 bg-[#e11d48] rounded-full shrink-0" />
-                        <div>
-                          <span className="font-bold text-[#1F3A5C]">Merah Solid: Pisau Potong (Through Cut)</span>
-                          <span className="text-[7.5px] text-[#718BAA] block">Memotong kontur luar & sudut flap (Dipotong, bukan dilipat)</span>
-                        </div>
-                      </div>
-                      <span className="px-1.5 py-0.5 rounded bg-red-50 text-red-600 font-mono font-bold text-[8px]">
-                        {analysis.cadStats?.cutSegmentsCount || 0} potong
-                      </span>
-                    </div>
-
-                    {/* Green Line: Crease / Score */}
-                    <div className="flex items-center justify-between p-1.5 rounded-lg bg-white border border-[#D5E4F0] text-[8.5px]">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-5 h-0.5 border-t-2 border-dashed border-[#10b981] shrink-0" />
-                        <div>
-                          <span className="font-bold text-[#1F3A5C]">Hijau Dashed: Garis Lipat (Score / Crease)</span>
-                          <span className="text-[7.5px] text-[#718BAA] block">Ditekan membentuk sendi lipatan 3D (Hinges)</span>
-                        </div>
-                      </div>
-                      <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-mono font-bold text-[8px]">
-                        {analysis.cadStats?.creaseSegmentsCount || 0} lipatan
-                      </span>
-                    </div>
-
-                    {/* Blue Line: Bleed */}
-                    {analysis.cadStats?.bleedSegmentsCount > 0 && (
-                      <div className="flex items-center justify-between p-1.5 rounded-lg bg-white border border-[#D5E4F0] text-[8.5px]">
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-5 h-0.5 border-t border-dotted border-[#00a0e9] shrink-0" />
-                          <div>
-                            <span className="font-bold text-[#1F3A5C]">Biru / Cyan: Batas Bleed & Margin</span>
-                            <span className="text-[7.5px] text-[#718BAA] block">Toleransi area lebihan cetak 3mm</span>
-                          </div>
-                        </div>
-                        <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-mono font-bold text-[8px]">
-                          {analysis.cadStats?.bleedSegmentsCount} bleed
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Detected Panels Tag Cloud */}
-                <div className="flex flex-wrap gap-1 pt-1">
-                  {analysis.panels.map((p, i) => (
-                    <span key={i} className="px-1.5 py-0.5 rounded-md bg-white border border-[#D5E4F0] text-[8px] font-mono font-bold text-[#2F79A6]">
-                      {p.face.toUpperCase()} ({Math.round(p.width)}×{Math.round(p.height)}mm)
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 4. 2D Vector Dieline Preview Thumbnail */}
-            <div className="space-y-1.5">
-              <span className="text-[10px] font-bold text-[#718BAA] uppercase tracking-wider">
-                Preview Pola Lembaran 2D (Cut & Crease):
-              </span>
-              <div className="w-full aspect-4/3 bg-[#F8FAFC] rounded-2xl border border-[#D5E4F0] p-2 flex items-center justify-center overflow-hidden relative shadow-inner">
-                {svgString ? (
-                  <div
-                    className="w-full h-full flex items-center justify-center [&>svg]:max-w-full [&>svg]:max-h-full"
-                    dangerouslySetInnerHTML={{ __html: svgString }}
-                  />
-                ) : (
-                  <div className="text-center text-[#718BAA] space-y-1">
-                    <RefreshCw className="w-6 h-6 animate-spin mx-auto text-[#2F79A6]" />
-                    <p className="text-[10px]">Memuat pola SVG...</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
+        {/* Desktop parser inspector */}
+        <aside className="hidden lg:flex w-[min(26vw,24rem)] shrink-0 min-h-0 flex-col justify-between overflow-y-auto border-r border-[#D5E4F0] bg-white p-4">
+          {inspectorContent}
           <div className="pt-2 border-t border-[#D5E4F0] text-[9.5px] text-[#718BAA] flex items-center gap-1.5">
-            <Info className="w-3.5 h-3.5 text-[#2F79A6] shrink-0" />
+            <Info className="w-3.5 h-3.5 text-[#2F79A6] shrink-0" aria-hidden="true" />
             <span>Pola SVG langsung dimapping 1:1 ke koordinat UV model 3D tanpa distorsi.</span>
           </div>
+        </aside>
+
+        <div className="lg:hidden">
+          <AdminDrawer open={isInspectorOpen} onClose={() => setIsInspectorOpen(false)} title="SVG Parser Inspector" side="left">
+            {inspectorContent}
+            <div className="mt-4 pt-2 border-t border-[#D5E4F0] text-[9.5px] text-[#718BAA] flex items-center gap-1.5">
+              <Info className="w-3.5 h-3.5 text-[#2F79A6] shrink-0" aria-hidden="true" />
+              <span>Pola SVG langsung dimapping 1:1 ke koordinat UV model 3D tanpa distorsi.</span>
+            </div>
+          </AdminDrawer>
         </div>
 
         {/* Right Column: 3D Live Folded Viewport & Folding Controls */}
         <div className="flex-1 flex flex-col bg-[#F0F5FA] relative overflow-hidden">
           {/* 3D Viewport */}
           <div className="flex-1 relative">
+            <button
+              type="button"
+              onClick={() => setIsInspectorOpen(true)}
+              className="absolute left-4 top-4 z-10 flex h-11 items-center gap-1.5 rounded-xl border border-[#D5E4F0] bg-white/95 px-3 text-xs font-bold text-[#1F3A5C] shadow-lg backdrop-blur-md transition-all hover:bg-white lg:hidden"
+              aria-label="Open SVG parser inspector"
+              title="Open SVG parser inspector"
+            >
+              <Sliders className="h-3.5 w-3.5 text-purple-600" aria-hidden="true" />
+              <span>Inspector</span>
+            </button>
             {analysis ? (
               <DielineFoldCanvas
                 analysis={analysis}
@@ -636,13 +597,13 @@ export default function SvgToModelPage() {
           </div>
 
           {/* Bottom Control Bar: Fold Progress Slider & Material Selector */}
-          <div className="h-24 shrink-0 bg-white/95 backdrop-blur-md border-t border-[#D5E4F0] px-6 py-3 flex items-center justify-between gap-6 z-20 shadow-lg">
+          <div className="min-h-24 h-auto shrink-0 bg-white/95 backdrop-blur-md border-t border-[#D5E4F0] px-3 py-3 sm:px-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4 lg:gap-6 z-20 shadow-lg">
             {/* Play/Pause & Folding Slider */}
-            <div className="flex-1 max-w-xl space-y-1.5">
+            <div className="min-w-0 w-full lg:max-w-xl space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold text-[#1F3A5C] flex items-center gap-2">
-                  <Sliders className="w-3.5 h-3.5 text-purple-600" />
-                  Simulasi Lipat Pola Kemasan (Folding Progress):
+                <span id="folding-progress-label" className="min-w-0 truncate text-xs font-extrabold text-[#1F3A5C] flex items-center gap-2">
+                  <Sliders className="w-3.5 h-3.5 shrink-0 text-purple-600" aria-hidden="true" />
+                  <span className="truncate">Simulasi Lipat Pola Kemasan (Folding Progress):</span>
                 </span>
                 <span className="text-xs font-mono font-black text-purple-700">
                   {Math.round(foldProgress * 100)}%
@@ -653,11 +614,12 @@ export default function SvgToModelPage() {
                 <button
                   type="button"
                   onClick={() => setIsPlaying(!isPlaying)}
-                  className={`p-2 rounded-xl transition-all shadow-xs ${
+                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-all shadow-xs ${
                     isPlaying
                       ? "bg-purple-600 text-white hover:bg-purple-700"
                       : "bg-[#1F3A5C] text-[#F7CB45] hover:bg-[#152840]"
                   }`}
+                  aria-label={isPlaying ? "Pause folding simulation" : "Play folding simulation"}
                   title={isPlaying ? "Jeda Simulasi" : "Mulai Animasi Lipat Otomatis"}
                 >
                   {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
@@ -670,6 +632,8 @@ export default function SvgToModelPage() {
                     max="1"
                     step="0.005"
                     value={foldProgress}
+                    aria-labelledby="folding-progress-label"
+                    aria-valuetext={`${Math.round(foldProgress * 100)}% folded`}
                     onChange={(e) => {
                       setIsPlaying(false)
                       setFoldProgress(parseFloat(e.target.value))
@@ -679,21 +643,21 @@ export default function SvgToModelPage() {
                 </div>
               </div>
 
-              <div className="flex justify-between text-[8.5px] font-bold text-[#718BAA]">
+              <div className="flex justify-between gap-2 text-[8.5px] font-bold text-[#718BAA]">
                 <span>0% Lembaran Pola Datar</span>
-                <span>50% Setengah Terlipat</span>
+                <span className="hidden sm:inline">50% Setengah Terlipat</span>
                 <span>100% Kotak Utuh Sempurna</span>
               </div>
             </div>
 
             {/* Material & Appearance Selector */}
-            <div className="shrink-0 flex items-center gap-4 pl-4 border-l border-[#D5E4F0]">
+            <div className="min-w-0 w-full lg:w-auto shrink-0 flex items-center gap-4 border-t border-[#D5E4F0] pt-3 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
               {/* Material Finish Pills */}
-              <div className="space-y-1">
+              <div className="min-w-0 space-y-1">
                 <span className="text-[9px] font-bold text-[#718BAA] uppercase tracking-wider block">
                   Material Karton:
                 </span>
-                <div className="flex items-center gap-1">
+                <div className="flex min-w-0 gap-1 overflow-x-auto pb-1">
                   {[
                     { id: "kraft", label: "Karton Kraft Cokelat", color: "#be8d58" },
                     { id: "matte", label: "Ivory / Duplex Putih", color: "#f8f9fa" },
@@ -706,7 +670,7 @@ export default function SvgToModelPage() {
                         setMaterialFinish(m.id as any)
                         setBoxColor(m.color)
                       }}
-                      className={`px-2.5 py-1 rounded-xl text-[9.5px] font-bold transition-all border ${
+                      className={`min-h-11 shrink-0 px-2.5 py-1 rounded-xl text-[9.5px] font-bold transition-all border ${
                         materialFinish === m.id
                           ? "bg-[#1F3A5C] text-[#F7CB45] border-[#1F3A5C] shadow-xs"
                           : "bg-white text-[#4B6B94] border-[#D5E4F0] hover:bg-[#EEF4F8]"
