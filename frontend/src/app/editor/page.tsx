@@ -11,7 +11,7 @@ import DielineCanvas from "@/components/2d/DielineCanvas"
 import AstaLoadingScreen from "@/components/ui/AstaLoadingScreen"
 import UserImageLibrary from "@/components/editor/UserImageLibrary"
 import { formatRupiah } from "@/lib/utils"
-import { getCurrentUser, getProjectById, saveProjectToHistory, getUserSavedProjects, logoutUser } from "@/lib/auth"
+import { getCurrentUser, getProjectById, saveProjectToHistory, getUserSavedProjects, fetchUserProjectsFromServer, logoutUser } from "@/lib/auth"
 import { getUmkmByEmail, getRemainingTrialDays, isUmkmTrialActive } from "@/lib/umkm"
 import { UmkmRegistration } from "@/types/umkm"
 import { UserSession, SavedProject } from "@/types/auth"
@@ -22,6 +22,7 @@ import {
   Box,
   Layers,
   Sparkles,
+  ChevronDown,
   Download,
   ShoppingCart,
   Sliders,
@@ -309,6 +310,14 @@ function EditorComponent() {
   const [showImageLibraryModal, setShowImageLibraryModal] = useState(false)
   const [replacingObjectId, setReplacingObjectId] = useState<string | null>(null)
 
+  // Model & Design Switcher Modal State
+  const [showSwitchModal, setShowSwitchModal] = useState(false)
+  const [switchModalTab, setSwitchModalTab] = useState<"models" | "projects">("models")
+  const [modelSearchQuery, setModelSearchQuery] = useState("")
+  const [modelCategoryFilter, setModelCategoryFilter] = useState("ALL")
+  const [savedProjectsList, setSavedProjectsList] = useState<SavedProject[]>([])
+  const [switchToast, setSwitchToast] = useState<string | null>(null)
+
   // Camera Orbit 360° Viewport
   const [cameraView, setCameraView] = useState<"iso" | "front" | "back" | "top" | "bottom" | "side">("iso")
   const [dielineZoom, setDielineZoom] = useState(100)
@@ -515,6 +524,139 @@ function EditorComponent() {
     setSelectedMaterial(mat)
     setBoxColor(mat.defaultColor)
   }
+
+  // Refresh saved projects list whenever modal is opened
+  useEffect(() => {
+    if (showSwitchModal) {
+      const projs = getUserSavedProjects(currentUser?.id)
+      setSavedProjectsList(projs)
+      fetchUserProjectsFromServer(currentUser?.id).then((serverProjs) => {
+        if (serverProjs && serverProjs.length > 0) {
+          setSavedProjectsList(serverProjs)
+        }
+      })
+    }
+  }, [showSwitchModal, currentUser?.id])
+
+  // Switch Model Handler (Preserving design decals & user colors)
+  const handleSwitchModel = (tmpl: TemplateItem) => {
+    if (tmpl.id === selectedTemplate.id) {
+      setShowSwitchModal(false)
+      return
+    }
+    pushToUndo(objects)
+    setSelectedTemplate(tmpl)
+
+    // Update dimensions to new template default dimensions
+    if (tmpl.defaultDims) {
+      setLength(tmpl.defaultDims.length ?? 65)
+      setWidth(tmpl.defaultDims.width ?? 45)
+      setHeight(tmpl.defaultDims.height ?? 35)
+      setRadius(tmpl.defaultDims.radius ?? 25)
+    }
+
+    // Ensure selected material is valid for the new model
+    const allowed =
+      tmpl.available_materials && tmpl.available_materials.length > 0
+        ? MATERIALS.filter((m) => tmpl.available_materials?.includes(m.id))
+        : MATERIALS
+    if (!allowed.some((m) => m.id === selectedMaterial.id)) {
+      const firstAllowed = allowed[0] || MATERIALS[0]
+      setSelectedMaterial(firstAllowed)
+      setBoxColor(firstAllowed.defaultColor)
+    }
+
+    // Update URL query parameter without full reload
+    try {
+      const url = new URL(window.location.href)
+      url.searchParams.set("template", tmpl.id)
+      window.history.replaceState({}, "", url.toString())
+    } catch (e) {}
+
+    setShowSwitchModal(false)
+    setSwitchToast(`Model berganti ke "${tmpl.name}". Desain Anda tetap terjaga!`)
+    setTimeout(() => setSwitchToast(null), 3500)
+  }
+
+  // Load Saved Project Handler
+  const handleLoadSavedProject = (proj: SavedProject) => {
+    pushToUndo(objects)
+    setCurrentProjectId(proj.id)
+    setProjectName(proj.name)
+
+    const matchedTpl =
+      templateList.find((t) => t.id === proj.templateId) || {
+        id: proj.templateId,
+        name: proj.templateName,
+        category: proj.category,
+        description: proj.description,
+        defaultDims: { ...proj.dimensions, radius: proj.dimensions.radius || 25 },
+        model_3d_url: proj.model3dUrl,
+        model_format: proj.modelFormat,
+        available_materials: undefined,
+      }
+    setSelectedTemplate(matchedTpl as TemplateItem)
+
+    setLength(proj.dimensions.length)
+    setWidth(proj.dimensions.width)
+    setHeight(proj.dimensions.height)
+    if (proj.dimensions.radius) setRadius(proj.dimensions.radius)
+    if (proj.dimensions.wallThickness) setWallThickness(proj.dimensions.wallThickness)
+
+    const matchedMat = MATERIALS.find((m) => m.id === proj.materialId) || MATERIALS[0]
+    setSelectedMaterial(matchedMat)
+    setBoxColor(proj.boxColor || matchedMat.defaultColor)
+    setObjects(proj.objects || [])
+
+    try {
+      const url = new URL(window.location.href)
+      url.searchParams.set("projectId", proj.id)
+      url.searchParams.delete("template")
+      window.history.replaceState({}, "", url.toString())
+    } catch (e) {}
+
+    setShowSwitchModal(false)
+    setSwitchToast(`Desain "${proj.name}" berhasil dibuka!`)
+    setTimeout(() => setSwitchToast(null), 3500)
+  }
+
+  // Start New Clean Slate Design
+  const handleStartNewDesign = () => {
+    if (objects.length > 0) {
+      if (!confirm("Mulai desain baru? Elemen logo/grafis saat ini akan dikosongkan (Anda tetap dapat Undo).")) {
+        return
+      }
+      pushToUndo(objects)
+    }
+    setObjects([])
+    setSelectedObjectId(null)
+    setCurrentProjectId(null)
+    setProjectName(`Desain ${selectedTemplate.name}`)
+    setShowSwitchModal(false)
+    setSwitchToast("Memulai kanvas desain baru!")
+    setTimeout(() => setSwitchToast(null), 3000)
+  }
+
+  // Model categories for filtering
+  const modelCategories = useMemo(() => {
+    const cats = Array.from(new Set(templateList.map((t) => t.category.toUpperCase())))
+    return ["ALL", ...cats]
+  }, [templateList])
+
+  // Filtered templates list for the switcher modal
+  const filteredSwitchTemplates = useMemo(() => {
+    return templateList.filter((tmpl) => {
+      const matchCat =
+        modelCategoryFilter === "ALL" ||
+        tmpl.category.toUpperCase() === modelCategoryFilter.toUpperCase()
+      const matchSearch =
+        !modelSearchQuery.trim() ||
+        tmpl.name.toLowerCase().includes(modelSearchQuery.toLowerCase()) ||
+        tmpl.category.toLowerCase().includes(modelSearchQuery.toLowerCase()) ||
+        tmpl.description?.toLowerCase().includes(modelSearchQuery.toLowerCase())
+      return matchCat && matchSearch
+    })
+  }, [templateList, modelCategoryFilter, modelSearchQuery])
 
   // Push current objects state to undo stack before mutation
   const pushToUndo = (currentObjs: CanvasObject[]) => {
@@ -1170,6 +1312,393 @@ function EditorComponent() {
     )
   }
 
+  const renderCategorySvg = (cat: string, className = "w-12 h-12") => {
+    const c = (cat || "").toUpperCase()
+    if (c === "BOX") {
+      return (
+        <svg className={`${className} text-[#1F3A5C] drop-shadow-sm`} viewBox="0 0 100 100" fill="none">
+          <path d="M50 15 L85 33 L50 51 L15 33 Z" fill="#EEF4F8" stroke="#1F3A5C" strokeWidth="2.5" strokeLinejoin="round" />
+          <path d="M15 33 L50 51 L50 85 L15 67 Z" fill="#4394C3" stroke="#1F3A5C" strokeWidth="2.5" strokeLinejoin="round" />
+          <path d="M50 51 L85 33 L85 67 L50 85 Z" fill="#2F79A6" stroke="#1F3A5C" strokeWidth="2.5" strokeLinejoin="round" />
+          <path d="M57 47 L78 36" stroke="#F7CB45" strokeWidth="2" strokeDasharray="3 2" />
+          <path d="M57 58 L78 47" stroke="#F7CB45" strokeWidth="2" strokeDasharray="3 2" />
+        </svg>
+      )
+    }
+    if (c === "POUCH") {
+      return (
+        <svg className={`${className} text-[#1F3A5C] drop-shadow-sm`} viewBox="0 0 100 100" fill="none">
+          <path d="M28 20 L72 20 L80 82 C80 86, 75 90, 50 90 C25 90, 20 86, 20 82 Z" fill="#EEF4F8" stroke="#1F3A5C" strokeWidth="2.5" strokeLinejoin="round" />
+          <rect x="25" y="14" width="50" height="6" rx="2" fill="#1F3A5C" />
+          <line x1="28" y1="28" x2="72" y2="28" stroke="#2F79A6" strokeWidth="1.5" strokeDasharray="2 2" />
+          <rect x="36" y="42" width="28" height="24" rx="4" fill="#F7CB45" stroke="#1F3A5C" strokeWidth="1.5" />
+        </svg>
+      )
+    }
+    if (c === "JAR") {
+      return (
+        <svg className={`${className} text-[#1F3A5C] drop-shadow-sm`} viewBox="0 0 100 100" fill="none">
+          <rect x="18" y="24" width="64" height="14" rx="5" fill="#1F3A5C" />
+          <path d="M20 38 L80 38 L78 78 C78 84, 72 88, 50 88 C28 88, 22 84, 22 78 Z" fill="#EEF4F8" stroke="#1F3A5C" strokeWidth="2.5" strokeLinejoin="round" />
+          <rect x="30" y="50" width="40" height="18" rx="2" fill="#4394C3" stroke="#1F3A5C" strokeWidth="1.5" />
+        </svg>
+      )
+    }
+    if (c === "BOTTLE") {
+      return (
+        <svg className={`${className} text-[#1F3A5C] drop-shadow-sm`} viewBox="0 0 100 100" fill="none">
+          <path d="M42 12 L65 12 L65 16 L50 16 L50 24 L42 24 Z" fill="#1F3A5C" />
+          <rect x="44" y="24" width="12" height="6" fill="#4394C3" />
+          <rect x="30" y="30" width="40" height="58" rx="8" fill="#EEF4F8" stroke="#1F3A5C" strokeWidth="2.5" />
+          <rect x="36" y="46" width="28" height="26" rx="2" fill="#F7CB45" stroke="#1F3A5C" strokeWidth="1.5" />
+        </svg>
+      )
+    }
+    if (c === "CAN") {
+      return (
+        <svg className={`${className} text-[#1F3A5C] drop-shadow-sm`} viewBox="0 0 100 100" fill="none">
+          <ellipse cx="50" cy="26" rx="30" ry="10" fill="#1F3A5C" />
+          <path d="M20 26 L20 74 C20 80, 33 85, 50 85 C67 85, 80 80, 80 74 L80 26" fill="#EEF4F8" stroke="#1F3A5C" strokeWidth="2.5" />
+          <ellipse cx="50" cy="26" rx="30" ry="10" fill="#4394C3" stroke="#1F3A5C" strokeWidth="2.5" />
+          <line x1="20" y1="50" x2="80" y2="50" stroke="#F7CB45" strokeWidth="2" strokeDasharray="3 2" />
+        </svg>
+      )
+    }
+    if (c === "CUP") {
+      return (
+        <svg className={`${className} text-[#1F3A5C] drop-shadow-sm`} viewBox="0 0 100 100" fill="none">
+          <path d="M24 22 L76 22 L70 84 C70 87, 65 90, 50 90 C35 90, 30 87, 30 84 Z" fill="#EEF4F8" stroke="#1F3A5C" strokeWidth="2.5" />
+          <rect x="20" y="16" width="60" height="7" rx="3" fill="#1F3A5C" />
+          <circle cx="50" cy="54" r="14" fill="#F7CB45" stroke="#1F3A5C" strokeWidth="1.5" />
+        </svg>
+      )
+    }
+    if (c === "TRIANGLE") {
+      return (
+        <svg className={`${className} text-[#1F3A5C] drop-shadow-sm`} viewBox="0 0 100 100" fill="none">
+          <path d="M50 18 L85 78 L15 78 Z" fill="#EEF4F8" stroke="#1F3A5C" strokeWidth="2.5" strokeLinejoin="round" />
+          <path d="M50 18 L50 78 L85 78 Z" fill="#4394C3" stroke="#1F3A5C" strokeWidth="2.5" strokeLinejoin="round" />
+          <line x1="50" y1="18" x2="50" y2="78" stroke="#1F3A5C" strokeWidth="2" />
+        </svg>
+      )
+    }
+    return (
+      <svg className={`${className} text-[#1F3A5C] drop-shadow-sm`} viewBox="0 0 100 100" fill="none">
+        <rect x="20" y="25" width="60" height="50" rx="6" fill="#EEF4F8" stroke="#1F3A5C" strokeWidth="2.5" />
+        <path d="M20 40 L80 40" stroke="#1F3A5C" strokeWidth="2" />
+      </svg>
+    )
+  }
+
+  const renderSwitchModal = () => {
+    if (!showSwitchModal) return null
+
+    return (
+      <div className="fixed inset-0 z-50 bg-[#1F3A5C]/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 animate-fade-in">
+        <div className="bg-white rounded-3xl border border-[#D5E4F0] shadow-2xl w-full max-w-4xl max-h-[88vh] flex flex-col overflow-hidden animate-scale-up">
+          {/* Modal Header */}
+          <div className="p-4 sm:p-5 border-b border-[#D5E4F0] flex items-center justify-between gap-3 bg-white">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-[#EEF4F8] border border-[#D5E4F0] flex items-center justify-center shrink-0">
+                <Box className="w-5 h-5 text-[#2F79A6]" />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-[#2F79A6] uppercase tracking-wider block font-mono">
+                  Pusat Model &amp; Desain Kemasan
+                </span>
+                <h3 className="text-base sm:text-lg font-black text-[#1F3A5C] leading-snug">
+                  Ganti Model Kemasan atau Buka Desain
+                </h3>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowSwitchModal(false)}
+              className="w-8 h-8 rounded-full bg-[#EEF4F8] hover:bg-[#D5E4F0] text-[#1F3A5C] flex items-center justify-center font-bold text-xs transition-colors cursor-pointer"
+              title="Tutup Modal"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Tab Navigation Ribbon */}
+          <div className="px-4 sm:px-5 pt-3 pb-2 bg-[#EEF4F8] border-b border-[#D5E4F0] flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSwitchModalTab("models")}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                  switchModalTab === "models"
+                    ? "bg-[#1F3A5C] text-[#F7CB45] shadow-xs"
+                    : "bg-white hover:bg-white/80 text-[#1F3A5C] border border-[#D5E4F0]"
+                }`}
+              >
+                <Box className="w-3.5 h-3.5" />
+                <span>Pilihan Model Kemasan ({templateList.length})</span>
+              </button>
+
+              <button
+                onClick={() => setSwitchModalTab("projects")}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                  switchModalTab === "projects"
+                    ? "bg-[#1F3A5C] text-[#F7CB45] shadow-xs"
+                    : "bg-white hover:bg-white/80 text-[#1F3A5C] border border-[#D5E4F0]"
+                }`}
+              >
+                <FolderOpen className="w-3.5 h-3.5" />
+                <span>Desain Saya ({savedProjectsList.length})</span>
+              </button>
+            </div>
+
+            <div className="hidden md:flex items-center gap-1.5 text-[10px] font-bold text-[#4B6B94] font-mono">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Model Aktif: {selectedTemplate.name}</span>
+            </div>
+          </div>
+
+          {/* Modal Content Body */}
+          <div className="p-4 sm:p-5 flex-1 overflow-y-auto space-y-4">
+            {switchModalTab === "models" ? (
+              <>
+                {/* Safe Switch Notice */}
+                <div className="bg-[#EEF4F8] border border-[#D5E4F0] rounded-2xl p-3 flex items-start gap-2.5">
+                  <Sparkles className="w-4 h-4 text-[#F7CB45] shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-[#4B6B94] leading-relaxed">
+                    <strong className="text-[#1F3A5C]">Desain Anda Dijamin Tetap Terjaga:</strong> Saat Anda berganti model kemasan, seluruh logo, grafis, teks ({objects.length} layer), dan warna yang sedang Anda atur tidak akan hilang dan langsung diaplikasikan ke model kemasan baru.
+                  </p>
+                </div>
+
+                {/* Search Bar & Category Filters */}
+                <div className="flex flex-col sm:flex-row items-center gap-2.5">
+                  <div className="relative w-full sm:w-72">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#718BAA]" />
+                    <input
+                      type="text"
+                      value={modelSearchQuery}
+                      onChange={(e) => setModelSearchQuery(e.target.value)}
+                      placeholder="Cari model kemasan..."
+                      className="w-full pl-9 pr-7 py-2 rounded-xl bg-[#EEF4F8] border border-[#D5E4F0] text-xs text-[#1F3A5C] placeholder:text-[#718BAA] focus:outline-none focus:bg-white focus:border-[#4394C3] transition-colors"
+                    />
+                    {modelSearchQuery && (
+                      <button
+                        onClick={() => setModelSearchQuery("")}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[#718BAA] hover:text-[#1F3A5C]"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Category Filter Pills */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto w-full no-scrollbar pb-1 sm:pb-0">
+                    {modelCategories.map((cat) => {
+                      const isSelected = modelCategoryFilter.toUpperCase() === cat.toUpperCase()
+                      return (
+                        <button
+                          key={cat}
+                          onClick={() => setModelCategoryFilter(cat)}
+                          className={`px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all cursor-pointer ${
+                            isSelected
+                              ? "bg-[#1F3A5C] text-[#F7CB45] shadow-xs"
+                              : "bg-[#EEF4F8] text-[#4B6B94] hover:text-[#1F3A5C] hover:bg-[#D5E4F0]"
+                          }`}
+                        >
+                          {cat === "ALL" ? "Semua Kategori" : cat}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Templates Grid */}
+                {filteredSwitchTemplates.length === 0 ? (
+                  <div className="py-12 text-center text-[#718BAA] space-y-2">
+                    <Package className="w-8 h-8 mx-auto text-[#718BAA]" />
+                    <p className="text-xs font-bold">Tidak ada model kemasan yang cocok</p>
+                    <button
+                      onClick={() => {
+                        setModelSearchQuery("")
+                        setModelCategoryFilter("ALL")
+                      }}
+                      className="text-[11px] text-[#2F79A6] font-bold hover:underline"
+                    >
+                      Reset Filter
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {filteredSwitchTemplates.map((tmpl) => {
+                      const isCurrent = tmpl.id === selectedTemplate.id
+                      return (
+                        <div
+                          key={tmpl.id}
+                          onClick={() => handleSwitchModel(tmpl)}
+                          className={`group rounded-2xl border p-2 flex flex-col justify-between transition-all cursor-pointer overflow-hidden ${
+                            isCurrent
+                              ? "border-[#1F3A5C] bg-[#EEF4F8] ring-2 ring-[#1F3A5C]/20 shadow-sm"
+                              : "border-[#D5E4F0] bg-white hover:border-[#4394C3] hover:shadow-md hover:-translate-y-0.5"
+                          }`}
+                        >
+                          <div className="w-full aspect-square shrink-0 flex-none bg-[#EEF4F8] rounded-xl relative overflow-hidden flex items-center justify-center">
+                            {tmpl.badge && (
+                              <span className="absolute top-1.5 right-1.5 z-10 px-1.5 py-0.5 rounded-full bg-[#1F3A5C] text-[#F7CB45] font-mono text-[8px] font-bold uppercase shadow-2xs">
+                                {tmpl.badge}
+                              </span>
+                            )}
+                            {tmpl.preview_url ? (
+                              <img
+                                src={tmpl.preview_url}
+                                alt={tmpl.name}
+                                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform"
+                              />
+                            ) : (
+                              <div className="absolute inset-0 flex items-center justify-center p-3 group-hover:scale-105 transition-transform">
+                                {renderCategorySvg(tmpl.category)}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="pt-2 space-y-1">
+                            <div className="flex items-center justify-between text-[9px] text-[#718BAA] font-mono">
+                              <span className="px-1.5 py-0.2 rounded bg-[#EEF4F8] font-bold text-[#1F3A5C] uppercase">
+                                {tmpl.category}
+                              </span>
+                              <span className="truncate">
+                                {tmpl.defaultDims
+                                  ? `${tmpl.defaultDims.length}×${tmpl.defaultDims.width}×${tmpl.defaultDims.height} mm`
+                                  : "Kustom"}
+                              </span>
+                            </div>
+
+                            <h4 className="font-extrabold text-[#1F3A5C] text-xs truncate group-hover:text-[#2F79A6] transition-colors" title={tmpl.name}>
+                              {tmpl.name}
+                            </h4>
+
+                            <div className="pt-1">
+                              {isCurrent ? (
+                                <span className="w-full py-1.5 rounded-lg bg-[#1F3A5C] text-[#F7CB45] font-bold text-[10px] flex items-center justify-center gap-1 shadow-2xs">
+                                  <Check className="w-3 h-3" />
+                                  <span>Model Aktif</span>
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="w-full py-1.5 rounded-lg bg-[#EEF4F8] group-hover:bg-[#1F3A5C] text-[#1F3A5C] group-hover:text-white font-bold text-[10px] flex items-center justify-center gap-1 transition-all"
+                                >
+                                  <span>Ganti ke Model Ini</span>
+                                  <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </>
+            ) : (
+              /* Projects / Desain Saya Tab */
+              <div className="space-y-4">
+                {/* Action Bar for New Design */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-[#EEF4F8] p-3.5 rounded-2xl border border-[#D5E4F0]">
+                  <div className="space-y-0.5">
+                    <span className="font-extrabold text-[#1F3A5C] text-xs block">Mulai Desain Baru (Kanvas Kosong)</span>
+                    <span className="text-[10px] text-[#718BAA] block">
+                      Kosongkan logo/grafis untuk merancang kemasan dari awal pada model saat ini.
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleStartNewDesign}
+                    className="px-4 py-2 rounded-xl bg-[#1F3A5C] hover:bg-[#2F79A6] text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all shrink-0 cursor-pointer active:scale-98"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-[#F7CB45]" />
+                    <span>+ Desain Baru</span>
+                  </button>
+                </div>
+
+                {savedProjectsList.length === 0 ? (
+                  <div className="py-14 text-center border-2 border-dashed border-[#D5E4F0] rounded-2xl p-6 space-y-2.5">
+                    <FolderOpen className="w-10 h-10 mx-auto text-[#718BAA]" />
+                    <h4 className="font-extrabold text-[#1F3A5C] text-sm">Belum Ada Desain Tersimpan</h4>
+                    <p className="text-xs text-[#718BAA] max-w-sm mx-auto">
+                      Anda belum memiliki desain yang disimpan. Klik tombol <strong>"Simpan Proyek"</strong> di bilah atas studio untuk menyimpan hasil karya Anda agar dapat dibuka kapan saja.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    {savedProjectsList.map((proj) => {
+                      const isCurrent = currentProjectId === proj.id
+                      return (
+                        <div
+                          key={proj.id}
+                          onClick={() => handleLoadSavedProject(proj)}
+                          className={`group rounded-2xl border p-3 flex flex-col justify-between transition-all cursor-pointer ${
+                            isCurrent
+                              ? "border-[#1F3A5C] bg-[#EEF4F8] ring-2 ring-[#1F3A5C]/20 shadow-xs"
+                              : "border-[#D5E4F0] bg-white hover:border-[#4394C3] hover:shadow-md hover:-translate-y-0.5"
+                          }`}
+                        >
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between text-[9px] text-[#718BAA] font-mono">
+                              <span className="px-1.5 py-0.5 rounded bg-[#EEF4F8] font-bold text-[#1F3A5C] uppercase">
+                                {proj.category}
+                              </span>
+                              <span>
+                                {new Date(proj.updatedAt || proj.createdAt).toLocaleDateString("id-ID", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                })}
+                              </span>
+                            </div>
+
+                            <h4 className="font-extrabold text-[#1F3A5C] text-xs truncate group-hover:text-[#2F79A6] transition-colors" title={proj.name}>
+                              {proj.name}
+                            </h4>
+
+                            <p className="text-[10px] text-[#718BAA] line-clamp-1">
+                              Model: {proj.templateName || "Kemasan"} ({proj.dimensions.length}×{proj.dimensions.width}×{proj.dimensions.height} mm)
+                            </p>
+
+                            <div className="flex items-center gap-2 pt-1 text-[9.5px] text-[#4B6B94]">
+                              <span className="flex items-center gap-1 font-mono font-bold">
+                                <Layers className="w-3 h-3 text-[#2F79A6]" />
+                                {proj.objects?.length || 0} Layer
+                              </span>
+                              <span className="w-1 h-1 rounded-full bg-[#D5E4F0]" />
+                              <span className="truncate">{proj.materialName || "Material"}</span>
+                            </div>
+                          </div>
+
+                          <div className="pt-3">
+                            {isCurrent ? (
+                              <span className="w-full py-1.5 rounded-lg bg-[#1F3A5C] text-[#F7CB45] font-bold text-[10px] flex items-center justify-center gap-1 shadow-2xs">
+                                <Check className="w-3 h-3" />
+                                <span>Sedang Dibuka</span>
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                className="w-full py-1.5 rounded-lg bg-[#EEF4F8] group-hover:bg-[#1F3A5C] text-[#1F3A5C] group-hover:text-white font-bold text-[10px] flex items-center justify-center gap-1 transition-all"
+                              >
+                                <FolderOpen className="w-3 h-3 text-[#2F79A6] group-hover:text-[#F7CB45]" />
+                                <span>Buka Desain Ini</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const selectedObject = objects.find((o) => o.id === selectedObjectId)
 
   if (authChecking || isStudioLoading) {
@@ -1226,10 +1755,19 @@ function EditorComponent() {
               <ArrowLeft className="w-4 h-4 text-[#1F3A5C]" />
             </button>
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-[#1F3A5C] text-xs tracking-tight">Upload & Desain Pola (2D Dieline)</span>
-              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-[#EEF4F8] text-[#1F3A5C] border border-[#D5E4F0] font-mono uppercase">
-                {selectedTemplate.category}
-              </span>
+              <span className="font-extrabold text-[#1F3A5C] text-xs tracking-tight">Upload &amp; Desain Pola (2D Dieline)</span>
+              <button
+                onClick={() => {
+                  setSwitchModalTab("models")
+                  setShowSwitchModal(true)
+                }}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#EEF4F8] hover:bg-[#D5E4F0] text-[#1F3A5C] font-bold text-xs border border-[#D5E4F0] hover:border-[#4394C3] transition-all cursor-pointer shadow-2xs group"
+                title="Ganti Model Kemasan atau Buka Desain Lain"
+              >
+                <Box className="w-3.5 h-3.5 text-[#2F79A6] group-hover:scale-110 transition-transform" />
+                <span className="max-w-[120px] truncate">{selectedTemplate.name}</span>
+                <ChevronDown className="w-3 h-3 text-[#718BAA]" />
+              </button>
             </div>
           </div>
 
@@ -1628,6 +2166,13 @@ function EditorComponent() {
           </div>
 
         {renderImageLibraryModal()}
+        {renderSwitchModal()}
+        {switchToast && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#1F3A5C] text-white px-4 py-2.5 rounded-2xl shadow-2xl border border-[#4394C3]/40 flex items-center gap-2 text-xs font-bold animate-bounce-subtle pointer-events-none">
+            <CheckCircle2 className="w-4 h-4 text-[#F7CB45] shrink-0" />
+            <span>{switchToast}</span>
+          </div>
+        )}
       </div>
     )
   }
@@ -1701,12 +2246,21 @@ function EditorComponent() {
               type="text"
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
-              className="font-extrabold text-[#1F3A5C] tracking-tight text-xs bg-transparent hover:bg-[#EEF4F8] focus:bg-white px-2.5 py-1 rounded-lg border border-transparent focus:border-[#4394C3] focus:outline-none transition-all max-w-[200px]"
+              className="font-extrabold text-[#1F3A5C] tracking-tight text-xs bg-transparent hover:bg-[#EEF4F8] focus:bg-white px-2.5 py-1 rounded-lg border border-transparent focus:border-[#4394C3] focus:outline-none transition-all max-w-[170px]"
               title="Klik untuk ubah nama proyek"
             />
-            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-[#EEF4F8] text-[#1F3A5C] font-mono uppercase border border-[#D5E4F0]">
-              {selectedTemplate.category}
-            </span>
+            <button
+              onClick={() => {
+                setSwitchModalTab("models")
+                setShowSwitchModal(true)
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#EEF4F8] hover:bg-[#D5E4F0] text-[#1F3A5C] font-bold text-xs border border-[#D5E4F0] hover:border-[#4394C3] transition-all cursor-pointer shadow-2xs group"
+              title="Ganti Model Kemasan atau Buka Desain Lain"
+            >
+              <Box className="w-3.5 h-3.5 text-[#2F79A6] group-hover:scale-110 transition-transform" />
+              <span className="max-w-[120px] truncate">{selectedTemplate.name}</span>
+              <ChevronDown className="w-3 h-3 text-[#718BAA]" />
+            </button>
           </div>
         </div>
 
@@ -1830,6 +2384,43 @@ function EditorComponent() {
       {/* Floating Left Parameter Panel Island (Geometry & Material) */}
       <aside className="absolute top-18.5 left-4 bottom-4 w-68 z-30 bg-white/90 backdrop-blur-md border border-[#D5E4F0] rounded-2xl p-4 flex flex-col justify-between overflow-y-auto shadow-lg shadow-[#1F3A5C]/5 pointer-events-auto space-y-4">
           <div className="space-y-4">
+            {/* Active Model & Ganti Button */}
+            <div className="bg-[#EEF4F8] p-2.5 rounded-2xl border border-[#D5E4F0] space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-extrabold text-[#1F3A5C]">Model Kemasan</span>
+                <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-white text-[#2F79A6] border border-[#D5E4F0]">
+                  {selectedTemplate.category}
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  setSwitchModalTab("models")
+                  setShowSwitchModal(true)
+                }}
+                className="w-full flex items-center justify-between gap-2 p-2 rounded-xl bg-white hover:bg-[#D5E4F0]/40 border border-[#D5E4F0] text-left transition-all group cursor-pointer shadow-2xs"
+                title="Klik untuk memilih model kemasan lain"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-[#EEF4F8] border border-[#D5E4F0] overflow-hidden flex items-center justify-center shrink-0">
+                    {selectedTemplate.preview_url ? (
+                      <img src={selectedTemplate.preview_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <Box className="w-4 h-4 text-[#2F79A6]" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <span className="font-extrabold text-[#1F3A5C] text-xs block truncate group-hover:text-[#2F79A6] transition-colors">
+                      {selectedTemplate.name}
+                    </span>
+                    <span className="text-[9px] text-[#718BAA] block">
+                      Klik untuk ganti model
+                    </span>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#718BAA] group-hover:text-[#1F3A5C] group-hover:translate-x-0.5 transition-all shrink-0" />
+              </button>
+            </div>
+
             {/* 1. Dieline Card CTA */}
             <div className="space-y-2">
               <span className="font-extrabold text-[#1F3A5C] text-xs block">Pola Kemasan (Dieline)</span>
@@ -2367,6 +2958,13 @@ function EditorComponent() {
         )}
 
         {renderImageLibraryModal()}
+        {renderSwitchModal()}
+        {switchToast && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#1F3A5C] text-white px-4 py-2.5 rounded-2xl shadow-2xl border border-[#4394C3]/40 flex items-center gap-2 text-xs font-bold animate-bounce-subtle pointer-events-none">
+            <CheckCircle2 className="w-4 h-4 text-[#F7CB45] shrink-0" />
+            <span>{switchToast}</span>
+          </div>
+        )}
       </div>
   )
 }
