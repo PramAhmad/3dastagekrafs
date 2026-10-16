@@ -30,6 +30,7 @@ uploads/data/
 Thumbs.db
 .idea/
 .vscode/
+.claude/
 *.swp
 *.swo
 
