@@ -397,7 +397,11 @@ export default function SvgToModelPage() {
               <span className="shrink-0 rounded-full border border-[#BFD9E8] bg-[#EAF4F9] px-2 py-0.5 font-mono text-[8px] font-bold text-[#2F79A6]">2D SOURCE</span>
             </div>
             <div className="flex aspect-[4/3] items-center justify-center overflow-hidden bg-[linear-gradient(45deg,#f4f7fa_25%,transparent_25%),linear-gradient(-45deg,#f4f7fa_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#f4f7fa_75%),linear-gradient(-45deg,transparent_75%,#f4f7fa_75%)] bg-[length:16px_16px] bg-[position:0_0,0_8px,8px_-8px,-8px_0px] p-3">
-              <div className="flex h-full w-full items-center justify-center [&>svg]:max-h-full [&>svg]:max-w-full" dangerouslySetInnerHTML={{ __html: dielinePreviewSvg }} />
+              <img
+                src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(dielinePreviewSvg)}`}
+                alt="Preview dieline SVG yang diupload"
+                className="h-full w-full object-contain"
+              />
             </div>
           </div>
         )}
@@ -486,7 +490,7 @@ export default function SvgToModelPage() {
       {svgSourceTab === "analysis" && <div className="space-y-1.5">
         <span className="text-[10px] font-bold text-[#718BAA] uppercase tracking-wider">Preview Pola Lembaran 2D (Cut & Crease):</span>
         <div className="w-full aspect-4/3 bg-[#F8FAFC] rounded-2xl border border-[#D5E4F0] p-2 flex items-center justify-center overflow-hidden relative shadow-inner">
-          {dielinePreviewSvg ? <div className="w-full h-full flex items-center justify-center [&>svg]:max-w-full [&>svg]:max-h-full" dangerouslySetInnerHTML={{ __html: dielinePreviewSvg }} /> : <div className="text-center text-[#718BAA] space-y-1"><RefreshCw className="w-6 h-6 animate-spin mx-auto text-[#2F79A6]" /><p className="text-[10px]">Memuat pola SVG...</p></div>}
+          {dielinePreviewSvg ? <img src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(dielinePreviewSvg)}`} alt="Preview pola dieline SVG" className="h-full w-full object-contain" /> : <div className="text-center text-[#718BAA] space-y-1"><RefreshCw className="w-6 h-6 animate-spin mx-auto text-[#2F79A6]" /><p className="text-[10px]">Memuat pola SVG...</p></div>}
         </div>
       </div>}
     </div>
