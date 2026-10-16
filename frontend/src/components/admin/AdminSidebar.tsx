@@ -12,7 +12,6 @@ import {
   Settings,
   LogOut,
   User,
-  ExternalLink,
   ShieldCheck,
   Layers,
   Sparkles,
@@ -21,12 +20,20 @@ import {
 import { getAllUmkm } from "@/lib/umkm"
 
 interface AdminSidebarProps {
+  mode?: "persistent" | "drawer"
+  onNavigate?: () => void
   templateCount?: number
   orderCount?: number
   pendingUmkmCount?: number
 }
 
-export default function AdminSidebar({ templateCount = 8, orderCount = 3, pendingUmkmCount }: AdminSidebarProps) {
+export default function AdminSidebar({
+  mode = "persistent",
+  onNavigate,
+  templateCount = 8,
+  orderCount = 3,
+  pendingUmkmCount,
+}: AdminSidebarProps) {
   const pathname = usePathname()
   const [livePendingUmkm, setLivePendingUmkm] = React.useState<number>(pendingUmkmCount ?? 0)
 
@@ -112,45 +119,46 @@ export default function AdminSidebar({ templateCount = 8, orderCount = 3, pendin
   ]
 
   return (
-    <aside className="w-64 shrink-0 bg-white border-r border-[#D5E4F0] flex flex-col justify-between p-4 z-30 select-none shadow-xs">
-      <div className="space-y-6">
-        <Link href="/admin/dashboard" className="flex items-center gap-2.5 px-2 group">
-          <div className="w-8 h-8 rounded-xl bg-white border border-[#D5E4F0] overflow-hidden p-0.5 shadow-xs group-hover:scale-105 transition-all shrink-0">
-            <img
-              src="/logo/astakraft-primary.jpg"
-              alt="Logo AstaKraft Admin"
-              className="w-full h-full object-contain"
-            />
+    <aside
+      id={mode === "drawer" ? "admin-global-navigation" : undefined}
+      className={
+        mode === "drawer"
+          ? "flex min-h-full flex-col justify-between select-none"
+          : "hidden w-56 shrink-0 flex-col justify-between border-r border-[#D5E4F0] bg-white p-3 shadow-xs select-none lg:flex"
+      }
+    >
+      <div className="space-y-4">
+        <Link href="/admin/dashboard" onClick={onNavigate} className="group flex items-center gap-2 px-1.5">
+          <div className="h-8 w-8 shrink-0 overflow-hidden rounded-xl border border-[#D5E4F0] bg-white p-0.5 shadow-xs transition-all group-hover:scale-105">
+            <img src="/logo/astakraft-primary.jpg" alt="Logo AstaKraft Admin" className="h-full w-full object-contain" />
           </div>
           <div>
-            <span className="font-extrabold text-[#1F3A5C] tracking-tight text-[13px] block leading-tight">
-              AstaKraft Admin
-            </span>
-            <span className="text-[9px] text-[#718BAA] block font-mono font-bold">PORTAL SAAS UMKM</span>
+            <span className="block text-[13px] font-extrabold leading-tight tracking-tight text-[#1F3A5C]">AstaKraft Admin</span>
+            <span className="block font-mono text-[9px] font-bold text-[#718BAA]">PORTAL SAAS UMKM</span>
           </div>
         </Link>
 
-        {/* Navigation Menu */}
-        <nav className="space-y-1">
+        <nav aria-label="Admin navigation" className="space-y-0.5">
           {menuItems.map((item) => {
             const IconComp = item.icon
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`w-full px-3 py-2 rounded-xl text-[11.5px] flex items-center justify-between transition-all ${
+                onClick={onNavigate}
+                className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-[11.5px] transition-all ${
                   item.active
-                    ? "bg-[#1F3A5C] text-[#F7CB45] font-bold shadow-xs border border-[#1F3A5C]"
-                    : "text-[#4B6B94] hover:text-[#1F3A5C] hover:bg-[#EEF4F8]"
+                    ? "border border-[#1F3A5C] bg-[#1F3A5C] font-bold text-[#F7CB45] shadow-xs"
+                    : "text-[#4B6B94] hover:bg-[#EEF4F8] hover:text-[#1F3A5C]"
                 }`}
               >
-                <div className="flex items-center gap-2.5">
-                  <IconComp className={`w-4 h-4 ${item.active ? "text-[#F7CB45]" : "text-[#2F79A6]"}`} />
+                <div className="flex items-center gap-2">
+                  <IconComp className={`h-4 w-4 ${item.active ? "text-[#F7CB45]" : "text-[#2F79A6]"}`} aria-hidden="true" />
                   <span>{item.label}</span>
                 </div>
                 {item.badge !== undefined && (
                   <span
-                    className={`text-[9.5px] px-1.5 py-0.5 rounded font-mono font-bold ${
+                    className={`rounded px-1.5 py-0.5 font-mono text-[9.5px] font-bold ${
                       item.badgeColor || (item.active ? "bg-white/20 text-white" : "bg-[#EEF4F8] text-[#1F3A5C]")
                     }`}
                   >
@@ -163,23 +171,23 @@ export default function AdminSidebar({ templateCount = 8, orderCount = 3, pendin
         </nav>
       </div>
 
-      {/* Sidebar Footer */}
-      <div className="pt-4 border-t border-[#D5E4F0] space-y-2">
-        <div className="flex items-center gap-2.5 px-2 py-1">
-          <div className="w-7 h-7 rounded-full bg-[#1F3A5C] flex items-center justify-center text-[#F7CB45] font-bold text-[10px]">
-            <User className="w-3.5 h-3.5" />
+      <div className="space-y-2 border-t border-[#D5E4F0] pt-3">
+        <div className="flex items-center gap-2 px-1.5 py-1">
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#1F3A5C] text-[10px] font-bold text-[#F7CB45]">
+            <User className="h-3.5 w-3.5" aria-hidden="true" />
           </div>
-          <div className="truncate flex-1">
-            <span className="text-[11px] font-extrabold text-[#1F3A5C] block truncate">Super Admin</span>
-            <span className="text-[9.5px] text-[#718BAA] block truncate">admin@kemasan3d.id</span>
+          <div className="flex-1 truncate">
+            <span className="block truncate text-[11px] font-extrabold text-[#1F3A5C]">Super Admin</span>
+            <span className="block truncate text-[9.5px] text-[#718BAA]">admin@kemasan3d.id</span>
           </div>
         </div>
 
         <button
+          type="button"
           onClick={handleLogout}
-          className="w-full px-3 py-2 rounded-xl bg-[#EEF4F8] hover:bg-red-50 text-[#718BAA] hover:text-red-600 font-bold text-[11px] flex items-center justify-center gap-2 transition-all border border-[#D5E4F0]"
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#D5E4F0] bg-[#EEF4F8] px-2.5 py-1.5 text-[11px] font-bold text-[#718BAA] transition-all hover:bg-red-50 hover:text-red-600"
         >
-          <LogOut className="w-3.5 h-3.5" />
+          <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
           <span>Keluar (Logout)</span>
         </button>
       </div>
