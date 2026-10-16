@@ -1744,12 +1744,12 @@ function EditorComponent() {
           />
         </div>
 
-        {/* Floating Top Navbar */}
-        <header className="absolute top-3.5 left-4 right-4 h-13 bg-white/90 backdrop-blur-md border border-[#D5E4F0] px-4 rounded-2xl flex items-center justify-between z-40 shadow-lg shadow-[#1F3A5C]/5">
+        {/* Floating Top Navbar (Frosted Glass) */}
+        <header className="absolute top-3.5 left-4 right-4 h-13 bg-white/85 backdrop-blur-md border border-white/80 px-4 rounded-2xl flex items-center justify-between z-40 shadow-lg shadow-[#1F3A5C]/5">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setEditorMode("mockup")}
-              className="p-1.5 rounded-xl hover:bg-[#EEF4F8] text-[#1F3A5C] transition-all border border-[#D5E4F0]"
+              className="p-1.5 rounded-xl bg-white/70 hover:bg-white text-[#1F3A5C] transition-all border border-white/80 shadow-2xs cursor-pointer"
               title="Kembali ke 3D Mode"
             >
               <ArrowLeft className="w-4 h-4 text-[#1F3A5C]" />
@@ -1759,28 +1759,61 @@ function EditorComponent() {
             </div>
           </div>
 
-          {/* Center Studio Mode Segmented Switcher */}
-          <div className="flex items-center p-0.5 rounded-xl bg-slate-200/50 backdrop-blur-xs border border-white/80 shadow-2xs">
-            <button
-              onClick={() => setEditorMode("mockup")}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-[#718BAA] hover:text-[#1F3A5C]"
-            >
-              <Box className="w-3.5 h-3.5 text-[#2F79A6]" />
-              <span>3D Studio</span>
-            </button>
-            <button
-              onClick={() => setEditorMode("dieline")}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer bg-white text-[#1F3A5C] shadow-2xs"
-            >
-              <Layers className="w-3.5 h-3.5 text-[#2F79A6]" />
-              <span>2D Dieline</span>
-            </button>
+          {/* Center Studio Mode Segmented Switcher + Undo & Redo */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center p-0.5 rounded-xl bg-slate-200/50 backdrop-blur-xs border border-white/80 shadow-2xs">
+              <button
+                onClick={() => setEditorMode("mockup")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-[#718BAA] hover:text-[#1F3A5C]"
+              >
+                <Box className="w-3.5 h-3.5 text-[#2F79A6]" />
+                <span>3D Studio</span>
+              </button>
+              <button
+                onClick={() => setEditorMode("dieline")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer bg-white text-[#1F3A5C] shadow-2xs"
+              >
+                <Layers className="w-3.5 h-3.5 text-[#2F79A6]" />
+                <span>2D Dieline</span>
+              </button>
+            </div>
+
+            {/* Undo & Redo */}
+            <div className="flex items-center gap-1 bg-white/60 backdrop-blur-sm p-1 rounded-xl border border-white/70 shadow-2xs">
+              <button
+                onClick={handleUndo}
+                disabled={undoStack.length === 0}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                  undoStack.length > 0
+                    ? "text-[#1F3A5C] hover:bg-white hover:shadow-2xs cursor-pointer"
+                    : "text-[#A0B6CD] opacity-40 cursor-not-allowed"
+                }`}
+                title="Undo (Ctrl+Z)"
+              >
+                <Undo2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline text-[11px]">Undo</span>
+              </button>
+              <div className="w-px h-3.5 bg-[#D5E4F0]/60" />
+              <button
+                onClick={handleRedo}
+                disabled={redoStack.length === 0}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                  redoStack.length > 0
+                    ? "text-[#1F3A5C] hover:bg-white hover:shadow-2xs cursor-pointer"
+                    : "text-[#A0B6CD] opacity-40 cursor-not-allowed"
+                }`}
+                title="Redo (Ctrl+Y)"
+              >
+                <Redo2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline text-[11px]">Redo</span>
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowShortcutsModal(true)}
-              className="px-3 py-1.5 rounded-xl bg-white border border-[#D5E4F0] hover:bg-[#EEF4F8] text-[#1F3A5C] font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all"
+              className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-white/70 hover:bg-white text-[#1F3A5C] border border-white/80 text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
               title="Daftar Shortcut Keyboard"
             >
               <Keyboard className="w-3.5 h-3.5 text-[#2F79A6]" />
@@ -1789,39 +1822,35 @@ function EditorComponent() {
 
             <button
               onClick={handleExportPDF}
-              className="px-3 py-1.5 rounded-xl bg-white border border-[#D5E4F0] hover:bg-[#EEF4F8] text-[#1F3A5C] font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all"
+              className="px-3 py-1.5 rounded-xl bg-white/70 hover:bg-white border border-white/80 text-[#1F3A5C] font-bold text-xs shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer"
               title="Export Dieline & Spesifikasi ke PDF"
             >
-              <FileText className="w-3.5 h-3.5 text-[#E11D48]" />
+              <FileText className="w-3.5 h-3.5 text-[#2F79A6]" />
               <span className="hidden sm:inline">Export PDF</span>
             </button>
 
             <button
               onClick={handleSaveProject}
-              className="px-3.5 py-1.5 rounded-xl bg-white border border-[#D5E4F0] hover:bg-[#EEF4F8] text-[#1F3A5C] font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all"
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer ${
+                saveSuccessNotice
+                  ? "bg-emerald-600 text-white"
+                  : "bg-[#1F3A5C] hover:bg-[#2A4D77] text-white"
+              }`}
             >
-              <Save className="w-3.5 h-3.5 text-[#2F79A6]" />
-              <span>{saveSuccessNotice ? "Tersimpan!" : "Simpan Proyek"}</span>
-            </button>
-
-            <button
-              onClick={() => setEditorMode("mockup")}
-              className="px-4 py-1.5 rounded-xl bg-[#1F3A5C] hover:bg-[#2F79A6] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all"
-            >
-              <Check className="w-3.5 h-3.5 text-[#F7CB45]" />
-              <span>Selesai & Ke 3D</span>
+              {saveSuccessNotice ? <CheckCircle2 className="w-3.5 h-3.5 text-white" /> : <Save className="w-3.5 h-3.5 text-[#F7CB45]" />}
+              <span>{saveSuccessNotice ? "Tersimpan" : "Simpan Desain"}</span>
             </button>
           </div>
         </header>
 
         {/* Floating Left Tools Dock */}
         <div className="absolute top-18.5 left-4 bottom-4 z-30 flex gap-2.5 pointer-events-none">
-          {/* Left Icon Strip */}
-          <nav className="w-12 shrink-0 bg-white/90 backdrop-blur-md border border-[#D5E4F0] rounded-2xl flex flex-col items-center py-3.5 gap-2.5 shadow-lg shadow-[#1F3A5C]/5 pointer-events-auto">
+          {/* Left Icon Strip (Frosted Glass) */}
+          <nav className="w-12 shrink-0 bg-white/75 backdrop-blur-xl border border-white/80 rounded-3xl flex flex-col items-center py-3.5 gap-2.5 shadow-xl shadow-[#1F3A5C]/5 pointer-events-auto">
             <button
               onClick={() => setStudioTab("uploads")}
-              className={`w-8.5 h-8.5 rounded-xl flex items-center justify-center transition-all ${
-                studioTab === "uploads" ? "bg-[#1F3A5C] text-[#F7CB45] shadow-sm" : "text-[#4B6B94] hover:text-[#1F3A5C] hover:bg-[#EEF4F8]"
+              className={`w-8.5 h-8.5 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                studioTab === "uploads" ? "bg-[#1F3A5C] text-white shadow-xs" : "text-[#718BAA] hover:text-[#1F3A5C] hover:bg-white/60"
               }`}
               title="Pustaka Gambar & Upload (Logo, Sertifikasi)"
             >
@@ -1830,40 +1859,40 @@ function EditorComponent() {
 
             <button
               onClick={() => setStudioTab("elements")}
-              className={`w-8.5 h-8.5 rounded-xl flex items-center justify-center transition-all ${
-                studioTab === "elements" ? "bg-[#1F3A5C] text-[#F7CB45] shadow-sm" : "text-[#4B6B94] hover:text-[#1F3A5C] hover:bg-[#EEF4F8]"
+              className={`w-8.5 h-8.5 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                studioTab === "elements" ? "bg-[#1F3A5C] text-white shadow-xs" : "text-[#718BAA] hover:text-[#1F3A5C] hover:bg-white/60"
               }`}
-              title="Elements"
+              title="Elements & Stiker"
             >
               <Square className="w-4 h-4" />
             </button>
 
             <button
               onClick={() => setStudioTab("text")}
-              className={`w-8.5 h-8.5 rounded-xl flex items-center justify-center transition-all ${
-                studioTab === "text" ? "bg-[#1F3A5C] text-[#F7CB45] shadow-sm" : "text-[#4B6B94] hover:text-[#1F3A5C] hover:bg-[#EEF4F8]"
+              className={`w-8.5 h-8.5 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                studioTab === "text" ? "bg-[#1F3A5C] text-white shadow-xs" : "text-[#718BAA] hover:text-[#1F3A5C] hover:bg-white/60"
               }`}
-              title="Text"
+              title="Tambahkan Teks"
             >
               <TypeIcon className="w-4 h-4" />
             </button>
 
             <button
               onClick={() => setStudioTab("tools")}
-              className={`w-8.5 h-8.5 rounded-xl flex items-center justify-center transition-all ${
-                studioTab === "tools" ? "bg-[#1F3A5C] text-[#F7CB45] shadow-sm" : "text-[#4B6B94] hover:text-[#1F3A5C] hover:bg-[#EEF4F8]"
+              className={`w-8.5 h-8.5 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                studioTab === "tools" ? "bg-[#1F3A5C] text-white shadow-xs" : "text-[#718BAA] hover:text-[#1F3A5C] hover:bg-white/60"
               }`}
-              title="Tools / Layers"
+              title="Daftar Layer"
             >
               <Layers className="w-4 h-4" />
             </button>
           </nav>
 
-          {/* Left Feature Panel */}
+          {/* Left Feature Panel (Frosted Glass & No Scrollbar) */}
           <div
             className={`${
-              studioTab === "uploads" ? "w-80" : "w-64"
-            } shrink-0 bg-white/90 backdrop-blur-md border border-[#D5E4F0] rounded-2xl p-4 flex flex-col justify-between overflow-y-auto shadow-lg shadow-[#1F3A5C]/5 pointer-events-auto transition-all duration-200`}
+              studioTab === "uploads" ? "w-80" : "w-68"
+            } shrink-0 bg-white/75 backdrop-blur-xl border border-white/80 rounded-3xl p-4 flex flex-col justify-between overflow-y-auto no-scrollbar shadow-xl shadow-[#1F3A5C]/5 pointer-events-auto transition-all duration-200`}
           >
             <div className="space-y-4">
               {studioTab === "uploads" && (
@@ -1889,7 +1918,7 @@ function EditorComponent() {
 
               {studioTab === "elements" && (
                 <div className="space-y-3">
-                  <span className="font-extrabold text-[#1F3A5C] text-xs block">Bentuk Stiker & Ikon</span>
+                  <span className="font-bold text-[#718BAA] text-[11px] uppercase tracking-wider block">Bentuk Stiker &amp; Ikon</span>
                   <div className="grid grid-cols-2 gap-2">
                     {SHAPES_LIST.map((shp) => {
                       const IconComp = shp.icon
@@ -1897,7 +1926,7 @@ function EditorComponent() {
                         <button
                           key={shp.id}
                           onClick={() => addObject(shp.id, BRAND_COLORS.navy)}
-                          className="p-2.5 rounded-xl bg-[#EEF4F8] hover:bg-[#E2EDF5] border border-[#D5E4F0] hover:border-[#4394C3] text-[#1F3A5C] flex flex-col items-center gap-1.5 text-[10px] font-bold transition-all"
+                          className="p-2.5 rounded-2xl bg-white/80 hover:bg-white border border-white/80 text-[#1F3A5C] flex flex-col items-center gap-1.5 text-[10px] font-bold transition-all shadow-2xs hover:shadow-xs cursor-pointer active:scale-98"
                         >
                           <IconComp className="w-4 h-4 text-[#2F79A6]" />
                           <span>{shp.label}</span>
@@ -1910,10 +1939,10 @@ function EditorComponent() {
 
               {studioTab === "text" && (
                 <div className="space-y-3">
-                  <span className="font-extrabold text-[#1F3A5C] text-xs block">Tambahkan Teks</span>
+                  <span className="font-bold text-[#718BAA] text-[11px] uppercase tracking-wider block">Tambahkan Teks</span>
                   <button
                     onClick={() => addObject("badge", BRAND_COLORS.navy)}
-                    className="w-full py-2.5 rounded-xl bg-[#1F3A5C] hover:bg-[#2F79A6] text-white font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 transition-all"
+                    className="w-full py-2.5 rounded-2xl bg-[#1F3A5C] hover:bg-[#2A4D77] text-white font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-98"
                   >
                     <Plus className="w-3.5 h-3.5 text-[#F7CB45]" />
                     <span>Tambah Badge Label</span>
@@ -1923,7 +1952,7 @@ function EditorComponent() {
 
               {studioTab === "tools" && (
                 <div className="space-y-3">
-                  <span className="font-extrabold text-[#1F3A5C] text-xs block">Daftar Layer Desain</span>
+                  <span className="font-bold text-[#718BAA] text-[11px] uppercase tracking-wider block">Daftar Layer Desain</span>
                   {objects.length === 0 ? (
                     <p className="text-[10.5px] text-[#718BAA] italic">Belum ada elemen ditambahkan.</p>
                   ) : (
@@ -1934,13 +1963,13 @@ function EditorComponent() {
                           onClick={() => setSelectedObjectId(obj.id)}
                           className={`p-2 rounded-xl border text-xs flex items-center justify-between cursor-pointer transition-all ${
                             selectedObjectId === obj.id
-                              ? "bg-[#EEF4F8] border-[#4394C3] font-bold text-[#1F3A5C] shadow-xs"
-                              : "bg-white border-[#D5E4F0] text-[#1F3A5C]/80 hover:bg-[#EEF4F8]"
+                              ? "bg-white border-white/90 font-bold text-[#1F3A5C] shadow-xs ring-1 ring-[#4394C3]"
+                              : "bg-white/70 border-white/80 text-[#1F3A5C]/80 hover:bg-white"
                           }`}
                         >
                           <div className="flex items-center gap-1.5 truncate">
                             {obj.type === "image" && obj.imageUrl ? (
-                              <img src={obj.imageUrl} alt="" className="w-4 h-4 rounded-sm object-contain shrink-0 border border-[#D5E4F0]" />
+                              <img src={obj.imageUrl} alt="" className="w-4 h-4 rounded-xs object-contain shrink-0 border border-white/80" />
                             ) : null}
                             <span className="truncate max-w-[110px]">{obj.name}</span>
                           </div>
@@ -1952,7 +1981,7 @@ function EditorComponent() {
                                   setReplacingObjectId(obj.id)
                                   setShowImageLibraryModal(true)
                                 }}
-                                className="text-[#718BAA] hover:text-[#2F79A6] p-1 transition-colors"
+                                className="text-[#718BAA] hover:text-[#2F79A6] p-1 transition-colors cursor-pointer"
                                 title="Ganti Gambar dari Pustaka"
                               >
                                 <FolderOpen className="w-3.5 h-3.5" />
@@ -1963,7 +1992,7 @@ function EditorComponent() {
                                 e.stopPropagation()
                                 duplicateObject(obj.id)
                               }}
-                              className="text-[#718BAA] hover:text-[#1F3A5C] p-1 transition-colors"
+                              className="text-[#718BAA] hover:text-[#1F3A5C] p-1 transition-colors cursor-pointer"
                               title="Duplikat (Ctrl+D)"
                             >
                               <Copy className="w-3.5 h-3.5" />
@@ -1973,7 +2002,7 @@ function EditorComponent() {
                                 e.stopPropagation()
                                 removeObject(obj.id)
                               }}
-                              className="text-[#718BAA] hover:text-red-600 p-1 transition-colors"
+                              className="text-[#718BAA] hover:text-rose-600 p-1 transition-colors cursor-pointer"
                               title="Hapus (Delete / Backspace)"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -1989,187 +2018,205 @@ function EditorComponent() {
           </div>
         </div>
 
-        {/* Floating Right 3D Preview Island */}
-        <div className="absolute top-18.5 right-4 bottom-4 w-76 z-30 bg-white/90 backdrop-blur-md border border-[#D5E4F0] rounded-2xl p-4 flex flex-col justify-between overflow-y-auto shadow-lg shadow-[#1F3A5C]/5 pointer-events-auto space-y-4">
-          <div className="space-y-4">
-            {/* 3D Live Widget with Distinct Neutral Grey Studio Background */}
-            <div className="rounded-2xl border border-[#D5E4F0] overflow-hidden bg-[#eaedf0] relative shadow-xs">
-              <div className="h-52 w-full relative">
+        {/* Floating Right 3D Preview Island (Frosted Glass & No Scrollbar) */}
+        <aside className="absolute top-18.5 right-4 bottom-4 w-76 z-30 bg-white/75 backdrop-blur-xl border border-white/80 rounded-3xl p-4 flex flex-col justify-between overflow-y-auto no-scrollbar shadow-xl shadow-[#1F3A5C]/5 pointer-events-auto space-y-4">
+          <div className="space-y-3.5">
+            {/* Header Status Ringkasan */}
+            <div className="flex items-center justify-between pb-2.5 border-b border-[#D5E4F0]/60">
+              <div className="flex items-center gap-2">
+                <Box className="w-4 h-4 text-[#2F79A6]" />
+                <span className="font-extrabold text-[#1F3A5C] text-xs">Live 3D Preview</span>
+              </div>
+              <span className="text-[9.5px] font-mono font-bold px-2 py-0.5 rounded-md bg-white/80 text-[#2F79A6] border border-white/80">
+                Syncing
+              </span>
+            </div>
+
+            {/* 3D Live Viewport */}
+            <div className="rounded-2xl border border-white/90 overflow-hidden relative shadow-2xs">
+              <div className="h-48 w-full relative">
                 <PackagingCanvas
                   category={selectedTemplate.category}
                   length={length}
-                    width={width}
-                    height={height}
-                    radius={radius}
-                    wallThickness={wallThickness}
-                    boxColor={boxColor}
-                    faceColors={faceColors}
-                    materialFinish={selectedMaterial.finish}
-                    materialType={selectedMaterial.textureType}
-                    model3dUrl={selectedTemplate.model_3d_url}
-                    modelFormat={selectedTemplate.model_format}
-                    dielineSvgUrl={selectedTemplate.dieline_svg_url}
-                    manifest={selectedTemplate.manifest_json}
-                    objects={objects}
-                    selectedObjectId={selectedObjectId}
-                    showGrid={false}
-                    cameraView="iso"
-                    openProgress={openProgress}
-                    canvasBackground="#eaedf0"
-                    maxVisualBound={1.65}
-                  />
-                  <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-lg bg-[#1F3A5C]/80 text-[#F7CB45] text-[9px] font-extrabold font-mono shadow-xs backdrop-blur-xs border border-[#1F3A5C]">
-                    3D LIVE
-                  </div>
-                </div>
-              </div>
-
-              {/* Interactive Open to Close 3D Fold Slider */}
-              <div className="space-y-1.5 bg-[#EEF4F8] p-3 rounded-2xl border border-[#D5E4F0]">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-extrabold text-[#1F3A5C]">Open / Close Fold</span>
-                  <span className="font-mono text-[9.5px] font-extrabold px-2 py-0.5 rounded-md bg-white text-[#2F79A6] border border-[#D5E4F0] shadow-xs">
-                    {openProgress === 0 ? "Closed (0%)" : openProgress === 100 ? "Open (100%)" : `${openProgress}%`}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 pt-1">
-                  <span className="text-[9.5px] font-bold text-[#718BAA]">Close</span>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={openProgress}
-                    onChange={(e) => setOpenProgress(Number(e.target.value))}
-                    className="flex-1 h-1.5 bg-[#D5E4F0] rounded-lg appearance-none cursor-pointer accent-[#1F3A5C]"
-                  />
-                  <span className="text-[9.5px] font-bold text-[#718BAA]">Open</span>
-                </div>
-              </div>
-
-              {/* Outside / Inside Switcher */}
-              <div className="grid grid-cols-2 p-1 bg-neutral-100 rounded-xl border border-neutral-200 text-xs font-bold">
-                <button
-                  onClick={() => setViewSide("outside")}
-                  className={`py-1.5 rounded-lg transition-all ${
-                    viewSide === "outside"
-                      ? "bg-white text-neutral-900 shadow-xs font-bold"
-                      : "text-neutral-500 hover:text-neutral-900"
-                  }`}
-                >
-                  Outside
-                </button>
-                <button
-                  onClick={() => setViewSide("inside")}
-                  className={`py-1.5 rounded-lg transition-all ${
-                    viewSide === "inside"
-                      ? "bg-white text-neutral-900 shadow-xs font-bold"
-                      : "text-neutral-500 hover:text-neutral-900"
-                  }`}
-                >
-                  Inside
-                </button>
-              </div>
-
-              {/* Package Color Palette */}
-              <div className="space-y-2 bg-neutral-50 p-3 rounded-2xl border border-neutral-200">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold text-neutral-800">Package Color</span>
-                  <span className="text-[10px] font-mono text-neutral-500">{boxColor}</span>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 pt-1">
-                  {/* Plus Custom Color Picker */}
-                  <label className="w-7 h-7 rounded-full border border-dashed border-neutral-400 hover:border-neutral-900 flex items-center justify-center cursor-pointer bg-white transition-all text-neutral-600 hover:text-neutral-900 shadow-xs" title="Pilih Warna Kustom">
-                    <Plus className="w-3.5 h-3.5" />
-                    <input
-                      type="color"
-                      value={boxColor}
-                      onChange={(e) => setBoxColor(e.target.value)}
-                      className="hidden"
-                    />
-                  </label>
-
-                  {/* Preset Swatches */}
-                  {BOX_COLORS.map((c) => {
-                    const isSelected = boxColor.toLowerCase() === c.hex.toLowerCase()
-                    return (
-                      <button
-                        key={c.hex}
-                        onClick={() => {
-                          setBoxColor(c.hex)
-                          // Clear per-face overrides if global color changed
-                          setFaceColors({})
-                        }}
-                        className={`w-7 h-7 rounded-full border shadow-xs transition-all ${
-                          isSelected
-                            ? "scale-110 border-neutral-900 ring-2 ring-neutral-900"
-                            : "border-neutral-300 hover:scale-105"
-                        }`}
-                        style={{ backgroundColor: c.hex }}
-                        title={c.name}
-                      />
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Material Texture Preview */}
-              <div className="space-y-2 bg-neutral-50 p-3 rounded-2xl border border-neutral-200">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-extrabold text-neutral-800">Material</span>
-                  <span className="text-[9.5px] font-mono font-bold text-blue-600 truncate max-w-[110px]">
-                    {selectedMaterial.name}
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-1.5 pt-0.5">
-                  {activeMaterials.map((mat) => {
-                    const isSelected = selectedMaterial.id === mat.id
-                    return (
-                      <button
-                        key={mat.id}
-                        onClick={() => handleSelectMaterial(mat)}
-                        className={`w-6 h-6 rounded-full transition-all flex items-center justify-center shrink-0 ${
-                          isSelected
-                            ? "ring-2 ring-neutral-900 ring-offset-1 scale-110 shadow-sm z-10"
-                            : "border border-neutral-300 hover:border-neutral-600 hover:scale-105 opacity-85 hover:opacity-100"
-                        }`}
-                        style={{
-                          backgroundColor: mat.previewSwatch,
-                          backgroundImage:
-                            mat.textureType === "gold_foil"
-                              ? "linear-gradient(135deg, #d4af37 0%, #fff2a8 50%, #aa7c11 100%)"
-                              : mat.textureType === "silver_foil"
-                              ? "linear-gradient(135deg, #cbd5e1 0%, #ffffff 50%, #94a3b8 100%)"
-                              : mat.textureType === "corrugated"
-                              ? "repeating-linear-gradient(90deg, #ba8b57 0px, #ba8b57 2px, #a47640 3px, #c5945e 4px)"
-                              : undefined,
-                        }}
-                        title={`${mat.name} (${mat.subtitle})`}
-                      >
-                        {isSelected && (
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              mat.id === "glossy" || mat.id === "matte_art" || mat.id === "metallic_silver"
-                                ? "bg-neutral-900"
-                                : "bg-white"
-                            }`}
-                          />
-                        )}
-                      </button>
-                    )
-                  })}
+                  width={width}
+                  height={height}
+                  radius={radius}
+                  wallThickness={wallThickness}
+                  boxColor={boxColor}
+                  faceColors={faceColors}
+                  materialFinish={selectedMaterial.finish}
+                  materialType={selectedMaterial.textureType}
+                  model3dUrl={selectedTemplate.model_3d_url}
+                  modelFormat={selectedTemplate.model_format}
+                  dielineSvgUrl={selectedTemplate.dieline_svg_url}
+                  manifest={selectedTemplate.manifest_json}
+                  objects={objects}
+                  selectedObjectId={selectedObjectId}
+                  showGrid={false}
+                  cameraView="iso"
+                  openProgress={openProgress}
+                  canvasBackground="#EEF4F8"
+                  maxVisualBound={1.65}
+                />
+                <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-[#1F3A5C]/80 text-[#F7CB45] text-[9px] font-extrabold font-mono shadow-xs backdrop-blur-xs border border-white/40">
+                  LIVE 3D
                 </div>
               </div>
             </div>
 
+            <div className="h-px bg-[#D5E4F0]/50 w-full" />
+
+            {/* Interactive Open to Close 3D Fold Slider */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-[11px] font-bold text-[#718BAA] uppercase tracking-wider">
+                <span>Lipatan (Fold)</span>
+                <span className="font-mono text-[10px] font-bold text-[#1F3A5C]">
+                  {openProgress === 0 ? "Closed (0%)" : openProgress === 100 ? "Open (100%)" : `${openProgress}%`}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 pt-0.5">
+                <span className="text-[9.5px] font-bold text-[#718BAA]">Tutup</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={openProgress}
+                  onChange={(e) => setOpenProgress(Number(e.target.value))}
+                  className="flex-1 h-1 bg-[#D5E4F0]/80 rounded-lg appearance-none cursor-pointer accent-[#4394C3]"
+                />
+                <span className="text-[9.5px] font-bold text-[#718BAA]">Buka</span>
+              </div>
+            </div>
+
+            {/* Outside / Inside Switcher */}
+            <div className="grid grid-cols-2 p-0.5 bg-slate-200/50 backdrop-blur-xs rounded-xl border border-white/80 text-xs font-bold">
+              <button
+                onClick={() => setViewSide("outside")}
+                className={`py-1.5 rounded-lg transition-all cursor-pointer ${
+                  viewSide === "outside"
+                    ? "bg-white text-[#1F3A5C] shadow-2xs font-bold"
+                    : "text-[#718BAA] hover:text-[#1F3A5C]"
+                }`}
+              >
+                Sisi Luar (Outside)
+              </button>
+              <button
+                onClick={() => setViewSide("inside")}
+                className={`py-1.5 rounded-lg transition-all cursor-pointer ${
+                  viewSide === "inside"
+                    ? "bg-white text-[#1F3A5C] shadow-2xs font-bold"
+                    : "text-[#718BAA] hover:text-[#1F3A5C]"
+                }`}
+              >
+                Sisi Dalam (Inside)
+              </button>
+            </div>
+
+            <div className="h-px bg-[#D5E4F0]/50 w-full" />
+
+            {/* Package Color Palette */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-[11px] font-bold text-[#718BAA] uppercase tracking-wider">
+                <span>Warna Kemasan</span>
+                <span className="text-[10px] font-mono font-bold text-[#2F79A6]">{boxColor}</span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                {/* Plus Custom Color Picker */}
+                <label className="w-6.5 h-6.5 rounded-full border border-dashed border-[#718BAA] hover:border-[#1F3A5C] flex items-center justify-center cursor-pointer bg-white/80 hover:bg-white transition-all text-[#718BAA] hover:text-[#1F3A5C] shadow-2xs" title="Pilih Warna Kustom">
+                  <Plus className="w-3.5 h-3.5" />
+                  <input
+                    type="color"
+                    value={boxColor}
+                    onChange={(e) => setBoxColor(e.target.value)}
+                    className="hidden"
+                  />
+                </label>
+
+                {/* Preset Swatches */}
+                {BOX_COLORS.map((c) => {
+                  const isSelected = boxColor.toLowerCase() === c.hex.toLowerCase()
+                  return (
+                    <button
+                      key={c.hex}
+                      onClick={() => {
+                        setBoxColor(c.hex)
+                        setFaceColors({})
+                      }}
+                      className={`w-6.5 h-6.5 rounded-full border shadow-2xs transition-all cursor-pointer ${
+                        isSelected
+                          ? "scale-110 border-[#1F3A5C] ring-2 ring-[#1F3A5C] ring-offset-2"
+                          : "border-white/90 hover:scale-105"
+                      }`}
+                      style={{ backgroundColor: c.hex }}
+                      title={c.name}
+                    />
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="h-px bg-[#D5E4F0]/50 w-full" />
+
+            {/* Material Texture Preview */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-[11px] font-bold text-[#718BAA] uppercase tracking-wider">
+                <span>Material</span>
+                <span className="text-[10px] font-bold text-[#2F79A6] truncate max-w-[110px]">
+                  {selectedMaterial.name}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1.5 pt-0.5">
+                {activeMaterials.map((mat) => {
+                  const isSelected = selectedMaterial.id === mat.id
+                  return (
+                    <button
+                      key={mat.id}
+                      onClick={() => handleSelectMaterial(mat)}
+                      className={`w-6 h-6 rounded-full transition-all flex items-center justify-center shrink-0 cursor-pointer ${
+                        isSelected
+                          ? "ring-2 ring-[#1F3A5C] ring-offset-2 scale-110 shadow-xs z-10"
+                          : "border border-white/90 hover:border-[#4394C3] hover:scale-105 opacity-85 hover:opacity-100"
+                      }`}
+                      style={{
+                        backgroundColor: mat.previewSwatch,
+                        backgroundImage:
+                          mat.textureType === "gold_foil"
+                            ? "linear-gradient(135deg, #d4af37 0%, #fff2a8 50%, #aa7c11 100%)"
+                            : mat.textureType === "silver_foil"
+                            ? "linear-gradient(135deg, #cbd5e1 0%, #ffffff 50%, #94a3b8 100%)"
+                            : mat.textureType === "corrugated"
+                            ? "repeating-linear-gradient(90deg, #ba8b57 0px, #ba8b57 2px, #a47640 3px, #c5945e 4px)"
+                            : undefined,
+                      }}
+                      title={`${mat.name} (${mat.subtitle})`}
+                    >
+                      {isSelected && (
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            mat.id === "glossy" || mat.id === "matte_art" || mat.id === "metallic_silver"
+                              ? "bg-[#1F3A5C]"
+                              : "bg-white"
+                          }`}
+                        />
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2">
             <button
               onClick={() => setEditorMode("mockup")}
-              className="w-full py-2.5 rounded-xl bg-[#1F3A5C] hover:bg-[#2F79A6] text-white font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-1.5 mt-3"
+              className="w-full py-2.5 px-3 rounded-2xl bg-white/80 hover:bg-white text-[#1F3A5C] font-bold text-xs shadow-2xs hover:shadow-xs transition-all border border-white/90 flex items-center justify-center gap-2 cursor-pointer active:scale-98"
             >
-              <Check className="w-3.5 h-3.5 text-[#F7CB45]" />
-              <span>Selesai & Ke 3D</span>
+              <Box className="w-4 h-4 text-[#2F79A6]" />
+              <span>Lihat Hasil di 3D Studio</span>
             </button>
           </div>
+        </aside>
 
         {renderImageLibraryModal()}
         {renderSwitchModal()}
