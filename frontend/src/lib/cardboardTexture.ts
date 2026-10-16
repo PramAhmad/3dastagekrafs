@@ -28,7 +28,7 @@ let cachedKraftBumpTex: THREE.CanvasTexture | null = null
 let cachedCorrugatedBumpTex: THREE.CanvasTexture | null = null
 
 /**
- * Generates an authentic tactile paper tooth bump map matching Pacdora PBR specs.
+ * Generates an authentic tactile paper tooth bump map matching packaging industry PBR specs.
  * Fine isotropic paper tooth, delicate fiber micro-relief, completely clean without moldy spots or vertical stripes.
  */
 export function getCardboardBumpTexture(isCorrugated: boolean = false): THREE.CanvasTexture {
@@ -111,8 +111,8 @@ export function getCardboardBumpTexture(isCorrugated: boolean = false): THREE.Ca
 }
 
 /**
- * Draws photorealistic Pacdora shoe box style cardboard background onto a 2D canvas context.
- * Exact 1:1 color match (#B59D7B) and clean paperboard pulp texture.
+ * Draws photorealistic packaging cardboard background onto a 2D canvas context.
+ * Calibrated color match (#B59D7B) and clean paperboard pulp texture.
  * Free of dirty stains, moldy specks ("bulukan"), and vertical stripes.
  */
 export function applyCardboardBackground(
@@ -132,7 +132,7 @@ export function applyCardboardBackground(
     options.materialType === "kraft" ||
     !options.materialFinish
 
-  // Exact Pacdora PBR baseline tones:
+  // Industrial PBR baseline tones:
   // Corrugated Cardboard: #B58A63 (Kardus tebal/gelap)
   // Brown Kraft Paper: #C6A07A (Eco Kraft)
   let baseColor = options.baseColor

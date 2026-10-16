@@ -437,30 +437,34 @@ export default function KemasanCatalogPage() {
               return (
                 <div
                   key={tmpl.id}
-                  className="group bg-white rounded-2xl border border-[#D5E4F0] hover:border-[#1F3A5C] p-4 flex flex-col justify-between transition-all hover:shadow-xl hover:-translate-y-1 relative"
+                  onClick={() => handleStartDesign(tmpl.id)}
+                  className="group bg-white rounded-2xl border border-[#D5E4F0] hover:border-[#1F3A5C] overflow-hidden flex flex-col justify-between transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 cursor-pointer relative"
                 >
-                  {/* Top Badge */}
-                  {tmpl.badge && (
-                    <div className="absolute top-6 right-6 z-10 px-2 py-0.5 rounded-md bg-[#1F3A5C] text-[#F7CB45] font-bold text-[9px] uppercase tracking-wider font-mono shadow-xs flex items-center gap-1">
-                      <Sparkles className="w-2.5 h-2.5 text-[#F7CB45]" />
-                      <span>{tmpl.badge}</span>
-                    </div>
-                  )}
+                  {/* Full-Bleed 3D Visual Preview Area (No Card-in-Card) */}
+                  <div className="w-full aspect-square bg-[#EEF4F8] relative overflow-hidden flex items-center justify-center p-5 group-hover:bg-[#E5EFF5] transition-colors">
+                    {/* Top Badge */}
+                    {tmpl.badge && (
+                      <div className="absolute top-3 right-3 z-10 px-2.5 py-0.5 rounded-full bg-[#1F3A5C] text-[#F7CB45] font-bold text-[9px] uppercase tracking-wider font-mono shadow-xs flex items-center gap-1">
+                        <Sparkles className="w-2.5 h-2.5 text-[#F7CB45]" />
+                        <span>{tmpl.badge}</span>
+                      </div>
+                    )}
 
-                  {/* 3D Visual Preview Area */}
-                  <div
-                    onClick={() => handleStartDesign(tmpl.id)}
-                    className="w-full aspect-square bg-[#EEF4F8] rounded-xl flex items-center justify-center p-4 cursor-pointer overflow-hidden border border-[#D5E4F0] relative group-hover:bg-[#EEF4F8]/80 transition-colors"
-                  >
+                    {/* 3D Format Pill */}
+                    <div className="absolute bottom-3 left-3 z-10 px-2 py-0.5 rounded-md bg-white/90 backdrop-blur-xs border border-white/80 text-[#1F3A5C] font-mono text-[9px] font-bold shadow-xs flex items-center gap-1">
+                      <Box className="w-3 h-3 text-[#2F79A6]" />
+                      <span>{(tmpl.model_format || "GLB").toUpperCase()}</span>
+                    </div>
+
                     {tmpl.preview_url ? (
                       <img
                         src={tmpl.preview_url}
                         alt={tmpl.name}
-                        className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300 drop-shadow-md"
+                        className="w-full h-full object-contain group-hover:scale-108 transition-transform duration-500 ease-out drop-shadow-md pointer-events-none"
                       />
                     ) : tmpl.model_3d_url ? (
-                      <div className="flex flex-col items-center justify-center gap-1.5 group-hover:scale-110 transition-transform duration-300">
-                        <div className="w-20 h-20 rounded-2xl bg-white/90 border border-[#4394C3]/30 shadow-md flex flex-col items-center justify-center gap-1 p-2">
+                      <div className="flex flex-col items-center justify-center gap-1.5 group-hover:scale-108 transition-transform duration-300">
+                        <div className="w-16 h-16 rounded-2xl bg-white/90 border border-[#4394C3]/30 shadow-md flex flex-col items-center justify-center gap-1 p-2">
                           <Box className="w-8 h-8 text-[#2F79A6] animate-pulse" />
                           <span className="text-[9px] font-black font-mono text-[#1F3A5C] tracking-wider uppercase">
                             {(tmpl.model_format || "GLB").toUpperCase()}
@@ -471,8 +475,8 @@ export default function KemasanCatalogPage() {
                         </span>
                       </div>
                     ) : (
-                      <div className="flex flex-col items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                        <Box className="w-20 h-20 text-[#2F79A6]" />
+                      <div className="flex flex-col items-center justify-center group-hover:scale-108 transition-transform duration-300">
+                        <Box className="w-16 h-16 text-[#2F79A6]" />
                         <span className="text-[9.5px] font-mono font-bold text-[#1F3A5C] mt-2">
                           Parametrik CAD 3D
                         </span>
@@ -480,14 +484,14 @@ export default function KemasanCatalogPage() {
                     )}
                   </div>
 
-                  {/* Model Meta Information */}
-                  <div className="pt-3.5 space-y-2 flex-1 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <span className="px-2 py-0.5 rounded-md bg-[#EEF4F8] border border-[#D5E4F0] text-[#1F3A5C] font-mono text-[9px] uppercase font-bold">
+                  {/* Clean, Simple Model Body */}
+                  <div className="p-4 flex-1 flex flex-col justify-between gap-3 bg-white">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="px-2 py-0.5 rounded-md bg-[#EEF4F8] text-[#1F3A5C] font-mono text-[9.5px] uppercase font-bold">
                           {tmpl.category}
                         </span>
-                        <span className="text-[10px] font-mono text-[#718BAA]">
+                        <span className="text-[10.5px] font-mono text-[#718BAA]">
                           {tmpl.default_dimensions ? (
                             tmpl.category === "JAR" || tmpl.category === "BOTTLE" || tmpl.category === "CAN" || tmpl.category === "CUP" ? (
                               `Ø${(tmpl.default_dimensions.radius_mm || 25) * 2} × ${tmpl.default_dimensions.height_mm || 35} mm`
@@ -500,57 +504,36 @@ export default function KemasanCatalogPage() {
                         </span>
                       </div>
 
-                      <h3
-                        onClick={() => handleStartDesign(tmpl.id)}
-                        className="font-extrabold text-[#1F3A5C] text-sm group-hover:text-[#2F79A6] cursor-pointer transition-colors line-clamp-1"
-                      >
+                      <h3 className="font-extrabold text-[#1F3A5C] text-sm group-hover:text-[#2F79A6] transition-colors line-clamp-1">
                         {tmpl.name}
                       </h3>
-                      <p className="text-[10.5px] text-[#4B6B94] line-clamp-2 mt-0.5 leading-snug">
+                      <p className="text-[11px] text-[#4B6B94] line-clamp-1 leading-snug">
                         {tmpl.description}
                       </p>
                     </div>
 
-                    {/* Available Materials Swatches */}
-                    <div className="pt-2 border-t border-[#EEF4F8] space-y-1">
-                      <div className="flex items-center justify-between text-[9.5px] text-[#718BAA]">
-                        <span>Bahan Tersedia:</span>
-                        <span className="font-bold text-[#1F3A5C]">{materials.length} Pilihan</span>
-                      </div>
-                      <div className="flex items-center gap-1 overflow-hidden">
-                        {materials.slice(0, 5).map((matId) => {
-                          const matObj = MASTER_MATERIAL_OPTIONS.find((m) => m.id === matId)
-                          return (
-                            <span
-                              key={matId}
-                              className="w-4 h-4 rounded-full border border-neutral-300 shrink-0 shadow-2xs"
-                              style={{ backgroundColor: matObj?.color || "#94a3b8" }}
-                              title={matObj ? `${matObj.name} (${matObj.subtitle})` : matId}
-                            />
-                          )
-                        })}
-                        {materials.length > 5 && (
-                          <span className="text-[9px] text-[#718BAA] font-bold">
-                            +{materials.length - 5}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Action CTAs */}
-                    <div className="pt-3 flex items-center gap-2">
+                    {/* Simple Action CTAs */}
+                    <div className="flex items-center gap-2 pt-1">
                       <button
-                        onClick={() => handleStartDesign(tmpl.id)}
-                        className="flex-1 py-2 rounded-xl bg-[#1F3A5C] hover:bg-[#2F79A6] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-95 group/btn"
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleStartDesign(tmpl.id)
+                        }}
+                        className="flex-1 py-2.5 rounded-xl bg-[#1F3A5C] group-hover:bg-[#2F79A6] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-98"
                       >
                         <Box className="w-3.5 h-3.5 text-[#F7CB45]" />
                         <span>Desain 3D</span>
-                        <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
+                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                       </button>
 
                       <button
-                        onClick={() => setSelectedDetailModal(tmpl)}
-                        className="p-2 rounded-xl bg-[#EEF4F8] hover:bg-[#D5E4F0] text-[#1F3A5C] transition-all border border-[#D5E4F0]"
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSelectedDetailModal(tmpl)
+                        }}
+                        className="p-2.5 rounded-xl bg-[#EEF4F8] hover:bg-[#D5E4F0] text-[#1F3A5C] transition-all border border-[#D5E4F0]"
                         title="Lihat Rincian Spesifikasi & Dieline"
                       >
                         <Info className="w-4 h-4 text-[#2F79A6]" />

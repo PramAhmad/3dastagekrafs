@@ -117,7 +117,7 @@ const BOX_COLORS = [
   { name: "Navy Premium", hex: BRAND_COLORS.navy },
   { name: "Kuning Cerah (Aksen)", hex: BRAND_COLORS.yellow },
   { name: "Karton Putih Alami", hex: "#F4F3EF" },
-  { name: "Eco Kraft (Pacdora)", hex: "#C6A07A" },
+  { name: "Eco Kraft Cokelat", hex: "#C6A07A" },
   { name: "Kardus Corrugated Tebal", hex: "#B58A63" },
   { name: "Hitam Pekat", hex: "#18181b" },
   { name: "Abu Natural", hex: "#71717a" },
@@ -300,7 +300,7 @@ function EditorComponent() {
   const [showImageLibraryModal, setShowImageLibraryModal] = useState(false)
   const [replacingObjectId, setReplacingObjectId] = useState<string | null>(null)
 
-  // Camera Orbit 360° (Pacdora-Style)
+  // Camera Orbit 360° Viewport
   const [cameraView, setCameraView] = useState<"iso" | "front" | "back" | "top" | "bottom" | "side">("iso")
   const [dielineZoom, setDielineZoom] = useState(100)
   const [openProgress, setOpenProgress] = useState(0)
