@@ -176,7 +176,7 @@ export default function DielineFoldCanvas({
       applyCardboardBackground(ctx, canvas.width, canvas.height, {
         baseColor: boxColor,
         materialFinish: materialFinish,
-        isCorrugated: false,
+        isCorrugated: (materialFinish as string) === "corrugated",
       })
 
       // Draw SVG dieline graphics

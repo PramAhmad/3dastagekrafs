@@ -514,14 +514,28 @@ function ContinuousBoxModel({
 
   const isMetallic = materialFinish === "metallic" || materialType === "gold_foil" || materialType === "silver_foil"
   const isGlossy = materialFinish === "glossy"
-  const isCorrugated = materialType === "corrugated"
-  const isKraft = materialFinish === "kraft" || materialType === "corrugated" || materialType === "kraft"
-  const kraftBumpMap = isKraft ? getKraftBumpTexture(isCorrugated) : null
-  const kraftBumpScale = 0.008
+  const isCorrugated = materialType === "corrugated" || (materialFinish as string) === "corrugated"
+  const isKraftPaper = (materialFinish === "kraft" || materialType === "kraft") && !isCorrugated
+  const isCardboardFamily = isCorrugated || isKraftPaper || materialFinish === "kraft" || !materialFinish
+  const isKraft = isCardboardFamily
 
-  const roughness = isGlossy ? 0.06 : isKraft ? 0.88 : isMetallic ? 0.15 : 0.65
+  const kraftBumpMap = isCardboardFamily ? getKraftBumpTexture(isCorrugated) : null
+  const kraftBumpScale = isCorrugated ? 0.014 : 0.005
+
+  const roughness = isGlossy
+    ? 0.06
+    : isCorrugated
+    ? 0.94
+    : isKraftPaper
+    ? 0.82
+    : isMetallic
+    ? 0.15
+    : 0.65
   const metalness = isMetallic ? 0.88 : isGlossy ? 0.05 : 0.0
   const clearcoat = isGlossy ? 1.0 : 0.0
+  const sheen = isCorrugated ? 0.18 : isKraftPaper ? 0.32 : 0.0
+  const sheenRoughness = isCorrugated ? 0.85 : 0.75
+  const sheenColor = isCorrugated ? new THREE.Color("#c8985c") : new THREE.Color("#d8b485")
 
   const loadedImages = useImageCache(objects)
 
@@ -705,11 +719,11 @@ function ContinuousBoxModel({
       metalness,
       clearcoat,
       clearcoatRoughness: 0.1,
-      sheen: isKraft ? 0.30 : 0.0,
-      sheenRoughness: 0.80,
-      sheenColor: new THREE.Color("#d8b485"),
-      bumpMap: isKraft ? kraftBumpMap : null,
-      bumpScale: isKraft ? kraftBumpScale : 0,
+      sheen: isCardboardFamily ? sheen : 0.0,
+      sheenRoughness,
+      sheenColor,
+      bumpMap: isCardboardFamily ? kraftBumpMap : null,
+      bumpScale: isCardboardFamily ? kraftBumpScale : 0,
     })
 
     const topMat = new THREE.MeshPhysicalMaterial({
@@ -719,11 +733,11 @@ function ContinuousBoxModel({
       metalness,
       clearcoat,
       clearcoatRoughness: 0.1,
-      sheen: isKraft ? 0.30 : 0.0,
-      sheenRoughness: 0.80,
-      sheenColor: new THREE.Color("#d8b485"),
-      bumpMap: isKraft ? kraftBumpMap : null,
-      bumpScale: isKraft ? kraftBumpScale : 0,
+      sheen: isCardboardFamily ? sheen : 0.0,
+      sheenRoughness,
+      sheenColor,
+      bumpMap: isCardboardFamily ? kraftBumpMap : null,
+      bumpScale: isCardboardFamily ? kraftBumpScale : 0,
     })
 
     const bottomMat = new THREE.MeshPhysicalMaterial({
@@ -732,23 +746,23 @@ function ContinuousBoxModel({
       metalness,
       clearcoat,
       clearcoatRoughness: 0.1,
-      sheen: isKraft ? 0.30 : 0.0,
-      sheenRoughness: 0.80,
-      sheenColor: new THREE.Color("#d8b485"),
-      bumpMap: isKraft ? kraftBumpMap : null,
-      bumpScale: isKraft ? kraftBumpScale : 0,
+      sheen: isCardboardFamily ? sheen : 0.0,
+      sheenRoughness,
+      sheenColor,
+      bumpMap: isCardboardFamily ? kraftBumpMap : null,
+      bumpScale: isCardboardFamily ? kraftBumpScale : 0,
     })
 
     const insideMat = new THREE.MeshPhysicalMaterial({
-      color: faceColors?.inside || (isKraft ? "#b88959" : "#e8dfd5"),
+      color: faceColors?.inside || (isCardboardFamily ? (isCorrugated ? "#aa7742" : "#b88959") : "#e8dfd5"),
       roughness: 0.90,
       metalness: 0.0,
-      sheen: isKraft ? 0.28 : 0.0,
-      sheenRoughness: 0.80,
-      sheenColor: new THREE.Color("#d8b485"),
+      sheen: isCardboardFamily ? sheen * 0.8 : 0.0,
+      sheenRoughness,
+      sheenColor,
       side: THREE.DoubleSide,
-      bumpMap: isKraft ? kraftBumpMap : null,
-      bumpScale: isKraft ? kraftBumpScale * 0.7 : 0,
+      bumpMap: isCardboardFamily ? kraftBumpMap : null,
+      bumpScale: isCardboardFamily ? kraftBumpScale * 0.7 : 0,
     })
 
     return {
@@ -758,7 +772,7 @@ function ContinuousBoxModel({
       bottomMat,
       insideMat,
     }
-  }, [wrapTexture, topTexture, boxColor, faceColors, materialFinish, roughness, metalness, clearcoat, isKraft, kraftBumpMap, kraftBumpScale])
+  }, [wrapTexture, topTexture, boxColor, faceColors, materialFinish, roughness, metalness, clearcoat, isCardboardFamily, isCorrugated, sheen, sheenRoughness, sheenColor, kraftBumpMap, kraftBumpScale])
 
   // Find which object is located at continuous UV coordinate
   const findObjectAtUV = useCallback(
@@ -1953,16 +1967,33 @@ function CustomMeshModel({
     }
   }, [modelUrl, isStl])
 
-  const isCorrugated = materialType === "corrugated"
-  const isKraft = materialFinish === "kraft" || materialType === "corrugated" || materialType === "kraft"
-  const kraftBumpMap = isKraft ? getKraftBumpTexture(isCorrugated) : null
-  const kraftBumpScale = 0.008
+  const isMetallic = materialFinish === "metallic" || materialType === "gold_foil" || materialType === "silver_foil"
+  const isGlossy = materialFinish === "glossy"
+  const isCorrugated = materialType === "corrugated" || (materialFinish as string) === "corrugated"
+  const isKraftPaper = (materialFinish === "kraft" || materialType === "kraft") && !isCorrugated
+  const isCardboardFamily = isCorrugated || isKraftPaper || materialFinish === "kraft" || !materialFinish
+  const isKraft = isCardboardFamily
+
+  const kraftBumpMap = isCardboardFamily ? getKraftBumpTexture(isCorrugated) : null
+  const kraftBumpScale = isCorrugated ? 0.014 : 0.005
 
   // Dynamic Material Properties
-  const roughness =
-    isKraft ? 0.88 : materialFinish === "glossy" ? 0.08 : materialFinish === "metallic" ? 0.15 : materialFinish === "frosted" ? 0.4 : 0.65
-  const metalness = isKraft ? 0.0 : materialFinish === "metallic" ? 0.88 : 0.04
-  const clearcoat = isKraft ? 0.0 : materialFinish === "glossy" ? 0.95 : 0.0
+  const roughness = isGlossy
+    ? 0.06
+    : isCorrugated
+    ? 0.94
+    : isKraftPaper
+    ? 0.82
+    : isMetallic
+    ? 0.15
+    : materialFinish === "frosted"
+    ? 0.4
+    : 0.65
+  const metalness = isCardboardFamily ? 0.0 : materialFinish === "metallic" ? 0.88 : 0.04
+  const clearcoat = isCardboardFamily ? 0.0 : materialFinish === "glossy" ? 0.95 : 0.0
+  const sheen = isCorrugated ? 0.18 : isKraftPaper ? 0.32 : 0.0
+  const sheenRoughness = isCorrugated ? 0.85 : 0.75
+  const sheenColor = isCorrugated ? new THREE.Color("#c8985c") : new THREE.Color("#d8b485")
 
   // 3. Dynamic Offscreen Texture Baking (Manifest UV Bridge + SVG Dieline + Decal Artwork)
   useEffect(() => {
@@ -2218,10 +2249,10 @@ function CustomMeshModel({
         mat.roughness = roughness
         mat.metalness = metalness
         mat.clearcoat = clearcoat
-        mat.sheen = isKraft ? 0.30 : 0.0
-        mat.sheenRoughness = 0.80
-        mat.sheenColor = new THREE.Color("#d8b485")
-        if (isKraft && kraftBumpMap) {
+        mat.sheen = isCardboardFamily ? sheen : 0.0
+        mat.sheenRoughness = sheenRoughness
+        mat.sheenColor = sheenColor
+        if (isCardboardFamily && kraftBumpMap) {
           kraftBumpMap.wrapS = THREE.RepeatWrapping
           kraftBumpMap.wrapT = THREE.RepeatWrapping
           kraftBumpMap.repeat.set(3, 3)
@@ -2426,7 +2457,7 @@ function CustomMeshModel({
         }
       })
     }
-  }, [gltfScene, dielineTexture, svgPanels, parsedManifest, boxColor, roughness, metalness, clearcoat, isKraft, kraftBumpMap, kraftBumpScale])
+  }, [gltfScene, dielineTexture, svgPanels, parsedManifest, boxColor, roughness, metalness, clearcoat, isCardboardFamily, isCorrugated, sheen, sheenRoughness, sheenColor, kraftBumpMap, kraftBumpScale])
 
   // 5. 3DPAKS-Style Adaptive Scaling & Strict Max-Visual Bounding Cap
   // Normalizes 1280px assets, millimeter meshes, and meter models into a comfortable viewport size (~1.15 world units)

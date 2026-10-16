@@ -650,9 +650,9 @@ export default function DielineCanvas({
     if (!ctx) return ""
     applyCardboardBackground(ctx, 512, 512, {
       baseColor: boxColor,
-      materialFinish: "kraft",
-      materialType: "kraft",
-      isCorrugated: false,
+      materialFinish: "corrugated",
+      materialType: "corrugated",
+      isCorrugated: true,
       seed: 8888,
     })
     return canvas.toDataURL("image/jpeg", 0.90)
