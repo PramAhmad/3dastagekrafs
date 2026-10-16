@@ -1421,15 +1421,15 @@ function EditorComponent() {
             </button>
           </div>
 
-          {/* Tab Navigation Ribbon */}
-          <div className="px-4 sm:px-5 pt-3 pb-2 bg-[#EEF4F8] border-b border-[#D5E4F0] flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
-            <div className="flex items-center gap-2">
+          {/* Tab Navigation Ribbon with generous padding */}
+          <div className="px-5 sm:px-6 py-4 bg-[#F8FAFC] border-b border-[#D5E4F0] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="p-1.5 bg-[#EEF4F8] rounded-2xl border border-[#D5E4F0] flex items-center gap-2">
               <button
                 onClick={() => setSwitchModalTab("models")}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
                   switchModalTab === "models"
                     ? "bg-[#1F3A5C] text-[#F7CB45] shadow-xs"
-                    : "bg-white hover:bg-white/80 text-[#1F3A5C] border border-[#D5E4F0]"
+                    : "text-[#4B6B94] hover:text-[#1F3A5C] hover:bg-white/60"
                 }`}
               >
                 <Box className="w-3.5 h-3.5" />
@@ -1438,10 +1438,10 @@ function EditorComponent() {
 
               <button
                 onClick={() => setSwitchModalTab("projects")}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
                   switchModalTab === "projects"
                     ? "bg-[#1F3A5C] text-[#F7CB45] shadow-xs"
-                    : "bg-white hover:bg-white/80 text-[#1F3A5C] border border-[#D5E4F0]"
+                    : "text-[#4B6B94] hover:text-[#1F3A5C] hover:bg-white/60"
                 }`}
               >
                 <FolderOpen className="w-3.5 h-3.5" />
@@ -1449,9 +1449,9 @@ function EditorComponent() {
               </button>
             </div>
 
-            <div className="hidden md:flex items-center gap-1.5 text-[10px] font-bold text-[#4B6B94] font-mono">
+            <div className="hidden md:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-[#D5E4F0] text-[10.5px] font-bold text-[#4B6B94] font-mono shadow-2xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Model Aktif: {selectedTemplate.name}</span>
+              <span>Model Aktif: <strong className="text-[#1F3A5C] font-extrabold">{selectedTemplate.name}</strong></span>
             </div>
           </div>
 
@@ -1756,18 +1756,6 @@ function EditorComponent() {
             </button>
             <div className="flex items-center gap-2">
               <span className="font-extrabold text-[#1F3A5C] text-xs tracking-tight">Upload &amp; Desain Pola (2D Dieline)</span>
-              <button
-                onClick={() => {
-                  setSwitchModalTab("models")
-                  setShowSwitchModal(true)
-                }}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#EEF4F8] hover:bg-[#D5E4F0] text-[#1F3A5C] font-bold text-xs border border-[#D5E4F0] hover:border-[#4394C3] transition-all cursor-pointer shadow-2xs group"
-                title="Ganti Model Kemasan atau Buka Desain Lain"
-              >
-                <Box className="w-3.5 h-3.5 text-[#2F79A6] group-hover:scale-110 transition-transform" />
-                <span className="max-w-[120px] truncate">{selectedTemplate.name}</span>
-                <ChevronDown className="w-3 h-3 text-[#718BAA]" />
-              </button>
             </div>
           </div>
 
@@ -2246,69 +2234,40 @@ function EditorComponent() {
               type="text"
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
-              className="font-extrabold text-[#1F3A5C] tracking-tight text-xs bg-transparent hover:bg-[#EEF4F8] focus:bg-white px-2.5 py-1 rounded-lg border border-transparent focus:border-[#4394C3] focus:outline-none transition-all max-w-[170px]"
+              className="font-extrabold text-[#1F3A5C] tracking-tight text-xs bg-transparent hover:bg-[#EEF4F8] focus:bg-white px-2.5 py-1 rounded-lg border border-transparent focus:border-[#4394C3] focus:outline-none transition-all max-w-[200px]"
               title="Klik untuk ubah nama proyek"
             />
-            <button
-              onClick={() => {
-                setSwitchModalTab("models")
-                setShowSwitchModal(true)
-              }}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#EEF4F8] hover:bg-[#D5E4F0] text-[#1F3A5C] font-bold text-xs border border-[#D5E4F0] hover:border-[#4394C3] transition-all cursor-pointer shadow-2xs group"
-              title="Ganti Model Kemasan atau Buka Desain Lain"
-            >
-              <Box className="w-3.5 h-3.5 text-[#2F79A6] group-hover:scale-110 transition-transform" />
-              <span className="max-w-[120px] truncate">{selectedTemplate.name}</span>
-              <ChevronDown className="w-3 h-3 text-[#718BAA]" />
-            </button>
           </div>
         </div>
 
-        {/* Center Camera Orbit Buttons */}
+        {/* Center Actions: Undo & Redo */}
         <div className="flex items-center gap-1 bg-[#EEF4F8] p-1 rounded-xl border border-[#D5E4F0]">
-          {(["iso", "front", "back", "top", "bottom", "side"] as const).map((view) => (
-            <button
-              key={view}
-              onClick={() => setCameraView(view)}
-              className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                cameraView === view
-                  ? "bg-[#1F3A5C] text-white shadow-xs"
-                  : "text-[#4B6B94] hover:text-[#1F3A5C]"
-              }`}
-            >
-              {view === "iso"
-                ? "3D Orbit"
-                : view === "front"
-                ? "Depan"
-                : view === "back"
-                ? "Belakang"
-                : view === "top"
-                ? "Atas"
-                : view === "bottom"
-                ? "Bawah"
-                : "Samping"}
-            </button>
-          ))}
-          <div className="w-px h-4 bg-[#D5E4F0] mx-0.5" />
           <button
             onClick={handleUndo}
             disabled={undoStack.length === 0}
-            className={`p-1.5 rounded-lg text-[10px] transition-all ${
-              undoStack.length > 0 ? "text-[#1F3A5C] hover:bg-[#D5E4F0] cursor-pointer" : "text-[#A0B6CD] opacity-40 cursor-not-allowed"
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+              undoStack.length > 0
+                ? "text-[#1F3A5C] hover:bg-white hover:shadow-2xs cursor-pointer"
+                : "text-[#A0B6CD] opacity-40 cursor-not-allowed"
             }`}
             title="Undo (Ctrl+Z)"
           >
             <Undo2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline text-[11px]">Undo</span>
           </button>
+          <div className="w-px h-3.5 bg-[#D5E4F0]" />
           <button
             onClick={handleRedo}
             disabled={redoStack.length === 0}
-            className={`p-1.5 rounded-lg text-[10px] transition-all ${
-              redoStack.length > 0 ? "text-[#1F3A5C] hover:bg-[#D5E4F0] cursor-pointer" : "text-[#A0B6CD] opacity-40 cursor-not-allowed"
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+              redoStack.length > 0
+                ? "text-[#1F3A5C] hover:bg-white hover:shadow-2xs cursor-pointer"
+                : "text-[#A0B6CD] opacity-40 cursor-not-allowed"
             }`}
             title="Redo (Ctrl+Y)"
           >
             <Redo2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline text-[11px]">Redo</span>
           </button>
         </div>
 
@@ -2710,12 +2669,31 @@ function EditorComponent() {
           </div>
         </aside>
 
-        {/* Floating Info Pill (Bottom Center) */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 px-4 py-1.5 rounded-full bg-white/90 border border-[#D5E4F0] text-[10px] text-[#1F3A5C] backdrop-blur-md shadow-md flex items-center gap-2.5 font-semibold pointer-events-auto">
-          <span className="w-2 h-2 rounded-full bg-[#4394C3] animate-pulse" />
-          <span>Model: <strong className="text-[#1F3A5C] font-extrabold">{selectedTemplate.name}</strong></span>
-          <span className="text-[#D5E4F0]">•</span>
-          <span>Dimensi: <strong className="text-[#2F79A6] font-mono">{length}×{width}×{height} mm</strong></span>
+        {/* Floating Camera Orbit Controls (Bottom Center of 3D Viewport) */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 p-1 rounded-2xl bg-white/90 border border-[#D5E4F0] backdrop-blur-md shadow-lg shadow-[#1F3A5C]/10 flex items-center gap-1 font-semibold pointer-events-auto">
+          {(["iso", "front", "back", "top", "bottom", "side"] as const).map((view) => (
+            <button
+              key={view}
+              onClick={() => setCameraView(view)}
+              className={`px-3 py-1.5 rounded-xl text-[10.5px] font-bold transition-all cursor-pointer ${
+                cameraView === view
+                  ? "bg-[#1F3A5C] text-white shadow-xs scale-102"
+                  : "text-[#4B6B94] hover:text-[#1F3A5C] hover:bg-[#EEF4F8]"
+              }`}
+            >
+              {view === "iso"
+                ? "3D Orbit"
+                : view === "front"
+                ? "Depan"
+                : view === "back"
+                ? "Belakang"
+                : view === "top"
+                ? "Atas"
+                : view === "bottom"
+                ? "Bawah"
+                : "Samping"}
+            </button>
+          ))}
         </div>
 
         {/* Floating Save Toast Notification */}
