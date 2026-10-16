@@ -24,6 +24,8 @@ import {
   Palette,
   ExternalLink,
   ChevronRight,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react"
 
 import DielineFoldCanvas from "@/components/3d/DielineFoldCanvas"
@@ -79,6 +81,7 @@ export default function SvgToModelPage() {
   const [svgString, setSvgString] = useState<string>("")
   const [dielinePreviewSvg, setDielinePreviewSvg] = useState<string>("")
   const [modelTextureSvg, setModelTextureSvg] = useState<string | null>(null)
+  const [previewZoom, setPreviewZoom] = useState<number>(1)
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(true)
   const [analysis, setAnalysis] = useState<DielineAnalysis | null>(null)
   const [isInspectorOpen, setIsInspectorOpen] = useState<boolean>(false)
@@ -116,10 +119,15 @@ export default function SvgToModelPage() {
     setTimeout(() => setToastMsg(null), 4000)
   }
 
+  const changePreviewZoom = (delta: number) => {
+    setPreviewZoom((current) => Math.min(3, Math.max(0.5, Number((current + delta).toFixed(2)))))
+  }
+
   // 1. Load Initial Preset or SVG
   const loadPreset = async (presetId: string) => {
     setSelectedPresetId(presetId)
     setIsAnalyzing(true)
+    setPreviewZoom(1)
 
     const preset = SAMPLE_PRESETS.find((p) => p.id === presetId)
     if (!preset) return
@@ -183,6 +191,7 @@ export default function SvgToModelPage() {
     if (!file) return
 
     setIsAnalyzing(true)
+    setPreviewZoom(1)
     setSelectedPresetId("custom-upload")
     const cleanName = file.name.replace(/\.[^/.]+$/, "")
     setTemplateName(cleanName)
@@ -394,13 +403,18 @@ export default function SvgToModelPage() {
                 <p className="truncate text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#1F3A5C]">Preview dieline</p>
                 <p className="truncate text-[9px] text-[#718BAA]">Sumber SVG asli: cut, crease, bleed, dan area kerja</p>
               </div>
-              <span className="shrink-0 rounded-full border border-[#BFD9E8] bg-[#EAF4F9] px-2 py-0.5 font-mono text-[8px] font-bold text-[#2F79A6]">2D SOURCE</span>
+              <div className="flex shrink-0 items-center gap-1 rounded-xl border border-[#D5E4F0] bg-[#F8FAFC] p-0.5">
+                <button type="button" onClick={() => changePreviewZoom(-0.25)} disabled={previewZoom <= 0.5} aria-label="Zoom out preview dieline" className="flex h-7 w-7 items-center justify-center rounded-lg text-[#4B6B94] hover:bg-white disabled:opacity-35"><ZoomOut className="h-3.5 w-3.5" /></button>
+                <button type="button" onClick={() => setPreviewZoom(1)} aria-label="Reset zoom preview dieline" className="min-w-10 rounded-lg px-1.5 py-1 font-mono text-[8px] font-extrabold text-[#1F3A5C] hover:bg-white">{Math.round(previewZoom * 100)}%</button>
+                <button type="button" onClick={() => changePreviewZoom(0.25)} disabled={previewZoom >= 3} aria-label="Zoom in preview dieline" className="flex h-7 w-7 items-center justify-center rounded-lg text-[#2F79A6] hover:bg-white disabled:opacity-35"><ZoomIn className="h-3.5 w-3.5" /></button>
+              </div>
             </div>
-            <div className="flex aspect-[4/3] items-center justify-center overflow-hidden bg-[linear-gradient(45deg,#f4f7fa_25%,transparent_25%),linear-gradient(-45deg,#f4f7fa_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#f4f7fa_75%),linear-gradient(-45deg,transparent_75%,#f4f7fa_75%)] bg-[length:16px_16px] bg-[position:0_0,0_8px,8px_-8px,-8px_0px] p-3">
+            <div className="flex aspect-[4/3] items-center justify-center overflow-auto bg-[linear-gradient(45deg,#f4f7fa_25%,transparent_25%),linear-gradient(-45deg,#f4f7fa_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#f4f7fa_75%),linear-gradient(-45deg,transparent_75%,#f4f7fa_75%)] bg-[length:16px_16px] bg-[position:0_0,0_8px,8px_-8px,-8px_0px] p-3">
               <img
                 src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(dielinePreviewSvg)}`}
                 alt="Preview dieline SVG yang diupload"
-                className="h-full w-full object-contain"
+                className="shrink-0 object-contain transition-[width,height] duration-200"
+                style={{ width: `${previewZoom * 100}%`, height: `${previewZoom * 100}%` }}
               />
             </div>
           </div>
@@ -488,9 +502,16 @@ export default function SvgToModelPage() {
       )}
 
       {svgSourceTab === "analysis" && <div className="space-y-1.5">
-        <span className="text-[10px] font-bold text-[#718BAA] uppercase tracking-wider">Preview Pola Lembaran 2D (Cut & Crease):</span>
-        <div className="w-full aspect-4/3 bg-[#F8FAFC] rounded-2xl border border-[#D5E4F0] p-2 flex items-center justify-center overflow-hidden relative shadow-inner">
-          {dielinePreviewSvg ? <img src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(dielinePreviewSvg)}`} alt="Preview pola dieline SVG" className="h-full w-full object-contain" /> : <div className="text-center text-[#718BAA] space-y-1"><RefreshCw className="w-6 h-6 animate-spin mx-auto text-[#2F79A6]" /><p className="text-[10px]">Memuat pola SVG...</p></div>}
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] font-bold text-[#718BAA] uppercase tracking-wider">Preview Pola Lembaran 2D:</span>
+          <div className="flex items-center gap-0.5 rounded-lg border border-[#D5E4F0] bg-white p-0.5">
+            <button type="button" onClick={() => changePreviewZoom(-0.25)} disabled={previewZoom <= 0.5} aria-label="Zoom out preview" className="flex h-7 w-7 items-center justify-center rounded-md text-[#4B6B94] hover:bg-[#EEF4F8] disabled:opacity-35"><ZoomOut className="h-3.5 w-3.5" /></button>
+            <button type="button" onClick={() => setPreviewZoom(1)} className="min-w-9 rounded-md px-1 font-mono text-[8px] font-bold text-[#1F3A5C] hover:bg-[#EEF4F8]">{Math.round(previewZoom * 100)}%</button>
+            <button type="button" onClick={() => changePreviewZoom(0.25)} disabled={previewZoom >= 3} aria-label="Zoom in preview" className="flex h-7 w-7 items-center justify-center rounded-md text-[#2F79A6] hover:bg-[#EEF4F8] disabled:opacity-35"><ZoomIn className="h-3.5 w-3.5" /></button>
+          </div>
+        </div>
+        <div className="w-full aspect-4/3 bg-[#F8FAFC] rounded-2xl border border-[#D5E4F0] p-2 flex items-center justify-center overflow-auto relative shadow-inner">
+          {dielinePreviewSvg ? <img src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(dielinePreviewSvg)}`} alt="Preview pola dieline SVG" className="shrink-0 object-contain transition-[width,height] duration-200" style={{ width: `${previewZoom * 100}%`, height: `${previewZoom * 100}%` }} /> : <div className="text-center text-[#718BAA] space-y-1"><RefreshCw className="w-6 h-6 animate-spin mx-auto text-[#2F79A6]" /><p className="text-[10px]">Memuat pola SVG...</p></div>}
         </div>
       </div>}
     </div>
