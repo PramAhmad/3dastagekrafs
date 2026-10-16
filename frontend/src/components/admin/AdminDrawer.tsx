@@ -23,9 +23,19 @@ const FOCUSABLE_SELECTOR = [
 
 function getVisibleFocusableElements(panel: HTMLElement) {
   return Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter((element) => {
-    if (element.hasAttribute("hidden") || element.getAttribute("aria-hidden") === "true") return false
-    const style = window.getComputedStyle(element)
-    return style.display !== "none" && style.visibility !== "hidden" && element.getClientRects().length > 0
+    let current: HTMLElement | null = element
+
+    while (current && current !== panel) {
+      if (current.hasAttribute("hidden") || current.getAttribute("aria-hidden") === "true" || current.hasAttribute("inert")) {
+        return false
+      }
+
+      const style = window.getComputedStyle(current)
+      if (style.display === "none" || style.visibility === "hidden") return false
+      current = current.parentElement
+    }
+
+    return element.getClientRects().length > 0
   })
 }
 
