@@ -15,6 +15,7 @@ export type AssemblyFamily =
   | "rsc_corrugated"
   | "film_seal_and_deformation"
   | "flat_sheet_or_curved_label_wrap"
+  | "flat_sheet_selective_folding"
 
 export interface AssemblyPreviewSpec {
   family: AssemblyFamily
@@ -62,6 +63,13 @@ export const DIELINE_ASSEMBLY_CATALOG: Record<string, AssemblyPreviewSpec> = {
   "mousepad-mockup": { family: "flat_sheet_or_curved_label_wrap", dimensions: { L: 230, W: 3, H: 200 } },
   "postcard-a6": { family: "flat_sheet_or_curved_label_wrap", dimensions: { L: 148, W: 0.4, H: 105 } },
   "poster-a3": { family: "flat_sheet_or_curved_label_wrap", dimensions: { L: 297, W: 0.15, H: 420 } },
+  "belly-band": { family: "flat_sheet_selective_folding", dimensions: { L: 110, W: 20, H: 60 } },
+  "calendar-desk": { family: "flat_sheet_selective_folding", dimensions: { L: 210, W: 90, H: 120 } },
+  "envelope-mockup": { family: "flat_sheet_selective_folding", dimensions: { L: 220, W: 1, H: 110 } },
+  "folder-map": { family: "flat_sheet_selective_folding", dimensions: { L: 225, W: 6, H: 310 } },
+  "wedding-invitation": { family: "flat_sheet_selective_folding", dimensions: { L: 150, W: 0.4, H: 210 } },
+  "notebook-cover": { family: "flat_sheet_selective_folding", dimensions: { L: 148, W: 12, H: 210 } },
+  "trifold-brochure": { family: "flat_sheet_selective_folding", dimensions: { L: 100, W: 0.15, H: 210 } },
 }
 
 export function getAssemblyPreviewSpec(modelId?: string): AssemblyPreviewSpec | undefined {

@@ -437,6 +437,8 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
     boxType = "pouch"
   } else if (assemblySpec?.family === "flat_sheet_or_curved_label_wrap") {
     boxType = typeof assemblySpec.dimensions.outerDiameter === "number" ? "cylinder-wrap" : "flat-card"
+  } else if (assemblySpec?.family === "flat_sheet_selective_folding") {
+    boxType = "folder"
   } else if (assemblySpec?.family === "tapered_cup" || assemblySpec?.family === "tapered_cup_sleeve" || assemblySpec?.family === "circular_tube") {
     boxType = "cylinder-wrap"
   } else if (assemblySpec?.family === "rolled_wall_mailer" || assemblySpec?.family === "food_clamshell") {
@@ -971,6 +973,112 @@ export function buildFolded3DModel(
     box.position.y = H / 2
     rootGroup.add(box)
     const updateFold = (progress: number) => { box.scale.y = Math.max(0.02, Math.min(1, progress)) }
+    updateFold(1)
+    return { rootGroup, updateFold, materials }
+  }
+
+  if (family === "flat_sheet_selective_folding") {
+    const L = numberSpec("L", analysis.dims.length)
+    const W = numberSpec("W", analysis.dims.width)
+    const H = numberSpec("H", analysis.dims.height)
+    const localScale = 1.5 / Math.max(L * 2, H, 100)
+    const group = new THREE.Group()
+    rootGroup.add(group)
+
+    if (analysis.modelId === "belly-band") {
+      const faceW = L * localScale
+      const sideW = W * localScale
+      const height = H * localScale
+      const front = makeMesh(new THREE.PlaneGeometry(faceW, height)); front.position.set(0, height / 2, sideW / 2); group.add(front)
+      const back = makeMesh(new THREE.PlaneGeometry(faceW, height)); back.rotation.y = Math.PI; back.position.set(0, height / 2, -sideW / 2); group.add(back)
+      const left = makeMesh(new THREE.PlaneGeometry(sideW, height)); left.rotation.y = Math.PI / 2; left.position.set(-faceW / 2, height / 2, 0); group.add(left)
+      const right = makeMesh(new THREE.PlaneGeometry(sideW, height)); right.rotation.y = -Math.PI / 2; right.position.set(faceW / 2, height / 2, 0); group.add(right)
+      const updateFold = (progress: number) => { group.scale.z = Math.max(0.02, Math.min(1, progress)) }
+      updateFold(1)
+      return { rootGroup, updateFold, materials }
+    }
+
+    if (analysis.modelId === "calendar-desk") {
+      const length = L * localScale
+      const radius = Math.max(W, H * 0.72) * localScale / Math.sqrt(3)
+      const tent = makeMesh(new THREE.CylinderGeometry(radius, radius, length, 3, 1, true))
+      tent.rotation.z = Math.PI / 2
+      tent.position.y = radius * 0.86
+      group.add(tent)
+      const updateFold = (progress: number) => { tent.scale.z = Math.max(0.02, Math.min(1, progress)) }
+      updateFold(1)
+      return { rootGroup, updateFold, materials }
+    }
+
+    if (analysis.modelId === "envelope-mockup") {
+      const width = L * localScale
+      const height = H * localScale
+      const body = makeMesh(new THREE.PlaneGeometry(width, height)); body.position.y = height / 2; group.add(body)
+      const makeTriangle = (halfWidth: number, triangleHeight: number) => {
+        const shape = new THREE.Shape()
+        shape.moveTo(-halfWidth, 0); shape.lineTo(halfWidth, 0); shape.lineTo(0, triangleHeight); shape.closePath()
+        return makeMesh(new THREE.ShapeGeometry(shape))
+      }
+      const topPivot = new THREE.Group(); topPivot.position.set(0, height, 0); group.add(topPivot)
+      const topFlap = makeTriangle(width / 2, height * 0.72); topPivot.add(topFlap)
+      const bottomPivot = new THREE.Group(); group.add(bottomPivot)
+      const bottomFlap = makeTriangle(width / 2, -height * 0.78); bottomPivot.add(bottomFlap)
+      const leftPivot = new THREE.Group(); leftPivot.position.set(-width / 2, height / 2, 0); group.add(leftPivot)
+      const leftFlap = makeTriangle(height / 2, width * 0.42); leftFlap.rotation.z = -Math.PI / 2; leftPivot.add(leftFlap)
+      const rightPivot = new THREE.Group(); rightPivot.position.set(width / 2, height / 2, 0); group.add(rightPivot)
+      const rightFlap = makeTriangle(height / 2, width * 0.42); rightFlap.rotation.z = Math.PI / 2; rightPivot.add(rightFlap)
+      const updateFold = (progress: number) => {
+        const t = Math.max(0, Math.min(1, progress))
+        leftPivot.rotation.y = Math.PI * 0.96 * t
+        rightPivot.rotation.y = -Math.PI * 0.96 * t
+        bottomPivot.rotation.x = -Math.PI * 0.96 * t
+        topPivot.rotation.x = Math.PI * 0.94 * t
+      }
+      updateFold(1)
+      return { rootGroup, updateFold, materials }
+    }
+
+    const panelWidths = analysis.modelId === "trifold-brochure"
+      ? [100, 100, 97]
+      : analysis.modelId === "notebook-cover" || analysis.modelId === "folder-map"
+        ? [L, W, L]
+        : [L, L]
+    const panelHeight = H * localScale
+    const scaledWidths = panelWidths.map((value) => value * localScale)
+    const anchor = new THREE.Group()
+    anchor.position.y = panelHeight / 2
+    group.add(anchor)
+    anchor.add(makeMesh(new THREE.PlaneGeometry(scaledWidths[0], panelHeight)))
+
+    const hinges: THREE.Group[] = []
+    let parent = anchor
+    let offset = scaledWidths[0] / 2
+    for (let i = 1; i < scaledWidths.length; i++) {
+      const hinge = new THREE.Group()
+      hinge.position.x = offset
+      parent.add(hinge)
+      const panel = makeMesh(new THREE.PlaneGeometry(scaledWidths[i], panelHeight))
+      panel.position.x = scaledWidths[i] / 2
+      hinge.add(panel)
+      hinges.push(hinge)
+      parent = hinge
+      offset = scaledWidths[i]
+    }
+
+    if (analysis.modelId === "folder-map") {
+      const pocket = makeMesh(new THREE.PlaneGeometry(L * localScale, 65 * localScale))
+      pocket.position.set(scaledWidths[0] / 2, -panelHeight / 2 + 32.5 * localScale, 0.006)
+      hinges[hinges.length - 1]?.add(pocket)
+    }
+
+    const updateFold = (progress: number) => {
+      const t = Math.max(0, Math.min(1, progress))
+      hinges.forEach((hinge, index) => {
+        if (analysis.modelId === "trifold-brochure") hinge.rotation.y = (index === 0 ? Math.PI : -Math.PI) * 0.96 * t
+        else if (analysis.modelId === "wedding-invitation") hinge.rotation.y = Math.PI * 0.94 * t
+        else hinge.rotation.y = Math.PI / 2 * t
+      })
+    }
     updateFold(1)
     return { rootGroup, updateFold, materials }
   }
