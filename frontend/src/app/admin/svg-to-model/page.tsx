@@ -143,7 +143,8 @@ export default function SvgToModelPage() {
       if (rawSvg) {
         const autoFix = autoFixDielineSvg(rawSvg)
         setSvgString(autoFix.fixedSvg)
-        const ana = analyzeSvgDieline(autoFix.fixedSvg)
+        // Analyze original CAD source so structural metadata and exact layer geometry survive cleanup.
+        const ana = analyzeSvgDieline(rawSvg)
         setAnalysis(ana)
         showToast(`Pola dieline "${preset.name}" berhasil dianalisis & dilipat ke 3D!`)
       }
@@ -186,7 +187,7 @@ export default function SvgToModelPage() {
       const text = await file.text()
       const autoFix = autoFixDielineSvg(text)
       setSvgString(autoFix.fixedSvg)
-      const ana = analyzeSvgDieline(autoFix.fixedSvg)
+      const ana = analyzeSvgDieline(text)
       setAnalysis(ana)
       showToast(`✓ SVG Dieline "${file.name}" berhasil dianalisis & digambar menjadi model 3D!`, "success")
     } catch (err) {

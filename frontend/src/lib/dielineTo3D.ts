@@ -4,6 +4,7 @@
 import * as THREE from "three"
 import { DielinePanelZone } from "./dielineGenerator"
 import { getCardboardBumpTexture } from "./cardboardTexture"
+import { AssemblyFamily, getAssemblyPreviewSpec } from "./dielineAssemblyCatalog"
 
 export type DielineBoxType =
   | "tube-box"
@@ -17,6 +18,10 @@ export type DielineBoxType =
   | "generic-box"
 
 export interface DielineAnalysis {
+  modelId?: string
+  assemblyFile?: string
+  assemblyFamily?: AssemblyFamily
+  assemblyDimensions?: Record<string, number | Record<string, number>>
   totalWidthMm: number
   totalHeightMm: number
   svgCanvasW: number // in viewBox coordinate units
@@ -209,6 +214,9 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
 
   const svgCanvasW = hasVb ? vbW : physW
   const svgCanvasH = hasVb ? vbH : physH
+  const modelId = (svgText.match(/\bdata-model-id=["']([^"']+)["']/i) || [])[1]
+  const assemblyFile = (svgText.match(/\bdata-assembly-file=["']([^"']+)["']/i) || [])[1]
+  const assemblySpec = getAssemblyPreviewSpec(modelId)
 
   // Scale factor: viewBox units per millimeter
   let pxPerMm = 1.0
@@ -381,7 +389,7 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
     .sort((a, b) => a - b)
 
   // 5. Structure & Shape Topology Detection (No artificial forced classification!)
-  const isGable = /gable|milk|susu|beverage/i.test(svgText)
+  const isGable = assemblySpec?.family === "gable_carton" || /gable|milk|susu|beverage/i.test(svgText)
   const isCylinder = /cylinder|bottle|can|kaleng|spray|cup/i.test(svgText)
   const isMailer = /0427|mailer|tuck-top|pizza/i.test(svgText)
   const isPouch = /pouch|doypack|standing-pouch|sachet/i.test(svgText)
@@ -390,7 +398,13 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
 
   let boxType: DielineBoxType = "generic-box"
 
-  if (isMailer) {
+  if (assemblySpec?.family === "flexible_gusset_pouch") {
+    boxType = "pouch"
+  } else if (assemblySpec?.family === "tapered_cup" || assemblySpec?.family === "tapered_cup_sleeve" || assemblySpec?.family === "circular_tube") {
+    boxType = "cylinder-wrap"
+  } else if (assemblySpec?.family === "rolled_wall_mailer" || assemblySpec?.family === "food_clamshell") {
+    boxType = "mailer-0427"
+  } else if (isMailer) {
     boxType = "mailer-0427"
   } else if (isGable) {
     boxType = "gable"
@@ -519,7 +533,45 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
     }
   }
 
+  const assemblyLength = assemblySpec?.dimensions.L
+  const assemblyWidth = assemblySpec?.dimensions.W
+  const assemblyHeight = assemblySpec?.dimensions.H
+  if (typeof assemblyLength === "number") lengthMm = assemblyLength
+  if (typeof assemblyWidth === "number") widthMm = assemblyWidth
+  if (typeof assemblyHeight === "number") heightMm = assemblyHeight
+  const assemblyTopDiameter = assemblySpec?.dimensions.topOuterDiameter
+  const assemblyOuterDiameter = assemblySpec?.dimensions.outerDiameter
+  const assemblyNominalDiameter = assemblySpec?.dimensions.nominalDiameter
+  const assemblyWallHeight = assemblySpec?.dimensions.wallHeight
+  if (typeof assemblyTopDiameter === "number") {
+    lengthMm = assemblyTopDiameter
+    widthMm = assemblyTopDiameter
+  } else if (typeof assemblyOuterDiameter === "number") {
+    lengthMm = assemblyOuterDiameter
+    widthMm = assemblyOuterDiameter
+  } else if (typeof assemblyNominalDiameter === "number") {
+    lengthMm = assemblyNominalDiameter
+    widthMm = assemblyNominalDiameter
+  }
+  if (typeof assemblyWallHeight === "number") heightMm = assemblyWallHeight
+  const assemblyFilmWidth = assemblySpec?.dimensions.filmWidth
+  const assemblyPanelHeight = assemblySpec?.dimensions.panelHeight
+  const assemblyGusset = assemblySpec?.dimensions.bottomGusset
+  if (typeof assemblyFilmWidth === "number") lengthMm = assemblyFilmWidth
+  if (typeof assemblyGusset === "number") widthMm = assemblyGusset
+  if (typeof assemblyPanelHeight === "number") heightMm = assemblyPanelHeight
+  const assemblyPrimaryPart = assemblySpec?.dimensions.tray || assemblySpec?.dimensions.base
+  if (assemblyPrimaryPart && typeof assemblyPrimaryPart === "object") {
+    lengthMm = assemblyPrimaryPart.L
+    widthMm = assemblyPrimaryPart.W
+    heightMm = assemblyPrimaryPart.H
+  }
+
   return {
+    modelId,
+    assemblyFile,
+    assemblyFamily: assemblySpec?.family,
+    assemblyDimensions: assemblySpec?.dimensions,
     totalWidthMm: Math.round(physW),
     totalHeightMm: Math.round(physH),
     svgCanvasW,
@@ -726,6 +778,157 @@ export function buildFolded3DModel(
   // World scale so model fits within ~1.6 world units
   const maxDim = Math.max(cutBox.w, cutBox.h, 50)
   const scale = 1.6 / maxDim
+  const family = analysis.assemblyFamily
+  const spec = analysis.assemblyDimensions
+  const numberSpec = (key: string, fallback: number) => {
+    const value = spec?.[key]
+    return typeof value === "number" && Number.isFinite(value) ? value : fallback
+  }
+  const objectSpec = (key: string) => {
+    const value = spec?.[key]
+    return value && typeof value === "object" ? value : undefined
+  }
+
+  const makeMesh = (geometry: THREE.BufferGeometry) => {
+    const mesh = new THREE.Mesh(geometry, createMaterial())
+    mesh.castShadow = true
+    mesh.receiveShadow = true
+    return mesh
+  }
+
+  // Assembly metadata selects topology before SVG heuristics. These builders provide
+  // a faithful assembled preview for curved and multi-part packages that cannot be
+  // reconstructed from axis-aligned crease strips.
+  if (family === "tapered_cup" || family === "tapered_cup_sleeve" || family === "circular_tube") {
+    const topD = numberSpec("topOuterDiameter", numberSpec("outerDiameter", analysis.dims.length))
+    const bottomD = numberSpec("bottomOuterDiameter", topD)
+    const height = numberSpec("wallHeight", numberSpec("H", analysis.dims.height))
+    const localScale = 1.5 / Math.max(topD, height)
+    const group = new THREE.Group()
+    rootGroup.add(group)
+
+    const wall = makeMesh(new THREE.CylinderGeometry(topD * localScale / 2, bottomD * localScale / 2, height * localScale, 64, 1, true))
+    wall.position.y = height * localScale / 2
+    group.add(wall)
+
+    if (family !== "tapered_cup_sleeve") {
+      const bottom = makeMesh(new THREE.CircleGeometry(bottomD * localScale / 2, 64))
+      bottom.rotation.x = -Math.PI / 2
+      group.add(bottom)
+    }
+
+    const updateFold = (progress: number) => {
+      const t = Math.max(0.001, Math.min(1, progress))
+      group.scale.set(t, 1, t)
+    }
+    updateFold(1)
+    return { rootGroup, updateFold, materials }
+  }
+
+  if (family === "faceted_tube") {
+    const diameter = numberSpec("nominalDiameter", analysis.dims.length)
+    const height = numberSpec("H", analysis.dims.height)
+    const localScale = 1.5 / Math.max(diameter, height)
+    const group = new THREE.Group()
+    rootGroup.add(group)
+    const body = makeMesh(new THREE.CylinderGeometry(diameter * localScale / 2, diameter * localScale / 2, height * localScale, 6))
+    body.position.y = height * localScale / 2
+    group.add(body)
+    const updateFold = (progress: number) => {
+      const t = Math.max(0.001, Math.min(1, progress))
+      group.scale.set(t, 1, t)
+    }
+    updateFold(1)
+    return { rootGroup, updateFold, materials }
+  }
+
+  if (family === "open_tray" || family === "food_formed_carton") {
+    const L = numberSpec("L", Math.max(analysis.dims.length, 80)) * scale
+    const W = numberSpec("W", Math.max(analysis.dims.width, 45)) * scale
+    const H = numberSpec("H", Math.max(analysis.dims.height, 35)) * scale
+    const group = new THREE.Group()
+    rootGroup.add(group)
+    group.add(makeMesh(new THREE.BoxGeometry(L, 0.012, W)))
+    const front = makeMesh(new THREE.BoxGeometry(L, H, 0.012)); front.position.set(0, H / 2, W / 2); group.add(front)
+    const back = makeMesh(new THREE.BoxGeometry(L, H, 0.012)); back.position.set(0, H / 2, -W / 2); group.add(back)
+    const left = makeMesh(new THREE.BoxGeometry(0.012, H, W)); left.position.set(-L / 2, H / 2, 0); group.add(left)
+    const right = makeMesh(new THREE.BoxGeometry(0.012, H, W)); right.position.set(L / 2, H / 2, 0); group.add(right)
+    const updateFold = (progress: number) => {
+      const t = Math.max(0, Math.min(1, progress))
+      front.scale.y = back.scale.y = left.scale.y = right.scale.y = t
+      front.position.y = back.position.y = left.position.y = right.position.y = H * t / 2
+    }
+    updateFold(1)
+    return { rootGroup, updateFold, materials }
+  }
+
+  if (family === "food_clamshell") {
+    const L = numberSpec("L", 128) * scale
+    const W = numberSpec("W", 128) * scale
+    const H = numberSpec("H", 54) * scale
+    const lidH = numberSpec("lidHeight", 48) * scale
+    const group = new THREE.Group()
+    rootGroup.add(group)
+    const base = makeMesh(new THREE.BoxGeometry(L, H, W)); base.position.y = H / 2; group.add(base)
+    const lidPivot = new THREE.Group(); lidPivot.position.set(0, H, -W / 2); group.add(lidPivot)
+    const lid = makeMesh(new THREE.BoxGeometry(L, lidH, W)); lid.position.set(0, lidH / 2, W / 2); lidPivot.add(lid)
+    const updateFold = (progress: number) => {
+      const t = Math.max(0, Math.min(1, progress))
+      lidPivot.rotation.x = -Math.PI / 2 * (1 - t)
+    }
+    updateFold(1)
+    return { rootGroup, updateFold, materials }
+  }
+
+  if (family === "rigid_set") {
+    const traySpec = objectSpec("tray") || objectSpec("base") || { L: analysis.dims.length, W: analysis.dims.width, H: Math.max(20, analysis.dims.height * 0.25) }
+    const L = traySpec.L * scale
+    const W = traySpec.W * scale
+    const H = traySpec.H * scale
+    const group = new THREE.Group()
+    rootGroup.add(group)
+    const tray = makeMesh(new THREE.BoxGeometry(L, H, W)); tray.position.y = H / 2; group.add(tray)
+    const lidSpec = objectSpec("lid")
+    if (lidSpec || analysis.modelId === "lidbase") {
+      const lidL = (lidSpec?.L || traySpec.L + 5) * scale
+      const lidW = (lidSpec?.W || traySpec.W + 5) * scale
+      const lidH = (lidSpec?.H || Math.max(12, traySpec.H * 0.8)) * scale
+      const lid = makeMesh(new THREE.BoxGeometry(lidL, lidH, lidW)); lid.position.set(0, H + lidH / 2 + 0.04, 0); group.add(lid)
+    } else {
+      const sleeve = makeMesh(new THREE.BoxGeometry(L * 1.04, H * 1.12, W * 1.04)); sleeve.position.set(L * 0.58, H / 2, 0); group.add(sleeve)
+    }
+    const updateFold = (progress: number) => { group.scale.y = Math.max(0.02, Math.min(1, progress)) }
+    updateFold(1)
+    return { rootGroup, updateFold, materials }
+  }
+
+  if (family === "curved_pillow_carton") {
+    const L = numberSpec("L", 130)
+    const W = numberSpec("W", 75)
+    const H = numberSpec("H", W * 0.56)
+    const localScale = 1.5 / Math.max(L, W)
+    const group = new THREE.Group()
+    rootGroup.add(group)
+    const shell = makeMesh(new THREE.SphereGeometry(0.5, 48, 24))
+    shell.scale.set(L * localScale, H * localScale, W * localScale)
+    shell.position.y = H * localScale / 2
+    group.add(shell)
+    const updateFold = (progress: number) => { shell.scale.y = H * localScale * Math.max(0.03, Math.min(1, progress)) }
+    updateFold(1)
+    return { rootGroup, updateFold, materials }
+  }
+
+  if (family === "rsc_corrugated" || family === "four_wall_tuck_carton") {
+    const L = numberSpec("L", analysis.dims.length) * scale
+    const W = numberSpec("W", analysis.dims.width) * scale
+    const H = numberSpec("H", analysis.dims.height) * scale
+    const box = makeMesh(new THREE.BoxGeometry(L, H, W))
+    box.position.y = H / 2
+    rootGroup.add(box)
+    const updateFold = (progress: number) => { box.scale.y = Math.max(0.02, Math.min(1, progress)) }
+    updateFold(1)
+    return { rootGroup, updateFold, materials }
+  }
 
   // ==========================================
   // CASE 1: MAILER BOX (FEFCO 0427)
