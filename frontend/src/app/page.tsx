@@ -771,8 +771,8 @@ export default function LandingPage() {
                 onClick={() => handleSelectTemplateAndStart(tmpl)}
                 className="group bg-white rounded-2xl border border-[#D5E4F0] hover:border-[#1F3A5C] overflow-hidden flex flex-col justify-between cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 relative"
               >
-                {/* Full-Bleed 3D Visual Preview Area (No Card-in-Card) */}
-                <div className="w-full aspect-square bg-[#EEF4F8] relative overflow-hidden flex items-center justify-center p-5 group-hover:bg-[#E5EFF5] transition-colors">
+                {/* Full-Bleed 3D Visual Preview Area (Full Width & Auto Crop) */}
+                <div className="w-full aspect-square bg-[#EEF4F8] relative overflow-hidden flex items-center justify-center group-hover:bg-[#E5EFF5] transition-colors">
                   {/* Badge */}
                   {tmpl.badge && (
                     <div className="absolute top-3 right-3 z-10 px-2.5 py-0.5 rounded-full bg-[#1F3A5C] text-[#F7CB45] font-bold text-[9px] uppercase tracking-wider font-mono shadow-xs flex items-center gap-1">
@@ -791,10 +791,10 @@ export default function LandingPage() {
                     <img
                       src={tmpl.preview_url}
                       alt={tmpl.name}
-                      className="w-full h-full object-contain group-hover:scale-108 transition-transform duration-500 ease-out drop-shadow-md pointer-events-none"
+                      className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500 ease-out pointer-events-none"
                     />
                   ) : tmpl.model_3d_url ? (
-                    <div className="relative w-full h-full flex flex-col items-center justify-center group-hover:scale-108 transition-transform duration-300">
+                    <div className="p-5 relative w-full h-full flex flex-col items-center justify-center group-hover:scale-108 transition-transform duration-300">
                       <div className="w-16 h-16 rounded-2xl bg-white/90 border border-[#4394C3]/30 shadow-md flex flex-col items-center justify-center gap-1.5 p-2">
                         <Box className="w-8 h-8 text-[#2F79A6] animate-pulse" />
                         <span className="text-[9px] font-black font-mono text-[#1F3A5C] tracking-wider uppercase">
@@ -806,7 +806,7 @@ export default function LandingPage() {
                       </span>
                     </div>
                   ) : (
-                    <div className="relative w-full h-full flex flex-col items-center justify-center group-hover:scale-108 transition-transform duration-300">
+                    <div className="p-5 relative w-full h-full flex flex-col items-center justify-center group-hover:scale-108 transition-transform duration-300">
                       {tmpl.category === "BOX" ? (
                         <svg className="w-24 h-24 text-[#1F3A5C] drop-shadow-lg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M50 15 L85 33 L50 51 L15 33 Z" fill="#EEF4F8" stroke="#1F3A5C" strokeWidth="2.5" strokeLinejoin="round" />

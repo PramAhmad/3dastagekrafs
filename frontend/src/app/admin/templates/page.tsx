@@ -263,7 +263,48 @@ export default function AdminTemplatesPage() {
     reader.readAsDataURL(file)
   }
 
-  // Handle Thumbnail Preview Upload (.png, .jpg, .webp) - Uploads to Server /api/upload
+  // Helper to automatically crop any uploaded image to 1x1 square ratio by default
+  const cropImageTo1x1 = (file: File): Promise<Blob> => {
+    return new Promise((resolve) => {
+      if (!file.type.startsWith("image/")) {
+        resolve(file)
+        return
+      }
+      const img = new Image()
+      const url = URL.createObjectURL(file)
+      img.onload = () => {
+        URL.revokeObjectURL(url)
+        const size = Math.min(img.width, img.height)
+        const sx = (img.width - size) / 2
+        const sy = (img.height - size) / 2
+        const canvas = document.createElement("canvas")
+        const targetDim = Math.min(size, 1024)
+        canvas.width = targetDim
+        canvas.height = targetDim
+        const ctx = canvas.getContext("2d")
+        if (!ctx) {
+          resolve(file)
+          return
+        }
+        ctx.drawImage(img, sx, sy, size, size, 0, 0, targetDim, targetDim)
+        canvas.toBlob(
+          (blob) => {
+            if (blob) resolve(blob)
+            else resolve(file)
+          },
+          file.type === "image/png" ? "image/png" : "image/jpeg",
+          0.92
+        )
+      }
+      img.onerror = () => {
+        URL.revokeObjectURL(url)
+        resolve(file)
+      }
+      img.src = url
+    })
+  }
+
+  // Handle Thumbnail Preview Upload (.png, .jpg, .webp) - Auto 1x1 Square Cropped
   const handlePreviewUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !editingTemplate) return
@@ -271,8 +312,11 @@ export default function AdminTemplatesPage() {
     setUploadPreviewName(file.name)
 
     try {
+      const squareBlob = await cropImageTo1x1(file)
+      const squareFile = new File([squareBlob], file.name, { type: squareBlob.type || file.type })
+
       const formData = new FormData()
-      formData.append("file", file)
+      formData.append("file", squareFile)
       const res = await fetch("/api/upload", { method: "POST", body: formData })
       const json = await res.json()
       if (json.success && json.url) {
@@ -280,11 +324,12 @@ export default function AdminTemplatesPage() {
           ...editingTemplate,
           preview_url: json.url,
         })
-        showToast(`Gambar Thumbnail "${file.name}" berhasil diunggah ke server!`)
+        showToast(`Gambar Thumbnail 1x1 "${file.name}" berhasil diunggah ke server!`)
         return
       }
     } catch (e) {}
 
+    const squareBlob = await cropImageTo1x1(file)
     const reader = new FileReader()
     reader.onload = (event) => {
       const dataUrl = event.target?.result as string
@@ -292,9 +337,9 @@ export default function AdminTemplatesPage() {
         ...editingTemplate,
         preview_url: dataUrl,
       })
-      showToast(`Gambar Thumbnail "${file.name}" berhasil dimuat!`)
+      showToast(`Gambar Thumbnail 1x1 "${file.name}" berhasil dimuat!`)
     }
-    reader.readAsDataURL(file)
+    reader.readAsDataURL(squareBlob)
   }
 
   // Save / Update Template (Persistent in server API + localStorage)

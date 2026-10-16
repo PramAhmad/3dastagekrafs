@@ -440,8 +440,8 @@ export default function KemasanCatalogPage() {
                   onClick={() => handleStartDesign(tmpl.id)}
                   className="group bg-white rounded-2xl border border-[#D5E4F0] hover:border-[#1F3A5C] overflow-hidden flex flex-col justify-between transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 cursor-pointer relative"
                 >
-                  {/* Full-Bleed 3D Visual Preview Area (No Card-in-Card) */}
-                  <div className="w-full aspect-square bg-[#EEF4F8] relative overflow-hidden flex items-center justify-center p-5 group-hover:bg-[#E5EFF5] transition-colors">
+                  {/* Full-Bleed 3D Visual Preview Area (Full Width & Auto Crop) */}
+                  <div className="w-full aspect-square bg-[#EEF4F8] relative overflow-hidden flex items-center justify-center group-hover:bg-[#E5EFF5] transition-colors">
                     {/* Top Badge */}
                     {tmpl.badge && (
                       <div className="absolute top-3 right-3 z-10 px-2.5 py-0.5 rounded-full bg-[#1F3A5C] text-[#F7CB45] font-bold text-[9px] uppercase tracking-wider font-mono shadow-xs flex items-center gap-1">
@@ -460,10 +460,10 @@ export default function KemasanCatalogPage() {
                       <img
                         src={tmpl.preview_url}
                         alt={tmpl.name}
-                        className="w-full h-full object-contain group-hover:scale-108 transition-transform duration-500 ease-out drop-shadow-md pointer-events-none"
+                        className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500 ease-out pointer-events-none"
                       />
                     ) : tmpl.model_3d_url ? (
-                      <div className="flex flex-col items-center justify-center gap-1.5 group-hover:scale-108 transition-transform duration-300">
+                      <div className="p-5 flex flex-col items-center justify-center gap-1.5 group-hover:scale-108 transition-transform duration-300">
                         <div className="w-16 h-16 rounded-2xl bg-white/90 border border-[#4394C3]/30 shadow-md flex flex-col items-center justify-center gap-1 p-2">
                           <Box className="w-8 h-8 text-[#2F79A6] animate-pulse" />
                           <span className="text-[9px] font-black font-mono text-[#1F3A5C] tracking-wider uppercase">
@@ -475,11 +475,60 @@ export default function KemasanCatalogPage() {
                         </span>
                       </div>
                     ) : (
-                      <div className="flex flex-col items-center justify-center group-hover:scale-108 transition-transform duration-300">
-                        <Box className="w-16 h-16 text-[#2F79A6]" />
-                        <span className="text-[9.5px] font-mono font-bold text-[#1F3A5C] mt-2">
-                          Parametrik CAD 3D
-                        </span>
+                      <div className="p-5 relative w-full h-full flex flex-col items-center justify-center group-hover:scale-108 transition-transform duration-300">
+                        {tmpl.category === "BOX" ? (
+                          <svg className="w-24 h-24 text-[#1F3A5C] drop-shadow-lg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M50 15 L85 33 L50 51 L15 33 Z" fill="#EEF4F8" stroke="#1F3A5C" strokeWidth="2.5" strokeLinejoin="round" />
+                            <path d="M15 33 L50 51 L50 85 L15 67 Z" fill="#4394C3" stroke="#1F3A5C" strokeWidth="2.5" strokeLinejoin="round" />
+                            <path d="M50 51 L85 33 L85 67 L50 85 Z" fill="#2F79A6" stroke="#1F3A5C" strokeWidth="2.5" strokeLinejoin="round" />
+                            <path d="M57 47 L78 36" stroke="#F7CB45" strokeWidth="2" strokeDasharray="3 2" />
+                            <path d="M57 58 L78 47" stroke="#F7CB45" strokeWidth="2" strokeDasharray="3 2" />
+                          </svg>
+                        ) : tmpl.category === "POUCH" ? (
+                          <svg className="w-22 h-24 text-[#1F3A5C] drop-shadow-lg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M28 20 L72 20 L80 82 C80 86, 75 90, 50 90 C25 90, 20 86, 20 82 Z" fill="#EEF4F8" stroke="#1F3A5C" strokeWidth="2.5" strokeLinejoin="round" />
+                            <rect x="25" y="14" width="50" height="6" rx="2" fill="#1F3A5C" />
+                            <line x1="28" y1="28" x2="72" y2="28" stroke="#2F79A6" strokeWidth="1.5" strokeDasharray="2 2" />
+                            <rect x="36" y="42" width="28" height="24" rx="4" fill="#F7CB45" stroke="#1F3A5C" strokeWidth="1.5" />
+                          </svg>
+                        ) : tmpl.category === "JAR" ? (
+                          <svg className="w-22 h-22 text-[#1F3A5C] drop-shadow-lg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="18" y="24" width="64" height="14" rx="5" fill="#1F3A5C" />
+                            <path d="M20 38 L80 38 L78 78 C78 84, 72 88, 50 88 C28 88, 22 84, 22 78 Z" fill="#EEF4F8" stroke="#1F3A5C" strokeWidth="2.5" strokeLinejoin="round" />
+                            <rect x="30" y="50" width="40" height="18" rx="2" fill="#4394C3" stroke="#1F3A5C" strokeWidth="1.5" />
+                          </svg>
+                        ) : tmpl.category === "BOTTLE" ? (
+                          <svg className="w-20 h-24 text-[#1F3A5C] drop-shadow-lg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M42 12 L65 12 L65 16 L50 16 L50 24 L42 24 Z" fill="#1F3A5C" />
+                            <rect x="44" y="24" width="12" height="6" fill="#4394C3" />
+                            <rect x="30" y="30" width="40" height="58" rx="8" fill="#EEF4F8" stroke="#1F3A5C" strokeWidth="2.5" />
+                            <rect x="36" y="46" width="28" height="26" rx="2" fill="#F7CB45" stroke="#1F3A5C" strokeWidth="1.5" />
+                          </svg>
+                        ) : tmpl.category === "CAN" ? (
+                          <svg className="w-20 h-24 text-[#1F3A5C] drop-shadow-lg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <ellipse cx="50" cy="26" rx="30" ry="10" fill="#1F3A5C" />
+                            <path d="M20 26 L20 74 C20 80, 33 85, 50 85 C67 85, 80 80, 80 74 L80 26" fill="#EEF4F8" stroke="#1F3A5C" strokeWidth="2.5" />
+                            <ellipse cx="50" cy="26" rx="30" ry="10" fill="#4394C3" stroke="#1F3A5C" strokeWidth="2.5" />
+                            <line x1="20" y1="50" x2="80" y2="50" stroke="#F7CB45" strokeWidth="2" strokeDasharray="3 2" />
+                          </svg>
+                        ) : tmpl.category === "CUP" ? (
+                          <svg className="w-20 h-24 text-[#1F3A5C] drop-shadow-lg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M24 22 L76 22 L70 84 C70 87, 65 90, 50 90 C35 90, 30 87, 30 84 Z" fill="#EEF4F8" stroke="#1F3A5C" strokeWidth="2.5" />
+                            <rect x="20" y="16" width="60" height="7" rx="3" fill="#1F3A5C" />
+                            <circle cx="50" cy="54" r="14" fill="#F7CB45" stroke="#1F3A5C" strokeWidth="1.5" />
+                          </svg>
+                        ) : tmpl.category === "TRIANGLE" ? (
+                          <svg className="w-22 h-22 text-[#1F3A5C] drop-shadow-lg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M50 18 L85 78 L15 78 Z" fill="#EEF4F8" stroke="#1F3A5C" strokeWidth="2.5" strokeLinejoin="round" />
+                            <path d="M50 18 L50 78 L85 78 Z" fill="#4394C3" stroke="#1F3A5C" strokeWidth="2.5" strokeLinejoin="round" />
+                            <line x1="50" y1="18" x2="50" y2="78" stroke="#1F3A5C" strokeWidth="2" />
+                          </svg>
+                        ) : (
+                          <svg className="w-20 h-20 text-[#1F3A5C] drop-shadow-lg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="20" y="25" width="60" height="50" rx="6" fill="#EEF4F8" stroke="#1F3A5C" strokeWidth="2.5" />
+                            <path d="M20 40 L80 40" stroke="#1F3A5C" strokeWidth="2" />
+                          </svg>
+                        )}
                       </div>
                     )}
                   </div>
