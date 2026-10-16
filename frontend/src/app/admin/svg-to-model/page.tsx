@@ -32,7 +32,7 @@ import WorkspaceTabs from "@/components/admin/WorkspaceTabs"
 import type { WorkspaceTabItem } from "@/components/admin/WorkspaceTabs"
 import { analyzeSvgDieline, DielineAnalysis } from "@/lib/dielineTo3D"
 import { generateParametricDieline } from "@/lib/dielineGenerator"
-import { autoFixDielineSvg } from "@/lib/dielineAutoFixer"
+import { autoFixDielineSvg, sanitizeSvgFor3D } from "@/lib/dielineAutoFixer"
 import { PackagingTemplate } from "@/types/admin"
 
 // Sample Presets for instant testing
@@ -77,6 +77,8 @@ export default function SvgToModelPage() {
   // State
   const [selectedPresetId, setSelectedPresetId] = useState<string>("gable-carton")
   const [svgString, setSvgString] = useState<string>("")
+  const [dielinePreviewSvg, setDielinePreviewSvg] = useState<string>("")
+  const [modelTextureSvg, setModelTextureSvg] = useState<string | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(true)
   const [analysis, setAnalysis] = useState<DielineAnalysis | null>(null)
   const [isInspectorOpen, setIsInspectorOpen] = useState<boolean>(false)
@@ -143,6 +145,8 @@ export default function SvgToModelPage() {
       if (rawSvg) {
         const autoFix = autoFixDielineSvg(rawSvg)
         setSvgString(autoFix.fixedSvg)
+        setDielinePreviewSvg(autoFix.fixedSvg)
+        setModelTextureSvg(sanitizeSvgFor3D(rawSvg))
         // Analyze original CAD source so structural metadata and exact layer geometry survive cleanup.
         const ana = analyzeSvgDieline(rawSvg)
         setAnalysis(ana)
@@ -187,6 +191,8 @@ export default function SvgToModelPage() {
       const text = await file.text()
       const autoFix = autoFixDielineSvg(text)
       setSvgString(autoFix.fixedSvg)
+      setDielinePreviewSvg(autoFix.fixedSvg)
+      setModelTextureSvg(sanitizeSvgFor3D(text))
       const ana = analyzeSvgDieline(text)
       setAnalysis(ana)
       showToast(`✓ SVG Dieline "${file.name}" berhasil dianalisis & digambar menjadi model 3D!`, "success")
@@ -381,6 +387,20 @@ export default function SvgToModelPage() {
           </span>
           <input type="file" accept=".svg,image/svg+xml" onChange={handleFileUpload} className="hidden" />
         </label>
+        {dielinePreviewSvg && (
+          <div className="overflow-hidden rounded-2xl border border-[#D5E4F0] bg-white shadow-xs">
+            <div className="flex items-center justify-between border-b border-[#D5E4F0] px-3 py-2">
+              <div className="min-w-0">
+                <p className="truncate text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#1F3A5C]">Preview dieline</p>
+                <p className="truncate text-[9px] text-[#718BAA]">Sumber SVG asli: cut, crease, bleed, dan area kerja</p>
+              </div>
+              <span className="shrink-0 rounded-full border border-[#BFD9E8] bg-[#EAF4F9] px-2 py-0.5 font-mono text-[8px] font-bold text-[#2F79A6]">2D SOURCE</span>
+            </div>
+            <div className="flex aspect-[4/3] items-center justify-center overflow-hidden bg-[linear-gradient(45deg,#f4f7fa_25%,transparent_25%),linear-gradient(-45deg,#f4f7fa_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#f4f7fa_75%),linear-gradient(-45deg,transparent_75%,#f4f7fa_75%)] bg-[length:16px_16px] bg-[position:0_0,0_8px,8px_-8px,-8px_0px] p-3">
+              <div className="flex h-full w-full items-center justify-center [&>svg]:max-h-full [&>svg]:max-w-full" dangerouslySetInnerHTML={{ __html: dielinePreviewSvg }} />
+            </div>
+          </div>
+        )}
       </div>}
 
       {svgSourceTab === "presets" && <div className="space-y-1.5">
@@ -466,7 +486,7 @@ export default function SvgToModelPage() {
       {svgSourceTab === "analysis" && <div className="space-y-1.5">
         <span className="text-[10px] font-bold text-[#718BAA] uppercase tracking-wider">Preview Pola Lembaran 2D (Cut & Crease):</span>
         <div className="w-full aspect-4/3 bg-[#F8FAFC] rounded-2xl border border-[#D5E4F0] p-2 flex items-center justify-center overflow-hidden relative shadow-inner">
-          {svgString ? <div className="w-full h-full flex items-center justify-center [&>svg]:max-w-full [&>svg]:max-h-full" dangerouslySetInnerHTML={{ __html: svgString }} /> : <div className="text-center text-[#718BAA] space-y-1"><RefreshCw className="w-6 h-6 animate-spin mx-auto text-[#2F79A6]" /><p className="text-[10px]">Memuat pola SVG...</p></div>}
+          {dielinePreviewSvg ? <div className="w-full h-full flex items-center justify-center [&>svg]:max-w-full [&>svg]:max-h-full" dangerouslySetInnerHTML={{ __html: dielinePreviewSvg }} /> : <div className="text-center text-[#718BAA] space-y-1"><RefreshCw className="w-6 h-6 animate-spin mx-auto text-[#2F79A6]" /><p className="text-[10px]">Memuat pola SVG...</p></div>}
         </div>
       </div>}
     </div>
@@ -587,7 +607,7 @@ export default function SvgToModelPage() {
                 foldProgress={foldProgress}
                 boxColor={boxColor}
                 materialFinish={materialFinish}
-                dielineSvgString={svgString}
+                dielineSvgString={modelTextureSvg || undefined}
                 exportTrigger={exportTrigger}
                 onExportDone={handleExportDone}
                 captureTrigger={captureTrigger}

@@ -398,6 +398,16 @@ export function sanitizeSvgFor3D(rawSvgText: string): string | null {
     const svgEl = doc.querySelector("svg")
     if (!svgEl) return null
 
+    // Remove complete technical layers first, including namespaced SVG groups and
+    // uppercase CAD layer IDs used by structural dieline exports.
+    const technicalLayerPattern = /^(info|cut|crease|bleed|safe|glue|seal|perf|kiss[_-]?cut|dimensions?|guides?|annotations?|registration[_-]?marks?)$/i
+    Array.from(svgEl.querySelectorAll("*")).forEach((el) => {
+      const localName = el.localName.toLowerCase()
+      if (localName !== "g") return
+      const semanticName = `${el.getAttribute("id") || ""} ${el.getAttribute("class") || ""}`.trim()
+      if (technicalLayerPattern.test(semanticName)) el.remove()
+    })
+
     // 1. Remove all text and tspan elements
     doc.querySelectorAll("text, tspan").forEach((t) => t.remove())
 
@@ -479,8 +489,19 @@ export function sanitizeSvgFor3D(rawSvgText: string): string | null {
     }
 
     doc.querySelectorAll("path, line, polyline, polygon, rect").forEach((el) => {
+      let parent: Element | null = el.parentElement
+      let technicalAncestor = false
+      while (parent && parent !== svgEl) {
+        const semanticName = `${parent.getAttribute("id") || ""} ${parent.getAttribute("class") || ""}`.trim()
+        if (technicalLayerPattern.test(semanticName)) {
+          technicalAncestor = true
+          break
+        }
+        parent = parent.parentElement
+      }
       if (
         isCutOrCreaseOrGuide(el) ||
+        technicalAncestor ||
         el.closest("#layer-cut, #layer-crease, #Dieline-Cut, #Crease-Score, .cut-line, .crease-line")
       ) {
         el.remove()
