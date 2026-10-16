@@ -62,7 +62,7 @@ export default function WorkspaceTabs({
     <div
       role="tablist"
       aria-label={tablistLabel}
-      className={`flex min-w-0 gap-1 overflow-x-auto rounded-xl border border-[#D5E4F0] bg-[#EEF4F8] p-1 scrollbar-thin ${className}`}
+      className={`flex min-w-0 gap-1 overflow-x-auto border-b border-[#D5E4F0] bg-white px-3 py-2 scrollbar-thin ${className}`}
     >
       {items.map((item, index) => {
         const Icon = item.icon
@@ -85,8 +85,8 @@ export default function WorkspaceTabs({
             title={item.label}
             onClick={() => selectAt(index)}
             onKeyDown={(event) => handleKeyDown(event, index)}
-            className={`flex min-h-11 min-w-[5.5rem] shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#2F79A6] motion-reduce:transition-none sm:flex-1 sm:text-xs ${
-              selected ? "bg-[#1F3A5C] text-white shadow-sm" : "text-[#4B6B94] hover:bg-white hover:text-[#1F3A5C]"
+            className={`flex min-h-11 min-w-[5.5rem] shrink-0 items-center justify-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[11px] font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#2F79A6] motion-reduce:transition-none sm:flex-1 sm:text-xs ${
+              selected ? "border-[#1F3A5C] bg-[#1F3A5C] text-white shadow-sm" : "border-transparent bg-[#F6F9FB] text-[#4B6B94] hover:border-[#D5E4F0] hover:bg-white hover:text-[#1F3A5C]"
             }`}
           >
             <Icon className={`h-3.5 w-3.5 shrink-0 ${selected ? "text-[#F7CB45]" : "text-[#2F79A6]"}`} aria-hidden="true" />

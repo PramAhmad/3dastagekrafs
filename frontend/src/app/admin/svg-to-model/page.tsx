@@ -395,7 +395,7 @@ export default function SvgToModelPage() {
               onClick={() => loadPreset(p.id)}
               className={`p-2.5 rounded-xl border text-left transition-all ${
                 selectedPresetId === p.id
-                  ? "bg-purple-50/60 border-purple-400 text-purple-950 ring-1 ring-purple-300"
+                  ? "border-[#2F79A6] bg-[#EAF4F9] text-[#1F3A5C] ring-1 ring-[#BFD9E8]"
                   : "bg-white border-[#D5E4F0] hover:bg-[#EEF4F8] text-[#1F3A5C]"
               }`}
             >
@@ -492,13 +492,13 @@ export default function SvgToModelPage() {
       {/* Top Header Bar */}
       <div className="min-h-14 shrink-0 bg-white border-b border-[#D5E4F0] px-3 sm:px-6 py-2 flex flex-wrap items-center justify-between gap-2 z-20 shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 border border-purple-200 flex items-center justify-center shrink-0">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#BFD9E8] bg-[#EAF4F9] text-[#2F79A6]">
             <Sparkles className="w-5 h-5" />
           </div>
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-2">
               <h1 className="min-w-0 truncate text-sm font-extrabold text-[#1F3A5C]">SVG to 3D Model Template Generator</h1>
-              <span className="hidden shrink-0 px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[9px] font-mono font-bold uppercase tracking-wider sm:inline-block">
+              <span className="hidden shrink-0 rounded-full border border-[#D5E4F0] bg-[#EEF4F8] px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-[#2F79A6] sm:inline-block">
                 ASTAKRAF 3D ENGINE
               </span>
             </div>
@@ -550,7 +550,7 @@ export default function SvgToModelPage() {
       {/* Main Split Layout */}
       <div className="flex-1 flex overflow-hidden">
         {/* Desktop parser inspector */}
-        <aside className="hidden lg:flex w-[min(26vw,24rem)] shrink-0 min-h-0 flex-col justify-between overflow-y-auto border-r border-[#D5E4F0] bg-white p-4">
+        <aside className="hidden min-h-0 w-[22rem] shrink-0 flex-col justify-between overflow-y-auto border-r border-[#D5E4F0] bg-white p-4 lg:flex xl:w-96">
           {inspectorContent}
           <div className="pt-2 border-t border-[#D5E4F0] text-[9.5px] text-[#718BAA] flex items-center gap-1.5">
             <Info className="w-3.5 h-3.5 text-[#2F79A6] shrink-0" aria-hidden="true" />
@@ -577,7 +577,7 @@ export default function SvgToModelPage() {
               aria-label="Open SVG parser inspector"
               title="Open SVG parser inspector"
             >
-              <Sliders className="h-3.5 w-3.5 text-purple-600" aria-hidden="true" />
+              <Sliders className="h-3.5 w-3.5 text-[#2F79A6]" aria-hidden="true" />
               <span>Inspector</span>
             </button>
             {analysis ? (

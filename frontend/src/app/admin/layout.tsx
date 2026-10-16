@@ -51,7 +51,7 @@ export default function AdminLayout({
 
   return (
     <AuthGuard>
-      <div className="flex h-dvh min-h-0 overflow-hidden bg-[#EEF4F8] font-sans text-[12px] text-[#1F3A5C] antialiased">
+      <div className="admin-shell flex h-dvh min-h-0 overflow-hidden bg-[#F3F7FA] font-sans text-[12px] text-[#1F3A5C] antialiased">
         {isWorkspace ? (
           !isMobileLayout && <AdminSidebar mode="rail" />
         ) : (
@@ -70,7 +70,7 @@ export default function AdminLayout({
             className={
               isWorkspace
                 ? "min-h-0 flex-1 w-full overflow-hidden"
-                : "min-h-0 flex-1 w-full max-w-7xl mx-auto overflow-y-auto p-4"
+                : "admin-standard min-h-0 flex-1 w-full overflow-y-auto px-4 py-5 sm:px-6 lg:px-8"
             }
           >
             {children}

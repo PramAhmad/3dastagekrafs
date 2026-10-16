@@ -507,18 +507,18 @@ function AdminStudioContent() {
 
   const panelContent = (
       <div
-        className="flex h-full w-full min-w-0 flex-col bg-white text-[#1F3A5C] shadow-2xl"
+        className="flex h-full w-full min-w-0 flex-col bg-[#F7FAFC] text-[#1F3A5C] shadow-2xl"
       >
         {/* Studio Brand Header */}
         <div className="p-3 border-b border-[#D5E4F0] flex items-center justify-between bg-[#FFFFFF]">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-[#2f81f7]/20 border border-[#2f81f7] flex items-center justify-center text-[#2f81f7]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#BFD9E8] bg-[#EAF4F9] text-[#2F79A6]">
               <Box className="w-3.5 h-3.5" />
             </div>
             <div>
               <div className="font-extrabold text-[12px] tracking-tight text-[#1F3A5C] flex items-center gap-1.5">
                 <span>3DPAKS Studio</span>
-                <span className="text-[8.5px] font-mono font-bold px-1 py-0.2 rounded bg-[#2f81f7]/30 text-[#58a6ff] border border-[#2f81f7]/50">
+                <span className="rounded-full border border-[#D5E4F0] bg-[#EEF4F8] px-1.5 py-0.5 font-mono text-[8.5px] font-bold text-[#2F79A6]">
                   CAD
                 </span>
               </div>
@@ -529,7 +529,7 @@ function AdminStudioContent() {
           <div className="flex items-center gap-1.5">
             <button
               onClick={handleSaveToCatalog}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#2f81f7] hover:bg-[#388bfd] text-[#1F3A5C] font-bold text-[10.5px] transition-all shadow-md active:scale-95"
+              className="flex min-h-10 items-center gap-1.5 rounded-xl bg-[#1F3A5C] px-3 py-2 text-[10.5px] font-bold text-white shadow-sm transition-all hover:bg-[#152840] active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2F79A6]"
               title="Simpan template ke katalog admin"
             >
               <Save className="w-3 h-3" />
@@ -560,15 +560,15 @@ function AdminStudioContent() {
         />
 
         {/* Tab Content Area (Scrollable) */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-5 scrollbar-thin scrollbar-thumb-[#D5E4F0]">
+        <div className="flex-1 space-y-4 overflow-y-auto p-3 scrollbar-thin scrollbar-thumb-[#D5E4F0] sm:p-4">
           {/* 150 DPI Physical UV Mapping Hint (3DPAKS Rule) */}
-          <div className="p-3 rounded-xl bg-[#FFFFFF] border border-[#D5E4F0] space-y-2">
+          <div className="space-y-2 rounded-2xl border border-[#D5E4F0] bg-white p-3 shadow-[0_8px_24px_rgba(31,58,92,0.05)]">
             <div className="flex items-center justify-between text-[11px]">
               <span className="font-extrabold text-[#1F3A5C] flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-[#58a6ff]" />
+                <Sparkles className="w-3.5 h-3.5 text-[#2F79A6]" />
                 150 DPI Physical UV Mapping
               </span>
-              <span className="font-mono text-[9.5px] px-1.5 py-0.5 rounded bg-[#EEF4F8] text-[#58a6ff] border border-[#D5E4F0]">
+              <span className="rounded-full border border-[#D5E4F0] bg-[#EEF4F8] px-2 py-0.5 font-mono text-[9.5px] font-bold text-[#2F79A6]">
                 1:1 Scale
               </span>
             </div>
@@ -788,7 +788,7 @@ function AdminStudioContent() {
               <button
                 onClick={handleTriggerExportGLB}
                 disabled={isExportingGLB}
-                className="w-full mt-2.5 py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#238636] to-[#2ea043] hover:brightness-110 text-[#1F3A5C] font-extrabold text-[11.5px] transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#238636]/20 active:scale-95 disabled:opacity-50"
+                className="mt-2.5 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#1F3A5C] px-3 py-2.5 text-[11.5px] font-extrabold text-white shadow-sm transition-all hover:bg-[#152840] active:scale-95 disabled:opacity-50"
               >
                 <Sparkles className="w-4 h-4 text-yellow-300" />
                 <span>{isExportingGLB ? "Mengenerate 3D GLB..." : "Generate & Unduh 3D GLB dari Dieline"}</span>
@@ -1112,7 +1112,7 @@ function AdminStudioContent() {
         </div>
       )}
 
-      <div className="hidden h-full w-64 flex-none lg:flex xl:w-72">
+      <div className="hidden h-full w-[22rem] flex-none lg:flex xl:w-96">
         {panelContent}
       </div>
 

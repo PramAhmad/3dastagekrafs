@@ -570,43 +570,25 @@ export default function AdminTemplatesPage() {
 
                     {/* Available Materials Column */}
                     <td className="p-3.5">
-                      <div className="flex flex-wrap items-center gap-1 max-w-[160px]">
-                        {tmpl.available_materials && tmpl.available_materials.length > 0 ? (
-                          <>
-                            {tmpl.available_materials.slice(0, 2).map((matId) => {
-                              const matObj = MASTER_MATERIAL_OPTIONS.find((m) => m.id === matId)
-                              return (
-                                <span
-                                  key={matId}
-                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8.5px] font-semibold bg-[#EEF4F8] text-[#1F3A5C] border border-[#D5E4F0]"
-                                  title={matObj ? `${matObj.name} (${matObj.subtitle})` : matId}
-                                >
-                                  <span
-                                    className="w-1.5 h-1.5 rounded-full shrink-0"
-                                    style={{ backgroundColor: matObj?.color || "#94a3b8" }}
-                                  />
-                                  <span className="truncate max-w-[65px]">{matObj?.name.split(" ")[0] || matId}</span>
-                                </span>
-                              )
-                            })}
-                            {tmpl.available_materials.length > 2 && (
-                              <span
-                                className="inline-flex items-center px-1.5 py-0.5 rounded text-[8.5px] font-bold bg-[#EEF4F8] text-[#2F79A6] border border-[#D5E4F0] cursor-help"
-                                title={tmpl.available_materials
-                                  .slice(2)
-                                  .map((matId) => {
-                                    const matObj = MASTER_MATERIAL_OPTIONS.find((m) => m.id === matId)
-                                    return matObj ? `${matObj.name} (${matObj.subtitle})` : matId
-                                  })
-                                  .join(", ")}
-                              >
-                                +{tmpl.available_materials.length - 2} ...
-                              </span>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-[9.5px] text-[#718BAA] italic">Semua Bahan</span>
-                        )}
+                      <div className="flex max-w-[160px] flex-wrap items-center gap-1.5" aria-label="Palet warna bahan tersedia">
+                        {(tmpl.available_materials && tmpl.available_materials.length > 0
+                          ? tmpl.available_materials
+                          : MASTER_MATERIAL_OPTIONS.map((material) => material.id)
+                        ).map((matId) => {
+                          const material = MASTER_MATERIAL_OPTIONS.find((option) => option.id === matId)
+                          const materialLabel = material ? `${material.name} (${material.subtitle})` : matId
+
+                          return (
+                            <span
+                              key={matId}
+                              className="h-5 w-5 shrink-0 cursor-help rounded-full border-2 border-white shadow-[0_0_0_1px_#C7D9E6]"
+                              style={{ backgroundColor: material?.color || "#94A3B8" }}
+                              title={materialLabel}
+                              aria-label={materialLabel}
+                              role="img"
+                            />
+                          )
+                        })}
                       </div>
                     </td>
                     <td className="p-3.5 text-right">
