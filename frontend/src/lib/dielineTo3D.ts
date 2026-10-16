@@ -45,6 +45,30 @@ interface PathSegment {
   y2: number
 }
 
+function parseSvgPoints(points: string, close: boolean = false): PathSegment[] {
+  const values = (points.match(/[-+]?\d*\.?\d+(?:e[-+]?\d+)?/gi) || []).map(Number)
+  const segments: PathSegment[] = []
+
+  for (let i = 0; i + 3 < values.length; i += 2) {
+    segments.push({ x1: values[i], y1: values[i + 1], x2: values[i + 2], y2: values[i + 3] })
+  }
+
+  if (close && values.length >= 6) {
+    segments.push({
+      x1: values[values.length - 2],
+      y1: values[values.length - 1],
+      x2: values[0],
+      y2: values[1],
+    })
+  }
+
+  return segments
+}
+
+function getSvgAttribute(attrs: string, name: string): string {
+  return (attrs.match(new RegExp(`(?:^|\\s)${name}=["']([^"']+)["']`, "i")) || [])[1] || ""
+}
+
 /**
  * Parses SVG path d attribute into linear coordinate segments
  */
@@ -206,7 +230,8 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
 
   while ((match = tagReg.exec(svgText)) !== null) {
     const isClose = !!match[1]
-    const tag = match[2].toLowerCase()
+    // Compare local names so namespaced SVG tags such as ns0:g remain valid input.
+    const tag = match[2].toLowerCase().split(":").pop() || ""
     const attrsStr = match[3] || ""
     const isSelfClosing = !!match[4] || attrsStr.trim().endsWith("/")
 
@@ -226,7 +251,7 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
       continue
     }
 
-    if (tag === "path" || tag === "line") {
+    if (tag === "path" || tag === "line" || tag === "polyline" || tag === "polygon" || tag === "rect") {
       const id = (attrsStr.match(/\bid=["\']([^"\']+)["\']/i) || [])[1] || ""
       const cls = (attrsStr.match(/\bclass=["\']([^"\']+)["\']/i) || [])[1] || ""
       const stroke = (attrsStr.match(/\bstroke=["\']([^"\']+)["\']/i) || [])[1] || ""
@@ -254,7 +279,7 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
 
       let segs: PathSegment[] = []
       if (tag === "path") {
-        const d = (attrsStr.match(/\bd=["\']([^"\']+)["\']/i) || [])[1] || ""
+        const d = getSvgAttribute(attrsStr, "d")
         segs = parseSvgPathSegments(d)
       } else if (tag === "line") {
         const x1 = parseFloat((attrsStr.match(/x1=["\']([\d.-]+)/i) || [])[1] || "0")
@@ -262,6 +287,21 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
         const x2 = parseFloat((attrsStr.match(/x2=["\']([\d.-]+)/i) || [])[1] || "0")
         const y2 = parseFloat((attrsStr.match(/y2=["\']([\d.-]+)/i) || [])[1] || "0")
         segs = [{ x1, y1, x2, y2 }]
+      } else if (tag === "polyline" || tag === "polygon") {
+        segs = parseSvgPoints(getSvgAttribute(attrsStr, "points"), tag === "polygon")
+      } else if (tag === "rect") {
+        const x = parseFloat(getSvgAttribute(attrsStr, "x") || "0")
+        const y = parseFloat(getSvgAttribute(attrsStr, "y") || "0")
+        const w = parseFloat(getSvgAttribute(attrsStr, "width") || "0")
+        const h = parseFloat(getSvgAttribute(attrsStr, "height") || "0")
+        if (w > 0 && h > 0) {
+          segs = [
+            { x1: x, y1: y, x2: x + w, y2: y },
+            { x1: x + w, y1: y, x2: x + w, y2: y + h },
+            { x1: x + w, y1: y + h, x2: x, y2: y + h },
+            { x1: x, y1: y + h, x2: x, y2: y },
+          ]
+        }
       }
 
       if (isBleed) {
@@ -305,13 +345,13 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
   }
 
   const rawVCreases: number[] = []
-  const rawHCreases: number[] = []
+  const rawHCreases: Array<{ value: number; length: number }> = []
 
   creaseSegs.forEach((s) => {
     if (Math.abs(s.x1 - s.x2) < 2.5 && Math.abs(s.y2 - s.y1) > 8) {
       rawVCreases.push((s.x1 + s.x2) / 2)
     } else if (Math.abs(s.y1 - s.y2) < 2.5 && Math.abs(s.x2 - s.x1) > 8) {
-      rawHCreases.push((s.y1 + s.y2) / 2)
+      rawHCreases.push({ value: (s.y1 + s.y2) / 2, length: Math.abs(s.x2 - s.x1) })
     }
   })
 
@@ -319,9 +359,26 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
     (x) => x > cutBox.x + 3 && x < cutBox.x + cutBox.w - 3
   )
 
-  const horizontalCreases = clusterValues(rawHCreases).filter(
-    (y) => y > cutBox.y + 3 && y < cutBox.y + cutBox.h - 3
-  )
+  // Body boundaries usually have broad coverage across several adjacent panels.
+  // Rank clustered horizontal creases by total span so short roof/handle folds do not become body edges.
+  const horizontalClusters: Array<{ y: number; coverage: number }> = []
+  rawHCreases
+    .sort((a, b) => a.value - b.value)
+    .forEach(({ value, length }) => {
+      const cluster = horizontalClusters.find((item) => Math.abs(item.y - value) <= 3)
+      if (cluster) {
+        cluster.coverage += length
+      } else {
+        horizontalClusters.push({ y: value, coverage: length })
+      }
+    })
+
+  const horizontalCreases = horizontalClusters
+    .filter(({ y }) => y > cutBox.y + 3 && y < cutBox.y + cutBox.h - 3)
+    .sort((a, b) => b.coverage - a.coverage)
+    .slice(0, 2)
+    .map(({ y }) => y)
+    .sort((a, b) => a - b)
 
   // 5. Structure & Shape Topology Detection (No artificial forced classification!)
   const isGable = /gable|milk|susu|beverage/i.test(svgText)
@@ -379,6 +436,8 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
 
     // Check if panel 0 is a glue flap (significantly narrower than adjacent wall)
     const isPanel0Glue = panelWidths.length >= 4 && panelWidths[0] < 0.42 * panelWidths[1] && panelWidths[0] / pxPerMm < 65
+    const lastPanelIndex = panelWidths.length - 1
+    const isLastPanelGlue = panelWidths.length >= 4 && panelWidths[lastPanelIndex] < 0.42 * panelWidths[lastPanelIndex - 1] && panelWidths[lastPanelIndex] / pxPerMm < 65
 
     panelWidths.forEach((w, i) => {
       const pX = boundaries[i]
@@ -386,6 +445,9 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
       let faceName = `panel-${i}`
 
       if (isPanel0Glue && i === 0) {
+        label = "LIDAH LEM (GLUE FLAP)"
+        faceName = "glue-flap"
+      } else if (isLastPanelGlue && i === lastPanelIndex) {
         label = "LIDAH LEM (GLUE FLAP)"
         faceName = "glue-flap"
       } else if (panelWidths.length === 5 && isPanel0Glue) {
@@ -407,8 +469,9 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
     })
 
     if (panelWidths.length >= 4) {
-      lengthMm = Math.round((isPanel0Glue ? panelWidths[2] : panelWidths[0]) / pxPerMm)
-      widthMm = Math.round((isPanel0Glue ? panelWidths[1] : panelWidths[1]) / pxPerMm)
+      const wallWidths = panelWidths.filter((_, index) => !(isPanel0Glue && index === 0) && !(isLastPanelGlue && index === lastPanelIndex))
+      lengthMm = Math.round(wallWidths[0] / pxPerMm)
+      widthMm = Math.round((wallWidths[1] || wallWidths[0]) / pxPerMm)
     } else {
       lengthMm = Math.round(panelWidths[0] / pxPerMm)
       widthMm = Math.round((panelWidths[1] || panelWidths[0]) / pxPerMm)
@@ -932,13 +995,18 @@ export function buildFolded3DModel(
   const topFlapH = Math.max(0, (topCreaseY - cutBox.y) * scale)
   const botFlapH = Math.max(0, ((cutBox.y + cutBox.h) - botCreaseY) * scale)
 
-  // Detect glue flap at panel 0
-  const hasGlueFlap = numPanels >= 4 && panelWidths[0] < 0.42 * panelWidths[1]
-  const glueWidth = hasGlueFlap ? panelWidths[0] : 0
+  // Glue tabs can sit before or after the wall strip, depending on CAD convention.
+  const hasLeadingGlueFlap = numPanels >= 4 && panelWidths[0] < 0.42 * panelWidths[1]
+  const hasTrailingGlueFlap = numPanels >= 4 && panelWidths[numPanels - 1] < 0.42 * panelWidths[numPanels - 2]
+  const glueWidth = hasLeadingGlueFlap
+    ? panelWidths[0]
+    : hasTrailingGlueFlap
+      ? panelWidths[numPanels - 1]
+      : 0
 
   // Main body walls
   const wallIndices: number[] = []
-  for (let i = (hasGlueFlap ? 1 : 0); i < numPanels; i++) {
+  for (let i = (hasLeadingGlueFlap ? 1 : 0); i < numPanels - (hasTrailingGlueFlap ? 1 : 0); i++) {
     wallIndices.push(i)
   }
 
@@ -1016,7 +1084,7 @@ export function buildFolded3DModel(
 
   // 2. Glue Flap Hinge (to the left of anchor wall: X = -anchorW/2)
   let glueHinge: THREE.Group | null = null
-  if (hasGlueFlap) {
+  if (hasLeadingGlueFlap) {
     glueHinge = new THREE.Group()
     glueHinge.position.set(-anchorW / 2, 0, 0)
     anchorGroup.add(glueHinge)
@@ -1151,9 +1219,31 @@ export function buildFolded3DModel(
     prevOffset = pW
   }
 
+  let trailingGlueHinge: THREE.Group | null = null
+  if (hasTrailingGlueFlap) {
+    const gluePanelIndex = numPanels - 1
+    trailingGlueHinge = new THREE.Group()
+    trailingGlueHinge.position.set(prevOffset, 0, 0)
+    prevHingeGroup.add(trailingGlueHinge)
+
+    const gGeo = createDieCutFlapGeometry(
+      glueWidth,
+      bodyH,
+      boundaries[gluePanelIndex],
+      topCreaseY,
+      svgW,
+      svgH,
+      boundaries[gluePanelIndex + 1] - boundaries[gluePanelIndex],
+      botCreaseY - topCreaseY,
+      "glue"
+    )
+    gGeo.translate(glueWidth / 2, 0, 0)
+    trailingGlueHinge.add(new THREE.Mesh(gGeo, createMaterial()))
+  }
+
   // Flat sheet center along X so flat dieline is centered at X=0
   const flatTotalW = panelWidths.reduce((a, b) => a + b, 0)
-  const flatMinX = -anchorW / 2 - glueWidth
+  const flatMinX = -anchorW / 2 - (hasLeadingGlueFlap ? glueWidth : 0)
   const flatMaxX = flatMinX + flatTotalW
   const flatCenterX = (flatMinX + flatMaxX) / 2
 
@@ -1172,6 +1262,9 @@ export function buildFolded3DModel(
     // 2. Glue flap folds inward
     if (glueHinge) {
       glueHinge.rotation.y = -stepFoldAngle * t
+    }
+    if (trailingGlueHinge) {
+      trailingGlueHinge.rotation.y = stepFoldAngle * t
     }
 
     // 3. Top Flaps
