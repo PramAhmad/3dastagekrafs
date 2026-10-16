@@ -248,7 +248,7 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
   }
 
   // 2. Tokenize elements and track group hierarchy
-  const groupStack: Array<{ id: string; cls: string; stroke: string; isCut: boolean; isCrease: boolean }> = []
+  const groupStack: Array<{ id: string; cls: string; stroke: string; isCut: boolean; isCrease: boolean; isNonFold: boolean }> = []
   const tagReg = /<(\/)?([a-zA-Z0-9:-]+)([^>]*?)(\/)?>/g
   let match: RegExpExecArray | null
 
@@ -275,9 +275,11 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
         const cls = (attrsStr.match(/\bclass=["\']([^"\']+)["\']/i) || [])[1] || ""
         const stroke = (attrsStr.match(/\bstroke=["\']([^"\']+)["\']/i) || [])[1] || ""
         const dash = (attrsStr.match(/\bstroke-dasharray=["\']([^"\']+)["\']/i) || [])[1] || ""
-        const isCut = /cut|die-cut|page-cut|pisau/i.test(id + " " + cls) || /#(ff007f|e11d48|f43f5e|ff0000|d41a5a|magenta)/i.test(stroke)
-        const isCrease = /crease|fold|page-fold|score|lipat/i.test(id + " " + cls) || /#(00a651|10b981|22c55e|00ff00)/i.test(stroke) || (dash.length > 0 && dash !== "none")
-        groupStack.push({ id, cls, stroke, isCut, isCrease })
+        const context = id + " " + cls
+        const isNonFold = /seal|glue|bleed|safe|perf|kiss[_-]?cut|artwork|info|annotation/i.test(context)
+        const isCut = !isNonFold && (/cut|die-cut|page-cut|pisau/i.test(context) || /#(ff007f|e11d48|f43f5e|ff0000|d41a5a|magenta)/i.test(stroke))
+        const isCrease = !isNonFold && (/crease|fold|page-fold|score|lipat/i.test(context) || /#(00a651|10b981|22c55e|00ff00)/i.test(stroke) || (dash.length > 0 && dash !== "none"))
+        groupStack.push({ id, cls, stroke, isCut, isCrease, isNonFold })
         if (isSelfClosing) groupStack.pop()
       }
       continue
@@ -302,9 +304,10 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
 
       const parentCut = groupStack.some((g) => g.isCut)
       const parentCrease = groupStack.some((g) => g.isCrease)
+      const parentNonFold = groupStack.some((g) => g.isNonFold)
 
       // Crease: Green stroke OR Dashed line OR inside fold/crease group (e.g. templatemaker #00adee inside page-fold)
-      const isCrease = !isBleedGroup && (parentCrease || isDashed || isGreenStroke || /crease|fold|page-fold|score|lipat/i.test(id + " " + cls))
+      const isCrease = !isBleedGroup && !parentNonFold && (parentCrease || isDashed || isGreenStroke || /crease|fold|page-fold|score|lipat/i.test(id + " " + cls))
       // Cut: Red/Magenta stroke OR inside cut/die-cut group
       const isCut = !isBleedGroup && !isCrease && (parentCut || isRedStroke || /cut|die-cut|page-cut|pisau/i.test(id + " " + cls))
       const isBleed = isBleedGroup && !isCut && !isCrease
@@ -430,7 +433,7 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
 
   let boxType: DielineBoxType = "generic-box"
 
-  if (assemblySpec?.family === "flexible_gusset_pouch") {
+  if (assemblySpec?.family === "flexible_gusset_pouch" || assemblySpec?.family === "film_seal_and_deformation") {
     boxType = "pouch"
   } else if (assemblySpec?.family === "tapered_cup" || assemblySpec?.family === "tapered_cup_sleeve" || assemblySpec?.family === "circular_tube") {
     boxType = "cylinder-wrap"
@@ -966,6 +969,76 @@ export function buildFolded3DModel(
     box.position.y = H / 2
     rootGroup.add(box)
     const updateFold = (progress: number) => { box.scale.y = Math.max(0.02, Math.min(1, progress)) }
+    updateFold(1)
+    return { rootGroup, updateFold, materials }
+  }
+
+  if (family === "film_seal_and_deformation") {
+    const L = numberSpec("L", analysis.dims.length)
+    const W = numberSpec("W", analysis.dims.width)
+    const H = numberSpec("H", analysis.dims.height)
+    const localScale = 1.5 / Math.max(L, H)
+    const displayW = L * localScale
+    const displayH = H * localScale
+    const depth = W * localScale
+    const isPillowPack = analysis.modelId === "pillow-pack"
+    const segsX = 32
+    const segsY = 32
+    const group = new THREE.Group()
+    group.position.y = displayH / 2
+    rootGroup.add(group)
+
+    const frontGeo = new THREE.PlaneGeometry(displayW, displayH, segsX, segsY)
+    const backGeo = new THREE.PlaneGeometry(displayW, displayH, segsX, segsY)
+    const front = makeMesh(frontGeo)
+    const back = makeMesh(backGeo)
+    group.add(front, back)
+
+    const sealBand = Math.max(0.018, Math.min(displayW, displayH) * 0.055)
+    const sealDepth = 0.008
+    const seals: THREE.Mesh[] = []
+    const addSeal = (width: number, height: number, x: number, y: number) => {
+      const seal = makeMesh(new THREE.BoxGeometry(width, height, sealDepth))
+      seal.position.set(x, y, 0)
+      seals.push(seal)
+      group.add(seal)
+    }
+
+    if (isPillowPack) {
+      addSeal(sealBand, displayH, -displayW / 2 + sealBand / 2, 0)
+      addSeal(sealBand, displayH, displayW / 2 - sealBand / 2, 0)
+      addSeal(displayW * 0.42, sealBand * 0.65, 0, 0)
+    } else {
+      addSeal(displayW, sealBand, 0, displayH / 2 - sealBand / 2)
+      addSeal(displayW, sealBand, 0, -displayH / 2 + sealBand / 2)
+      addSeal(sealBand, displayH, -displayW / 2 + sealBand / 2, 0)
+      addSeal(sealBand, displayH, displayW / 2 - sealBand / 2, 0)
+    }
+
+    const updateFold = (progress: number) => {
+      const t = Math.max(0, Math.min(1, progress))
+      const frontPos = frontGeo.attributes.position
+      const backPos = backGeo.attributes.position
+      for (let row = 0; row <= segsY; row++) {
+        const ny = row / segsY
+        for (let col = 0; col <= segsX; col++) {
+          const nx = col / segsX
+          const idx = row * (segsX + 1) + col
+          const edgeX = Math.sin(nx * Math.PI)
+          const edgeY = Math.sin(ny * Math.PI)
+          const pillowBias = isPillowPack ? Math.pow(edgeY, 0.55) : edgeY
+          const bulge = depth * 0.5 * edgeX * pillowBias * t
+          frontPos.setZ(idx, bulge)
+          backPos.setZ(idx, -bulge)
+        }
+      }
+      frontPos.needsUpdate = true
+      backPos.needsUpdate = true
+      frontGeo.computeVertexNormals()
+      backGeo.computeVertexNormals()
+      seals.forEach((seal) => { seal.scale.z = Math.max(0.1, t) })
+    }
+
     updateFold(1)
     return { rootGroup, updateFold, materials }
   }

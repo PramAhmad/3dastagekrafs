@@ -13,6 +13,7 @@ export type AssemblyFamily =
   | "rolled_wall_mailer"
   | "curved_pillow_carton"
   | "rsc_corrugated"
+  | "film_seal_and_deformation"
 
 export interface AssemblyPreviewSpec {
   family: AssemblyFamily
@@ -47,6 +48,8 @@ export const DIELINE_ASSEMBLY_CATALOG: Record<string, AssemblyPreviewSpec> = {
   "standup-pouch": { family: "flexible_gusset_pouch", dimensions: { filmWidth: 140, panelHeight: 210, bottomGusset: 46 } },
   ste: { family: "four_wall_tuck_carton", dimensions: { L: 90, W: 40, H: 140 } },
   "window-carton": { family: "four_wall_tuck_carton", dimensions: { L: 90, W: 40, H: 140 } },
+  "pillow-pack": { family: "film_seal_and_deformation", dimensions: { L: 140, W: 55, H: 120 } },
+  "flat-sachet": { family: "film_seal_and_deformation", dimensions: { L: 95, W: 12, H: 150 } },
 }
 
 export function getAssemblyPreviewSpec(modelId?: string): AssemblyPreviewSpec | undefined {
