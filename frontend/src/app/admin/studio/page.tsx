@@ -102,6 +102,7 @@ function AdminStudioContent() {
   // Active Tab & Collapse State for 1280px screen optimization
   const [activeTab, setActiveTab] = useState<"params" | "dieline" | "artwork" | "files" | "scene">("params")
   const [isPanelOpen, setIsPanelOpen] = useState<boolean>(false)
+  const [isMobileLayout, setIsMobileLayout] = useState<boolean>(false)
 
   // Selected Form / Template State
   const [selectedFormId, setSelectedFormId] = useState<string>("fefco-0427-mailer")
@@ -153,6 +154,19 @@ function AdminStudioContent() {
     setNotification({ msg, type })
     setTimeout(() => setNotification(null), 3500)
   }
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 1023px)")
+    const updateLayout = () => {
+      const isMobile = mediaQuery.matches
+      setIsMobileLayout(isMobile)
+      if (!isMobile) setIsPanelOpen(false)
+    }
+
+    updateLayout()
+    mediaQuery.addEventListener("change", updateLayout)
+    return () => mediaQuery.removeEventListener("change", updateLayout)
+  }, [])
 
   // Generate Parametric Dieline Vector SVG (real-time CAD math)
   const currentDieline = useMemo(() => {
@@ -1135,9 +1149,11 @@ function AdminStudioContent() {
         {panelContent}
       </div>
 
-      <AdminDrawer open={isPanelOpen} onClose={() => setIsPanelOpen(false)} title="3DPAKS Studio controls" side="left">
-        <div className="-m-5 h-[calc(100%+2.5rem)] w-[calc(100%+2.5rem)]">{panelContent}</div>
-      </AdminDrawer>
+      {isMobileLayout && (
+        <AdminDrawer open={isPanelOpen} onClose={() => setIsPanelOpen(false)} title="3DPAKS Studio controls" side="left">
+          <div className="-m-5 h-[calc(100%+2.5rem)] w-[calc(100%+2.5rem)]">{panelContent}</div>
+        </AdminDrawer>
+      )}
 
       {/* --------------------------------------------------------------------- */}
       {/* RIGHT VIEWPORT CANVAS (#viewport)                                     */}
@@ -1146,7 +1162,7 @@ function AdminStudioContent() {
         {/* Floating Top HUD Island */}
         <div className="pointer-events-none absolute left-3 right-3 top-3 z-20 flex flex-wrap items-start justify-between gap-2 sm:left-4 sm:right-4 sm:top-4">
           <div className="pointer-events-auto flex min-w-0 flex-1 flex-wrap items-center gap-2">
-            {!isPanelOpen && (
+            {isMobileLayout && !isPanelOpen && (
               <button
                 onClick={() => setIsPanelOpen(true)}
                 className="pointer-events-auto flex min-h-11 min-w-11 items-center gap-1.5 rounded-xl border border-[#D5E4F0] bg-white/95 px-2.5 py-1.5 text-[11px] font-bold text-[#1F3A5C] shadow-sm backdrop-blur-md transition-all hover:bg-[#EEF4F8] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2F79A6] sm:min-w-0"

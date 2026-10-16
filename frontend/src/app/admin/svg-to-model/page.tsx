@@ -77,7 +77,8 @@ export default function SvgToModelPage() {
   const [svgString, setSvgString] = useState<string>("")
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(true)
   const [analysis, setAnalysis] = useState<DielineAnalysis | null>(null)
-  const [isInspectorOpen, setIsInspectorOpen] = useState<boolean>(true)
+  const [isInspectorOpen, setIsInspectorOpen] = useState<boolean>(false)
+  const [isMobileLayout, setIsMobileLayout] = useState<boolean>(false)
 
   // Folding Animation State
   const [foldProgress, setFoldProgress] = useState<number>(1.0) // 1.0 = 100% folded
@@ -153,6 +154,19 @@ export default function SvgToModelPage() {
 
   useEffect(() => {
     loadPreset("gable-carton")
+  }, [])
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 1023px)")
+    const updateLayout = () => {
+      const isMobile = mediaQuery.matches
+      setIsMobileLayout(isMobile)
+      if (!isMobile) setIsInspectorOpen(false)
+    }
+
+    updateLayout()
+    mediaQuery.addEventListener("change", updateLayout)
+    return () => mediaQuery.removeEventListener("change", updateLayout)
   }, [])
 
   // 2. Handle Custom SVG Upload
@@ -488,7 +502,7 @@ export default function SvgToModelPage() {
           <button
             type="button"
             onClick={() => setIsInspectorOpen(true)}
-            className="flex h-10 items-center gap-1.5 rounded-xl border border-[#D5E4F0] bg-white px-2.5 text-xs font-bold text-[#1F3A5C] shadow-xs transition-all hover:bg-[#EEF4F8] lg:hidden"
+            className="flex min-h-11 min-w-11 items-center gap-1.5 rounded-xl border border-[#D5E4F0] bg-white px-2.5 text-xs font-bold text-[#1F3A5C] shadow-xs transition-all hover:bg-[#EEF4F8] lg:hidden"
             aria-label="Open SVG parser inspector"
             title="Open SVG parser inspector"
           >
@@ -499,7 +513,7 @@ export default function SvgToModelPage() {
             type="button"
             onClick={handleDownloadGlb}
             disabled={isExporting || !analysis}
-            className="flex h-10 items-center gap-1.5 rounded-xl border border-[#D5E4F0] bg-white px-2.5 text-xs font-bold text-[#1F3A5C] shadow-xs transition-all hover:bg-[#EEF4F8] disabled:cursor-not-allowed disabled:opacity-60 sm:px-3"
+            className="flex min-h-11 min-w-11 items-center gap-1.5 rounded-xl border border-[#D5E4F0] bg-white px-2.5 text-xs font-bold text-[#1F3A5C] shadow-xs transition-all hover:bg-[#EEF4F8] disabled:cursor-not-allowed disabled:opacity-60 sm:px-3"
             aria-label="Export 3D GLB"
             title="Export 3D (.GLB)"
           >
@@ -511,7 +525,7 @@ export default function SvgToModelPage() {
             type="button"
             onClick={handleOpenSaveModal}
             disabled={!analysis}
-            className="flex h-10 items-center gap-1.5 rounded-xl bg-[#1F3A5C] px-2.5 text-xs font-extrabold text-[#F7CB45] shadow-sm transition-all hover:bg-[#152840] disabled:cursor-not-allowed disabled:opacity-60 sm:px-4"
+            className="flex min-h-11 min-w-11 items-center gap-1.5 rounded-xl bg-[#1F3A5C] px-2.5 text-xs font-extrabold text-[#F7CB45] shadow-sm transition-all hover:bg-[#152840] disabled:cursor-not-allowed disabled:opacity-60 sm:px-4"
             aria-label="Save as model template"
             title="Simpan Sebagai Model Template"
           >
@@ -533,7 +547,7 @@ export default function SvgToModelPage() {
           </div>
         </aside>
 
-        <div className="lg:hidden">
+        {isMobileLayout && (
           <AdminDrawer open={isInspectorOpen} onClose={() => setIsInspectorOpen(false)} title="SVG Parser Inspector" side="left">
             {inspectorContent}
             <div className="mt-4 pt-2 border-t border-[#D5E4F0] text-[9.5px] text-[#718BAA] flex items-center gap-1.5">
@@ -541,7 +555,7 @@ export default function SvgToModelPage() {
               <span>Pola SVG langsung dimapping 1:1 ke koordinat UV model 3D tanpa distorsi.</span>
             </div>
           </AdminDrawer>
-        </div>
+        )}
 
         {/* Right Column: 3D Live Folded Viewport & Folding Controls */}
         <div className="flex-1 flex flex-col bg-[#F0F5FA] relative overflow-hidden">

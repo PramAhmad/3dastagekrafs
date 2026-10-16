@@ -50,16 +50,22 @@ export default function AdminDrawer({
   const panelRef = useRef<HTMLElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const openerRef = useRef<HTMLElement | null>(null)
+  const wasOpenRef = useRef(false)
   const titleId = useId()
   const dialogTitleId = labelledBy ?? titleId
 
   useEffect(() => {
     if (!open) {
-      openerRef.current?.focus()
+      if (!wasOpenRef.current) return
+
+      wasOpenRef.current = false
+      const opener = openerRef.current
       openerRef.current = null
+      if (opener?.isConnected) opener.focus()
       return
     }
 
+    wasOpenRef.current = true
     const activeElement = document.activeElement
     openerRef.current = activeElement instanceof HTMLElement ? activeElement : null
 
@@ -145,7 +151,7 @@ export default function AdminDrawer({
         className={`absolute inset-y-0 ${side === "left" ? "left-0" : "right-0"} flex w-[min(90vw,24rem)] min-h-0 flex-col bg-white shadow-2xl outline-none transition-[transform,opacity] duration-200 ease-out motion-reduce:transition-none`}
       >
         <header className="flex shrink-0 items-center justify-between gap-4 border-b border-[#D5E4F0] px-5 py-4">
-          <h2 id={titleId} className="min-w-0 truncate text-base font-extrabold text-[#1F3A5C]">
+          <h2 id={dialogTitleId} className="min-w-0 truncate text-base font-extrabold text-[#1F3A5C]">
             {title}
           </h2>
           <button
@@ -153,7 +159,7 @@ export default function AdminDrawer({
             type="button"
             onClick={onClose}
             aria-label={`Close ${title}`}
-            className="shrink-0 rounded-lg p-1.5 text-[#627D98] transition-colors hover:bg-[#EEF4F8] hover:text-[#1F3A5C] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2F79A6] motion-reduce:transition-none"
+            className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg p-1.5 text-[#627D98] transition-colors hover:bg-[#EEF4F8] hover:text-[#1F3A5C] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2F79A6] motion-reduce:transition-none"
           >
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
