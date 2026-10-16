@@ -28,6 +28,8 @@ import {
 
 import DielineFoldCanvas from "@/components/3d/DielineFoldCanvas"
 import AdminDrawer from "@/components/admin/AdminDrawer"
+import WorkspaceTabs from "@/components/admin/WorkspaceTabs"
+import type { WorkspaceTabItem } from "@/components/admin/WorkspaceTabs"
 import { analyzeSvgDieline, DielineAnalysis } from "@/lib/dielineTo3D"
 import { generateParametricDieline } from "@/lib/dielineGenerator"
 import { autoFixDielineSvg } from "@/lib/dielineAutoFixer"
@@ -79,6 +81,7 @@ export default function SvgToModelPage() {
   const [analysis, setAnalysis] = useState<DielineAnalysis | null>(null)
   const [isInspectorOpen, setIsInspectorOpen] = useState<boolean>(false)
   const [isMobileLayout, setIsMobileLayout] = useState<boolean>(false)
+  const [svgSourceTab, setSvgSourceTab] = useState<"upload" | "presets" | "analysis">("upload")
 
   // Folding Animation State
   const [foldProgress, setFoldProgress] = useState<number>(1.0) // 1.0 = 100% folded
@@ -354,10 +357,17 @@ export default function SvgToModelPage() {
     }
   }
 
+  const sourceTabs: WorkspaceTabItem[] = [
+    { id: "upload", label: "Upload SVG", shortLabel: "Upload", icon: Upload },
+    { id: "presets", label: "Sample Presets", shortLabel: "Presets", icon: Layers },
+    { id: "analysis", label: "Analysis", shortLabel: "Analysis", icon: Sliders },
+  ]
+
   const inspectorContent = (
     <div className="space-y-4">
+      <WorkspaceTabs items={sourceTabs} activeId={svgSourceTab} onChange={(id) => setSvgSourceTab(id as typeof svgSourceTab)} tablistLabel="SVG source workflow" panelIdPrefix="svg-source" />
       {/* 1. File Upload Dropzone */}
-      <div className="space-y-1.5">
+      {svgSourceTab === "upload" && <div className="space-y-1.5">
         <span className="text-[10.5px] font-bold text-[#1F3A5C] uppercase tracking-wider flex items-center gap-1.5">
           <Upload className="w-3.5 h-3.5 text-[#2F79A6]" />
           1. Upload Pola Dieline SVG Anda:
@@ -370,8 +380,9 @@ export default function SvgToModelPage() {
           </span>
           <input type="file" accept=".svg,image/svg+xml" onChange={handleFileUpload} className="hidden" />
         </label>
-      </div>
+      </div>}
 
+      {svgSourceTab === "presets" && <div className="space-y-1.5">
       {/* 2. Preset Samples Selector */}
       <div className="space-y-1.5">
         <span className="text-[10px] font-bold text-[#718BAA] uppercase tracking-wider">
@@ -393,10 +404,10 @@ export default function SvgToModelPage() {
             </button>
           ))}
         </div>
-      </div>
+      </div></div>}
 
       {/* 3. Auto-Detected Specifications */}
-      {analysis && (
+      {svgSourceTab === "analysis" && analysis && (
         <div className="bg-[#EEF4F8] p-3 rounded-2xl border border-[#D5E4F0] space-y-2.5">
           <div className="flex items-center justify-between">
             <span className="text-[10.5px] font-bold text-[#1F3A5C] flex items-center gap-1.5">
@@ -451,12 +462,12 @@ export default function SvgToModelPage() {
         </div>
       )}
 
-      <div className="space-y-1.5">
+      {svgSourceTab === "analysis" && <div className="space-y-1.5">
         <span className="text-[10px] font-bold text-[#718BAA] uppercase tracking-wider">Preview Pola Lembaran 2D (Cut & Crease):</span>
         <div className="w-full aspect-4/3 bg-[#F8FAFC] rounded-2xl border border-[#D5E4F0] p-2 flex items-center justify-center overflow-hidden relative shadow-inner">
           {svgString ? <div className="w-full h-full flex items-center justify-center [&>svg]:max-w-full [&>svg]:max-h-full" dangerouslySetInnerHTML={{ __html: svgString }} /> : <div className="text-center text-[#718BAA] space-y-1"><RefreshCw className="w-6 h-6 animate-spin mx-auto text-[#2F79A6]" /><p className="text-[10px]">Memuat pola SVG...</p></div>}
         </div>
-      </div>
+      </div>}
     </div>
   )
 
