@@ -1149,11 +1149,9 @@ function AdminStudioContent() {
         {panelContent}
       </div>
 
-      {isMobileLayout && (
-        <AdminDrawer open={isPanelOpen} onClose={() => setIsPanelOpen(false)} title="3DPAKS Studio controls" side="left">
-          <div className="-m-5 h-[calc(100%+2.5rem)] w-[calc(100%+2.5rem)]">{panelContent}</div>
-        </AdminDrawer>
-      )}
+      <AdminDrawer open={isMobileLayout && isPanelOpen} onClose={() => setIsPanelOpen(false)} title="3DPAKS Studio controls" side="left">
+        <div className="-m-5 h-[calc(100%+2.5rem)] w-[calc(100%+2.5rem)]">{panelContent}</div>
+      </AdminDrawer>
 
       {/* --------------------------------------------------------------------- */}
       {/* RIGHT VIEWPORT CANVAS (#viewport)                                     */}

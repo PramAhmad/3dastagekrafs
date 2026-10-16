@@ -547,15 +547,13 @@ export default function SvgToModelPage() {
           </div>
         </aside>
 
-        {isMobileLayout && (
-          <AdminDrawer open={isInspectorOpen} onClose={() => setIsInspectorOpen(false)} title="SVG Parser Inspector" side="left">
-            {inspectorContent}
-            <div className="mt-4 pt-2 border-t border-[#D5E4F0] text-[9.5px] text-[#718BAA] flex items-center gap-1.5">
-              <Info className="w-3.5 h-3.5 text-[#2F79A6] shrink-0" aria-hidden="true" />
-              <span>Pola SVG langsung dimapping 1:1 ke koordinat UV model 3D tanpa distorsi.</span>
-            </div>
-          </AdminDrawer>
-        )}
+        <AdminDrawer open={isMobileLayout && isInspectorOpen} onClose={() => setIsInspectorOpen(false)} title="SVG Parser Inspector" side="left">
+          {inspectorContent}
+          <div className="mt-4 pt-2 border-t border-[#D5E4F0] text-[9.5px] text-[#718BAA] flex items-center gap-1.5">
+            <Info className="w-3.5 h-3.5 text-[#2F79A6] shrink-0" aria-hidden="true" />
+            <span>Pola SVG langsung dimapping 1:1 ke koordinat UV model 3D tanpa distorsi.</span>
+          </div>
+        </AdminDrawer>
 
         {/* Right Column: 3D Live Folded Viewport & Folding Controls */}
         <div className="flex-1 flex flex-col bg-[#F0F5FA] relative overflow-hidden">

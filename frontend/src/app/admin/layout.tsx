@@ -19,16 +19,23 @@ export default function AdminLayout({
     pathname === "/admin/studio" ||
     pathname.startsWith("/admin/studio/")
   const [isNavOpen, setIsNavOpen] = React.useState(false)
+  const [isMobileLayout, setIsMobileLayout] = React.useState(false)
   const navId = "admin-global-navigation"
 
+  React.useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 1023px)")
+    const updateLayout = () => setIsMobileLayout(mediaQuery.matches)
+
+    updateLayout()
+    mediaQuery.addEventListener("change", updateLayout)
+    return () => mediaQuery.removeEventListener("change", updateLayout)
+  }, [])
+
   const closeNav = React.useCallback(() => setIsNavOpen(false), [])
+  const isNavVisible = isNavOpen && (isWorkspace || isMobileLayout)
 
   React.useEffect(() => {
-    closeNav()
-  }, [pathname, closeNav])
-
-  React.useEffect(() => {
-    if (!isNavOpen) return
+    if (!isNavVisible) return
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") closeNav()
@@ -36,7 +43,11 @@ export default function AdminLayout({
 
     document.addEventListener("keydown", handleKeyDown)
     return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [isNavOpen, closeNav])
+  }, [isNavVisible, closeNav])
+
+  React.useEffect(() => {
+    closeNav()
+  }, [pathname, closeNav])
 
   return (
     <AuthGuard>
@@ -62,11 +73,9 @@ export default function AdminLayout({
           </main>
         </div>
 
-        <div className={isWorkspace ? "" : "lg:hidden"}>
-          <AdminDrawer open={isNavOpen} onClose={closeNav} title="Admin navigation" side="left">
-            <AdminSidebar mode="drawer" onNavigate={closeNav} />
-          </AdminDrawer>
-        </div>
+        <AdminDrawer open={isNavVisible} onClose={closeNav} title="Admin navigation" side="left">
+          <AdminSidebar mode="drawer" onNavigate={closeNav} />
+        </AdminDrawer>
       </div>
     </AuthGuard>
   )
