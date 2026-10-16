@@ -440,18 +440,18 @@ export default function KemasanCatalogPage() {
                   onClick={() => handleStartDesign(tmpl.id)}
                   className="group bg-white rounded-2xl border border-[#D5E4F0] hover:border-[#1F3A5C] overflow-hidden flex flex-col justify-between transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 cursor-pointer relative"
                 >
-                  {/* Full-Bleed 3D Visual Preview Area (Full Width & Auto Crop) */}
-                  <div className="w-full aspect-square bg-[#EEF4F8] relative overflow-hidden flex items-center justify-center group-hover:bg-[#E5EFF5] transition-colors">
+                  {/* Full-Bleed 3D Visual Preview Area (Strict 1x1 Square & Auto Crop) */}
+                  <div className="w-full aspect-square shrink-0 flex-none bg-[#EEF4F8] relative overflow-hidden group-hover:bg-[#E5EFF5] transition-colors">
                     {/* Top Badge */}
                     {tmpl.badge && (
-                      <div className="absolute top-3 right-3 z-10 px-2.5 py-0.5 rounded-full bg-[#1F3A5C] text-[#F7CB45] font-bold text-[9px] uppercase tracking-wider font-mono shadow-xs flex items-center gap-1">
+                      <div className="absolute top-2.5 right-2.5 z-10 px-2 py-0.5 rounded-full bg-[#1F3A5C] text-[#F7CB45] font-bold text-[9px] uppercase tracking-wider font-mono shadow-xs flex items-center gap-1">
                         <Sparkles className="w-2.5 h-2.5 text-[#F7CB45]" />
                         <span>{tmpl.badge}</span>
                       </div>
                     )}
 
                     {/* 3D Format Pill */}
-                    <div className="absolute bottom-3 left-3 z-10 px-2 py-0.5 rounded-md bg-white/90 backdrop-blur-xs border border-white/80 text-[#1F3A5C] font-mono text-[9px] font-bold shadow-xs flex items-center gap-1">
+                    <div className="absolute bottom-2.5 left-2.5 z-10 px-2 py-0.5 rounded-md bg-white/90 backdrop-blur-xs border border-white/80 text-[#1F3A5C] font-mono text-[9px] font-bold shadow-xs flex items-center gap-1">
                       <Box className="w-3 h-3 text-[#2F79A6]" />
                       <span>{(tmpl.model_format || "GLB").toUpperCase()}</span>
                     </div>
@@ -460,13 +460,13 @@ export default function KemasanCatalogPage() {
                       <img
                         src={tmpl.preview_url}
                         alt={tmpl.name}
-                        className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500 ease-out pointer-events-none"
+                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-108 transition-transform duration-500 ease-out pointer-events-none"
                       />
                     ) : tmpl.model_3d_url ? (
-                      <div className="p-5 flex flex-col items-center justify-center gap-1.5 group-hover:scale-108 transition-transform duration-300">
-                        <div className="w-16 h-16 rounded-2xl bg-white/90 border border-[#4394C3]/30 shadow-md flex flex-col items-center justify-center gap-1 p-2">
-                          <Box className="w-8 h-8 text-[#2F79A6] animate-pulse" />
-                          <span className="text-[9px] font-black font-mono text-[#1F3A5C] tracking-wider uppercase">
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 p-4 group-hover:scale-108 transition-transform duration-300">
+                        <div className="w-14 h-14 rounded-2xl bg-white/90 border border-[#4394C3]/30 shadow-md flex flex-col items-center justify-center gap-1 p-2">
+                          <Box className="w-7 h-7 text-[#2F79A6] animate-pulse" />
+                          <span className="text-[8.5px] font-black font-mono text-[#1F3A5C] tracking-wider uppercase">
                             {(tmpl.model_format || "GLB").toUpperCase()}
                           </span>
                         </div>
@@ -475,7 +475,7 @@ export default function KemasanCatalogPage() {
                         </span>
                       </div>
                     ) : (
-                      <div className="p-5 relative w-full h-full flex flex-col items-center justify-center group-hover:scale-108 transition-transform duration-300">
+                      <div className="absolute inset-0 flex items-center justify-center p-6 group-hover:scale-108 transition-transform duration-300">
                         {tmpl.category === "BOX" ? (
                           <svg className="w-24 h-24 text-[#1F3A5C] drop-shadow-lg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M50 15 L85 33 L50 51 L15 33 Z" fill="#EEF4F8" stroke="#1F3A5C" strokeWidth="2.5" strokeLinejoin="round" />
@@ -533,14 +533,14 @@ export default function KemasanCatalogPage() {
                     )}
                   </div>
 
-                  {/* Clean, Simple Model Body */}
-                  <div className="p-4 flex-1 flex flex-col justify-between gap-3 bg-white">
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="px-2 py-0.5 rounded-md bg-[#EEF4F8] text-[#1F3A5C] font-mono text-[9.5px] uppercase font-bold">
+                  {/* Clean, Compact Model Body */}
+                  <div className="p-3 bg-white flex flex-col gap-2">
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between gap-1 text-[10px] text-[#718BAA] font-mono">
+                        <span className="px-2 py-0.5 rounded-md bg-[#EEF4F8] text-[#1F3A5C] font-bold uppercase tracking-wider text-[9px]">
                           {tmpl.category}
                         </span>
-                        <span className="text-[10.5px] font-mono text-[#718BAA]">
+                        <span className="truncate">
                           {tmpl.default_dimensions ? (
                             tmpl.category === "JAR" || tmpl.category === "BOTTLE" || tmpl.category === "CAN" || tmpl.category === "CUP" ? (
                               `Ø${(tmpl.default_dimensions.radius_mm || 25) * 2} × ${tmpl.default_dimensions.height_mm || 35} mm`
@@ -553,27 +553,24 @@ export default function KemasanCatalogPage() {
                         </span>
                       </div>
 
-                      <h3 className="font-extrabold text-[#1F3A5C] text-sm group-hover:text-[#2F79A6] transition-colors line-clamp-1">
+                      <h3 className="font-extrabold text-[#1F3A5C] text-xs sm:text-sm group-hover:text-[#2F79A6] transition-colors truncate">
                         {tmpl.name}
                       </h3>
-                      <p className="text-[11px] text-[#4B6B94] line-clamp-1 leading-snug">
-                        {tmpl.description}
-                      </p>
                     </div>
 
-                    {/* Simple Action CTAs */}
-                    <div className="flex items-center gap-2 pt-1">
+                    {/* Compact Action CTAs */}
+                    <div className="flex items-center gap-1.5 pt-0.5">
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation()
                           handleStartDesign(tmpl.id)
                         }}
-                        className="flex-1 py-2.5 rounded-xl bg-[#1F3A5C] group-hover:bg-[#2F79A6] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-98"
+                        className="flex-1 py-1.5 px-3 rounded-lg bg-[#1F3A5C] group-hover:bg-[#2F79A6] text-white font-bold text-[11px] flex items-center justify-center gap-1 shadow-2xs transition-all active:scale-98"
                       >
-                        <Box className="w-3.5 h-3.5 text-[#F7CB45]" />
+                        <Box className="w-3 h-3 text-[#F7CB45]" />
                         <span>Desain 3D</span>
-                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                        <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                       </button>
 
                       <button
@@ -582,10 +579,10 @@ export default function KemasanCatalogPage() {
                           e.stopPropagation()
                           setSelectedDetailModal(tmpl)
                         }}
-                        className="p-2.5 rounded-xl bg-[#EEF4F8] hover:bg-[#D5E4F0] text-[#1F3A5C] transition-all border border-[#D5E4F0]"
+                        className="p-1.5 rounded-lg bg-[#EEF4F8] hover:bg-[#D5E4F0] text-[#1F3A5C] transition-all border border-[#D5E4F0]"
                         title="Lihat Rincian Spesifikasi & Dieline"
                       >
-                        <Info className="w-4 h-4 text-[#2F79A6]" />
+                        <Info className="w-3.5 h-3.5 text-[#2F79A6]" />
                       </button>
                     </div>
                   </div>
