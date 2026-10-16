@@ -77,12 +77,12 @@ export default function SvgToModelPage() {
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(true)
   const [analysis, setAnalysis] = useState<DielineAnalysis | null>(null)
 
-  // Folding Animation State (Pacdora-style)
+  // Folding Animation State
   const [foldProgress, setFoldProgress] = useState<number>(1.0) // 1.0 = 100% folded
   const [isPlaying, setIsPlaying] = useState<boolean>(false)
   const animFrameRef = useRef<number | null>(null)
 
-  // Material & Appearance (Default Pacdora Kraft Cardboard)
+  // Material & Appearance (Default Kraft Cardboard)
   const [boxColor, setBoxColor] = useState<string>("#be8d58")
   const [materialFinish, setMaterialFinish] = useState<"matte" | "glossy" | "kraft" | "metallic">("kraft")
 
@@ -366,7 +366,7 @@ export default function SvgToModelPage() {
             <div className="flex items-center gap-2">
               <h1 className="text-sm font-extrabold text-[#1F3A5C]">SVG to 3D Model Template Generator</h1>
               <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[9px] font-mono font-bold uppercase tracking-wider">
-                PACDORA ENGINE
+                ASTAKRAF 3D ENGINE
               </span>
             </div>
             <p className="text-[10px] text-[#718BAA]">
@@ -502,10 +502,10 @@ export default function SvgToModelPage() {
                   </div>
                 </div>
 
-                {/* Pacdora CAD Rules Inspector: Red Solid (Cut) vs Green Dashed (Crease) */}
+                {/* CAD Rules Inspector: Red Solid (Cut) vs Green Dashed (Crease) */}
                 <div className="pt-2 border-t border-[#D5E4F0]/80 space-y-1.5">
                   <span className="text-[9px] font-extrabold text-[#1F3A5C] uppercase tracking-wider block">
-                    Aturan Garis CAD (Standar Pacdora):
+                    Aturan Garis CAD (Standar Industri):
                   </span>
                   <div className="space-y-1">
                     {/* Red Line: Through Cut */}
@@ -592,7 +592,7 @@ export default function SvgToModelPage() {
           </div>
         </div>
 
-        {/* Right Column: 3D Live Folded Viewport & Pacdora Folding Controls */}
+        {/* Right Column: 3D Live Folded Viewport & Folding Controls */}
         <div className="flex-1 flex flex-col bg-[#F0F5FA] relative overflow-hidden">
           {/* 3D Viewport */}
           <div className="flex-1 relative">
@@ -635,7 +635,7 @@ export default function SvgToModelPage() {
             </div>
           </div>
 
-          {/* Bottom Control Bar: Pacdora-Style Fold Progress Slider & Material Selector */}
+          {/* Bottom Control Bar: Fold Progress Slider & Material Selector */}
           <div className="h-24 shrink-0 bg-white/95 backdrop-blur-md border-t border-[#D5E4F0] px-6 py-3 flex items-center justify-between gap-6 z-20 shadow-lg">
             {/* Play/Pause & Folding Slider */}
             <div className="flex-1 max-w-xl space-y-1.5">

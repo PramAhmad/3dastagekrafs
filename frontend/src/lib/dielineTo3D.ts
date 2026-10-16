@@ -633,10 +633,10 @@ export function buildFolded3DModel(
   const isCorrugated = materialFinish === "corrugated"
   const isKraft = materialFinish === "kraft" || isCorrugated
   const kraftBumpMap = isKraft ? getCardboardBumpTexture(isCorrugated) : null
-  const bumpScale = isCorrugated ? 0.014 : isKraft ? 0.005 : 0
+  const bumpScale = isCorrugated ? 0.0065 : isKraft ? 0.0035 : 0
 
-  const defaultColor = isCorrugated ? "#b8864e" : isKraft ? "#c6a57f" : boxColor
-  const roughness = isCorrugated ? 0.94 : isKraft ? 0.82 : materialFinish === "glossy" ? 0.08 : materialFinish === "metallic" ? 0.15 : 0.65
+  const defaultColor = isCorrugated ? "#c29662" : isKraft ? "#cba578" : boxColor
+  const roughness = isCorrugated ? 0.88 : isKraft ? 0.78 : materialFinish === "glossy" ? 0.08 : materialFinish === "metallic" ? 0.15 : 0.65
   const metalness = materialFinish === "metallic" ? 0.88 : 0.02
   const clearcoat = materialFinish === "glossy" ? 0.95 : 0.0
 

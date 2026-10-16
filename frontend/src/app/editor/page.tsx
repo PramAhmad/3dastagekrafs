@@ -8,7 +8,7 @@ import PackagingCanvas, {
   CanvasObject,
 } from "@/components/3d/PackagingCanvas"
 import DielineCanvas from "@/components/2d/DielineCanvas"
-import PacdoraLoadingScreen from "@/components/ui/PacdoraLoadingScreen"
+import AstaLoadingScreen from "@/components/ui/AstaLoadingScreen"
 import UserImageLibrary from "@/components/editor/UserImageLibrary"
 import { formatRupiah } from "@/lib/utils"
 import { getCurrentUser, getProjectById, saveProjectToHistory, getUserSavedProjects, logoutUser } from "@/lib/auth"
@@ -118,7 +118,7 @@ const BOX_COLORS = [
   { name: "Navy Premium", hex: BRAND_COLORS.navy },
   { name: "Kuning Cerah (Aksen)", hex: BRAND_COLORS.yellow },
   { name: "Putih Bersih", hex: "#ffffff" },
-  { name: "Kraft Cokelat (Pacdora)", hex: "#c49866" },
+  { name: "Kraft Cokelat Natural", hex: "#c49866" },
   { name: "Kraft Gelombang Tua", hex: "#ba8852" },
   { name: "Hitam Pekat", hex: "#18181b" },
   { name: "Abu Natural", hex: "#71717a" },
@@ -1155,7 +1155,7 @@ function EditorComponent() {
 
   if (authChecking || isStudioLoading) {
     return (
-      <PacdoraLoadingScreen
+      <AstaLoadingScreen
         message="Memuat Studio 3D & Dieline Kemasan..."
         durationMs={1300}
         onLoaded={() => {
@@ -1426,7 +1426,7 @@ function EditorComponent() {
           </div>
         </div>
 
-        {/* Floating Right 3D Preview Island (Pacdora Style) */}
+        {/* Floating Right 3D Preview Island */}
         <div className="absolute top-18.5 right-4 bottom-4 w-76 z-30 bg-white/90 backdrop-blur-md border border-[#D5E4F0] rounded-2xl p-4 flex flex-col justify-between overflow-y-auto shadow-lg shadow-[#1F3A5C]/5 pointer-events-auto space-y-4">
           <div className="space-y-4">
             {/* 3D Live Widget with Distinct Neutral Grey Studio Background */}
@@ -1461,7 +1461,7 @@ function EditorComponent() {
                 </div>
               </div>
 
-              {/* Pacdora-Style Open to Close 3D Fold Slider */}
+              {/* Interactive Open to Close 3D Fold Slider */}
               <div className="space-y-1.5 bg-[#EEF4F8] p-3 rounded-2xl border border-[#D5E4F0]">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-extrabold text-[#1F3A5C]">Open / Close Fold</span>
@@ -1483,7 +1483,7 @@ function EditorComponent() {
                 </div>
               </div>
 
-              {/* Outside / Inside Switcher (Pacdora Style) */}
+              {/* Outside / Inside Switcher */}
               <div className="grid grid-cols-2 p-1 bg-neutral-100 rounded-xl border border-neutral-200 text-xs font-bold">
                 <button
                   onClick={() => setViewSide("outside")}
@@ -1507,7 +1507,7 @@ function EditorComponent() {
                 </button>
               </div>
 
-              {/* Package Color Palette (Pacdora Style) */}
+              {/* Package Color Palette */}
               <div className="space-y-2 bg-neutral-50 p-3 rounded-2xl border border-neutral-200">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-extrabold text-neutral-800">Package Color</span>
@@ -2268,7 +2268,7 @@ function EditorComponent() {
 
 export default function EditorPage() {
   return (
-    <Suspense fallback={<PacdoraLoadingScreen message="Memuat Studio 3D Kemasan..." />}>
+    <Suspense fallback={<AstaLoadingScreen message="Memuat Studio 3D Kemasan..." />}>
       <EditorComponent />
     </Suspense>
   )

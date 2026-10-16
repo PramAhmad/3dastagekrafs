@@ -520,22 +520,22 @@ function ContinuousBoxModel({
   const isKraft = isCardboardFamily
 
   const kraftBumpMap = isCardboardFamily ? getKraftBumpTexture(isCorrugated) : null
-  const kraftBumpScale = isCorrugated ? 0.014 : 0.005
+  const kraftBumpScale = isCorrugated ? 0.0065 : 0.0035
 
   const roughness = isGlossy
     ? 0.06
     : isCorrugated
-    ? 0.94
+    ? 0.88
     : isKraftPaper
-    ? 0.82
+    ? 0.78
     : isMetallic
     ? 0.15
     : 0.65
   const metalness = isMetallic ? 0.88 : isGlossy ? 0.05 : 0.0
   const clearcoat = isGlossy ? 1.0 : 0.0
-  const sheen = isCorrugated ? 0.18 : isKraftPaper ? 0.32 : 0.0
-  const sheenRoughness = isCorrugated ? 0.85 : 0.75
-  const sheenColor = isCorrugated ? new THREE.Color("#c8985c") : new THREE.Color("#d8b485")
+  const sheen = isCorrugated ? 0.25 : isKraftPaper ? 0.35 : 0.0
+  const sheenRoughness = isCorrugated ? 0.80 : 0.75
+  const sheenColor = isCorrugated ? new THREE.Color("#dfbe94") : new THREE.Color("#eedab7")
 
   const loadedImages = useImageCache(objects)
 
@@ -1975,15 +1975,15 @@ function CustomMeshModel({
   const isKraft = isCardboardFamily
 
   const kraftBumpMap = isCardboardFamily ? getKraftBumpTexture(isCorrugated) : null
-  const kraftBumpScale = isCorrugated ? 0.014 : 0.005
+  const kraftBumpScale = isCorrugated ? 0.0065 : 0.0035
 
   // Dynamic Material Properties
   const roughness = isGlossy
     ? 0.06
     : isCorrugated
-    ? 0.94
+    ? 0.88
     : isKraftPaper
-    ? 0.82
+    ? 0.78
     : isMetallic
     ? 0.15
     : materialFinish === "frosted"
@@ -1991,9 +1991,9 @@ function CustomMeshModel({
     : 0.65
   const metalness = isCardboardFamily ? 0.0 : materialFinish === "metallic" ? 0.88 : 0.04
   const clearcoat = isCardboardFamily ? 0.0 : materialFinish === "glossy" ? 0.95 : 0.0
-  const sheen = isCorrugated ? 0.18 : isKraftPaper ? 0.32 : 0.0
-  const sheenRoughness = isCorrugated ? 0.85 : 0.75
-  const sheenColor = isCorrugated ? new THREE.Color("#c8985c") : new THREE.Color("#d8b485")
+  const sheen = isCorrugated ? 0.25 : isKraftPaper ? 0.35 : 0.0
+  const sheenRoughness = isCorrugated ? 0.80 : 0.75
+  const sheenColor = isCorrugated ? new THREE.Color("#dfbe94") : new THREE.Color("#eedab7")
 
   // 3. Dynamic Offscreen Texture Baking (Manifest UV Bridge + SVG Dieline + Decal Artwork)
   useEffect(() => {
