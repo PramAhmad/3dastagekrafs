@@ -27,6 +27,7 @@ export interface DielineAnalysis {
   svgCanvasW: number // in viewBox coordinate units
   svgCanvasH: number // in viewBox coordinate units
   cutBox: { x: number; y: number; w: number; h: number }
+  cutContours: Array<Array<{ x: number; y: number }>>
   verticalCreases: number[]
   horizontalCreases: number[]
   panels: DielinePanelZone[]
@@ -72,6 +73,27 @@ function parseSvgPoints(points: string, close: boolean = false): PathSegment[] {
 
 function getSvgAttribute(attrs: string, name: string): string {
   return (attrs.match(new RegExp(`(?:^|\\s)${name}=["']([^"']+)["']`, "i")) || [])[1] || ""
+}
+
+function polygonArea(points: Array<{ x: number; y: number }>): number {
+  let area = 0
+  for (let i = 0; i < points.length; i++) {
+    const current = points[i]
+    const next = points[(i + 1) % points.length]
+    area += current.x * next.y - next.x * current.y
+  }
+  return area / 2
+}
+
+function pointInPolygon(point: { x: number; y: number }, polygon: Array<{ x: number; y: number }>): boolean {
+  let inside = false
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const a = polygon[i]
+    const b = polygon[j]
+    const crosses = (a.y > point.y) !== (b.y > point.y) && point.x < ((b.x - a.x) * (point.y - a.y)) / ((b.y - a.y) || Number.EPSILON) + a.x
+    if (crosses) inside = !inside
+  }
+  return inside
 }
 
 /**
@@ -175,6 +197,7 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
       svgCanvasW: 200,
       svgCanvasH: 200,
       cutBox: { x: 20, y: 20, w: 160, h: 160 },
+      cutContours: [],
       verticalCreases: [],
       horizontalCreases: [],
       panels: [],
@@ -230,6 +253,7 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
   let match: RegExpExecArray | null
 
   const cutSegs: PathSegment[] = []
+  const cutContours: Array<Array<{ x: number; y: number }>> = []
   const creaseSegs: PathSegment[] = []
 
   let cutSegmentsCount = 0
@@ -320,6 +344,14 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
       } else if (isCut) {
         cutSegmentsCount += segs.length
         cutSegs.push(...segs)
+        if (segs.length >= 3) {
+          const points = [{ x: segs[0].x1, y: segs[0].y1 }, ...segs.map((segment) => ({ x: segment.x2, y: segment.y2 }))]
+          const first = points[0]
+          const last = points[points.length - 1]
+          if (Math.hypot(first.x - last.x, first.y - last.y) <= 0.5) {
+            cutContours.push(points.slice(0, -1))
+          }
+        }
       }
     }
   }
@@ -566,6 +598,13 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
     widthMm = assemblyPrimaryPart.W
     heightMm = assemblyPrimaryPart.H
   }
+  if (modelId === "hangtag") widthMm = 0.8
+  if (modelId === "keychain-mockup") widthMm = 3
+  if (modelId === "pin-button") {
+    lengthMm = 58
+    widthMm = 3.5
+    heightMm = 58
+  }
 
   return {
     modelId,
@@ -577,6 +616,7 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
     svgCanvasW,
     svgCanvasH,
     cutBox,
+    cutContours,
     verticalCreases,
     horizontalCreases,
     panels,
@@ -1158,6 +1198,60 @@ export function buildFolded3DModel(
     const W = cutBox.w * scale
     const H = cutBox.h * scale
     centerGroup.position.y = H / 2
+
+    if (analysis.modelId === "pin-button") {
+      const finishedDiameterMm = 58
+      const radius = finishedDiameterMm * scale / 2
+      const depth = Math.max(0.025, 3.5 * scale)
+      const dome = makeMesh(new THREE.SphereGeometry(radius, 64, 24))
+      dome.scale.z = 0.14
+      dome.position.z = depth * 0.35
+      centerGroup.add(dome)
+
+      const back = makeMesh(new THREE.CylinderGeometry(radius * 0.98, radius * 0.98, depth, 64))
+      back.rotation.x = Math.PI / 2
+      back.position.z = -depth * 0.35
+      centerGroup.add(back)
+
+      const updateFold = (_progress: number) => {}
+      return { rootGroup, updateFold, materials }
+    }
+
+    if (analysis.cutContours.length > 0) {
+      const contours = [...analysis.cutContours].sort((a, b) => Math.abs(polygonArea(b)) - Math.abs(polygonArea(a)))
+      const outer = contours[0]
+      const toVectors = (points: Array<{ x: number; y: number }>) => points.map((point) => new THREE.Vector2(
+        (point.x - (cutBox.x + cutBox.w / 2)) * scale,
+        ((cutBox.y + cutBox.h / 2) - point.y) * scale
+      ))
+
+      let outerVectors = toVectors(outer)
+      if (!THREE.ShapeUtils.isClockWise(outerVectors)) outerVectors = outerVectors.reverse()
+      const shape = new THREE.Shape(outerVectors)
+
+      contours.slice(1).forEach((contour) => {
+        if (!pointInPolygon(contour[0], outer)) return
+        let holeVectors = toVectors(contour)
+        if (THREE.ShapeUtils.isClockWise(holeVectors)) holeVectors = holeVectors.reverse()
+        shape.holes.push(new THREE.Path(holeVectors))
+      })
+
+      const nominalThicknessMm = analysis.modelId === "keychain-mockup" ? 3 : analysis.modelId === "hangtag" ? 0.8 : 1
+      const depth = Math.max(0.008, nominalThicknessMm * scale)
+      const geo = new THREE.ExtrudeGeometry(shape, {
+        depth,
+        bevelEnabled: analysis.modelId === "keychain-mockup",
+        bevelSegments: 2,
+        bevelSize: analysis.modelId === "keychain-mockup" ? depth * 0.16 : 0,
+        bevelThickness: analysis.modelId === "keychain-mockup" ? depth * 0.12 : 0,
+        curveSegments: 24,
+      })
+      geo.translate(0, 0, -depth / 2)
+      centerGroup.add(makeMesh(geo))
+
+      const updateFold = (_progress: number) => {}
+      return { rootGroup, updateFold, materials }
+    }
 
     const geo = createPanelGeometry(W, H, cutBox.x, cutBox.y, svgW, svgH, cutBox.w, cutBox.h)
     const mesh = new THREE.Mesh(geo, createMaterial())
