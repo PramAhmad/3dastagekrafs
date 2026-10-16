@@ -29,6 +29,7 @@ import {
 } from "lucide-react"
 
 import PackagingCanvas, { CanvasObject, SurfaceTarget } from "@/components/3d/PackagingCanvas"
+import AdminDrawer from "@/components/admin/AdminDrawer"
 import { generateParametricDieline, mmToPixels150Dpi } from "@/lib/dielineGenerator"
 import { autoFixDielineSvg } from "@/lib/dielineAutoFixer"
 import { saveAsset, getAsset } from "@/lib/assetStorage"
@@ -100,7 +101,7 @@ function AdminStudioContent() {
 
   // Active Tab & Collapse State for 1280px screen optimization
   const [activeTab, setActiveTab] = useState<"params" | "dieline" | "artwork" | "files" | "scene">("params")
-  const [isPanelCollapsed, setIsPanelCollapsed] = useState<boolean>(false)
+  const [isPanelOpen, setIsPanelOpen] = useState<boolean>(false)
 
   // Selected Form / Template State
   const [selectedFormId, setSelectedFormId] = useState<string>("fefco-0427-mailer")
@@ -488,31 +489,9 @@ function AdminStudioContent() {
     showToast(`Template "${formName}" berhasil disimpan permanen di server & katalog!`)
   }
 
-  return (
-    <div className="flex h-full w-full bg-[#f8f9fa] text-[#1a1a1c] select-none overflow-hidden relative font-sans text-xs">
-      {/* Toast Notification */}
-      {notification && (
-        <div
-          className={`absolute top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl text-xs font-bold shadow-xl flex items-center gap-2 backdrop-blur-md transition-all ${
-            notification.type === "success"
-              ? "bg-[#1F3A5C] text-white border border-[#2F79A6]"
-              : notification.type === "error"
-              ? "bg-red-600 text-white"
-              : "bg-blue-600 text-white"
-          }`}
-        >
-          <Sparkles className="w-4 h-4 text-[#F7CB45]" />
-          <span>{notification.msg}</span>
-        </div>
-      )}
-
-      {/* --------------------------------------------------------------------- */}
-      {/* LEFT CONTROL PANEL (3DPAKS-STYLE #panel)                              */}
-      {/* --------------------------------------------------------------------- */}
+  const panelContent = (
       <div
-        className={`flex-none bg-[#0d1117] text-[#f0f6fc] border-r border-[#30363d] flex flex-col h-full z-10 shadow-2xl transition-all duration-200 ${
-          isPanelCollapsed ? "w-0 overflow-hidden border-none p-0 opacity-0 pointer-events-none" : "w-72 xl:w-80"
-        }`}
+        className="flex h-full w-full min-w-0 flex-col bg-[#0d1117] text-[#f0f6fc] shadow-2xl"
       >
         {/* Studio Brand Header */}
         <div className="p-3 border-b border-[#30363d] flex items-center justify-between bg-[#161b22]">
@@ -541,8 +520,8 @@ function AdminStudioContent() {
               <span>Simpan</span>
             </button>
             <button
-              onClick={() => setIsPanelCollapsed(true)}
-              className="p-1 rounded-lg text-[#8b949e] hover:text-white hover:bg-[#21262d] transition-all"
+              onClick={() => setIsPanelOpen(false)}
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-[#8b949e] transition-all hover:bg-[#21262d] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#58a6ff] lg:hidden"
               title="Sembunyikan Panel (Layar Penuh)"
             >
               <PanelLeftClose className="w-4 h-4" />
@@ -551,10 +530,10 @@ function AdminStudioContent() {
         </div>
 
         {/* Tab Navigation Navigation */}
-        <div className="flex items-center border-b border-[#30363d] bg-[#161b22]/70 px-2 py-1 gap-1 text-[11px] font-medium text-[#8b949e]">
+        <div className="flex min-w-0 items-center gap-1 overflow-x-auto border-b border-[#30363d] bg-[#161b22]/70 px-2 py-1 text-[11px] font-medium text-[#8b949e] scrollbar-thin scrollbar-thumb-[#30363d]">
           <button
             onClick={() => setActiveTab("params")}
-            className={`flex-1 py-1.5 px-2 rounded-md transition-all flex items-center justify-center gap-1.5 ${
+            className={`min-h-11 min-w-[4.5rem] flex-none rounded-md px-2 py-1.5 transition-all flex items-center justify-center gap-1.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#58a6ff] ${
               activeTab === "params" ? "bg-[#21262d] text-white font-bold" : "hover:text-[#c9d1d9]"
             }`}
           >
@@ -563,7 +542,7 @@ function AdminStudioContent() {
           </button>
           <button
             onClick={() => setActiveTab("dieline")}
-            className={`flex-1 py-1.5 px-2 rounded-md transition-all flex items-center justify-center gap-1.5 ${
+            className={`min-h-11 min-w-[4.5rem] flex-none rounded-md px-2 py-1.5 transition-all flex items-center justify-center gap-1.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#58a6ff] ${
               activeTab === "dieline" ? "bg-[#21262d] text-white font-bold" : "hover:text-[#c9d1d9]"
             }`}
           >
@@ -572,7 +551,7 @@ function AdminStudioContent() {
           </button>
           <button
             onClick={() => setActiveTab("artwork")}
-            className={`flex-1 py-1.5 px-2 rounded-md transition-all flex items-center justify-center gap-1.5 ${
+            className={`min-h-11 min-w-[4.5rem] flex-none rounded-md px-2 py-1.5 transition-all flex items-center justify-center gap-1.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#58a6ff] ${
               activeTab === "artwork" ? "bg-[#21262d] text-white font-bold" : "hover:text-[#c9d1d9]"
             }`}
           >
@@ -581,7 +560,7 @@ function AdminStudioContent() {
           </button>
           <button
             onClick={() => setActiveTab("files")}
-            className={`flex-1 py-1.5 px-2 rounded-md transition-all flex items-center justify-center gap-1.5 ${
+            className={`min-h-11 min-w-[4.5rem] flex-none rounded-md px-2 py-1.5 transition-all flex items-center justify-center gap-1.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#58a6ff] ${
               activeTab === "files" ? "bg-[#21262d] text-white font-bold" : "hover:text-[#c9d1d9]"
             }`}
           >
@@ -590,7 +569,7 @@ function AdminStudioContent() {
           </button>
           <button
             onClick={() => setActiveTab("scene")}
-            className={`flex-1 py-1.5 px-2 rounded-md transition-all flex items-center justify-center gap-1.5 ${
+            className={`min-h-11 min-w-[4.5rem] flex-none rounded-md px-2 py-1.5 transition-all flex items-center justify-center gap-1.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#58a6ff] ${
               activeTab === "scene" ? "bg-[#21262d] text-white font-bold" : "hover:text-[#c9d1d9]"
             }`}
           >
@@ -1132,57 +1111,84 @@ function AdminStudioContent() {
           </Link>
         </div>
       </div>
+  )
+
+  return (
+    <div className="flex h-full w-full bg-[#f8f9fa] text-[#1a1a1c] select-none overflow-hidden relative font-sans text-xs">
+      {/* Toast Notification */}
+      {notification && (
+        <div
+          className={`absolute top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl text-xs font-bold shadow-xl flex items-center gap-2 backdrop-blur-md transition-all ${
+            notification.type === "success"
+              ? "bg-[#1F3A5C] text-white border border-[#2F79A6]"
+              : notification.type === "error"
+              ? "bg-red-600 text-white"
+              : "bg-blue-600 text-white"
+          }`}
+        >
+          <Sparkles className="w-4 h-4 text-[#F7CB45]" />
+          <span>{notification.msg}</span>
+        </div>
+      )}
+
+      <div className="hidden h-full w-64 flex-none lg:flex xl:w-72">
+        {panelContent}
+      </div>
+
+      <AdminDrawer open={isPanelOpen} onClose={() => setIsPanelOpen(false)} title="3DPAKS Studio controls" side="left">
+        <div className="-m-5 h-[calc(100%+2.5rem)] w-[calc(100%+2.5rem)]">{panelContent}</div>
+      </AdminDrawer>
 
       {/* --------------------------------------------------------------------- */}
       {/* RIGHT VIEWPORT CANVAS (#viewport)                                     */}
       {/* --------------------------------------------------------------------- */}
       <div className="flex-1 relative h-full flex flex-col min-w-0 bg-[#eaedf0] overflow-hidden">
         {/* Floating Top HUD Island */}
-        <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
-          <div className="flex items-center gap-2 pointer-events-auto">
-            {isPanelCollapsed && (
+        <div className="pointer-events-none absolute left-3 right-3 top-3 z-20 flex flex-wrap items-start justify-between gap-2 sm:left-4 sm:right-4 sm:top-4">
+          <div className="pointer-events-auto flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            {!isPanelOpen && (
               <button
-                onClick={() => setIsPanelCollapsed(false)}
-                className="px-2.5 py-1.5 rounded-xl bg-white/95 backdrop-blur-md border border-[#D5E4F0] text-[#1F3A5C] font-bold text-[11px] shadow-sm hover:bg-[#EEF4F8] transition-all flex items-center gap-1.5"
+                onClick={() => setIsPanelOpen(true)}
+                className="pointer-events-auto flex min-h-11 min-w-11 items-center gap-1.5 rounded-xl border border-[#D5E4F0] bg-white/95 px-2.5 py-1.5 text-[11px] font-bold text-[#1F3A5C] shadow-sm backdrop-blur-md transition-all hover:bg-[#EEF4F8] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2F79A6] sm:min-w-0"
                 title="Buka Panel Kontrol"
               >
                 <PanelLeftOpen className="w-3.5 h-3.5 text-[#2F79A6]" />
-                <span>Panel Kontrol</span>
+                <span className="hidden sm:inline">Panel Kontrol</span>
               </button>
             )}
 
-            <div className="px-3 py-1.5 rounded-xl bg-white/90 backdrop-blur-md border border-[#D5E4F0] shadow-sm flex items-center gap-2 text-[#1F3A5C]">
-              <span className="font-extrabold text-[12px]">{formName}</span>
-              <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-[#EEF4F8] text-[#2F79A6] border border-[#D5E4F0] font-bold">
+            <div className="min-w-0 max-w-full rounded-xl border border-[#D5E4F0] bg-white/90 px-2.5 py-1.5 text-[#1F3A5C] shadow-sm backdrop-blur-md sm:px-3">
+              <span className="block max-w-[42vw] truncate font-extrabold text-[12px] sm:max-w-[18rem]">{formName}</span>
+              <span className="mt-1 block w-fit max-w-full truncate rounded border border-[#D5E4F0] bg-[#EEF4F8] px-1.5 py-0.5 font-mono text-[10px] font-bold text-[#2F79A6] sm:mt-0 sm:inline-block">
                 {length} × {width} × {height} mm
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 pointer-events-auto">
+          <div className="pointer-events-auto flex max-w-full flex-wrap items-center justify-end gap-2">
             <button
               onClick={handleTriggerExportGLB}
               disabled={isExportingGLB}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#238636] hover:bg-[#2ea043] text-white font-bold text-[11px] shadow-sm transition-all active:scale-95 disabled:opacity-50"
+              className="flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-xl bg-[#238636] px-3 py-1.5 text-[11px] font-bold text-white shadow-sm transition-all hover:bg-[#2ea043] active:scale-95 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#238636] sm:min-w-0"
               title="Generate dan download file 3D GLB langsung dari model/dieline ini"
             >
               <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-              <span>{isExportingGLB ? "Generating GLB..." : "Generate 3D GLB"}</span>
+              <span className="hidden lg:inline">{isExportingGLB ? "Generating GLB..." : "Generate 3D GLB"}</span>
             </button>
 
             <Link
               href={`/editor?template=${selectedFormId}`}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/90 hover:bg-white text-[#1F3A5C] border border-[#D5E4F0] font-bold shadow-sm transition-all"
+              className="flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-xl border border-[#D5E4F0] bg-white/90 px-3 py-1.5 font-bold text-[#1F3A5C] shadow-sm transition-all hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2F79A6] sm:min-w-0"
               title="Buka di Editor Pelanggan"
             >
-              <span>Uji di Client Editor</span>
+              <span className="hidden lg:inline">Uji di Client Editor</span>
               <ExternalLink className="w-3.5 h-3.5 text-[#2F79A6]" />
             </Link>
           </div>
         </div>
 
         {/* 3D WebGL Canvas Engine */}
-        <div className="w-full h-full relative">
+        <div className="relative min-h-0 min-w-0 h-full w-full">
           <PackagingCanvas
             category={category}
             length={length}
