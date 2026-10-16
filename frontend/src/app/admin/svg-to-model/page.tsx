@@ -145,7 +145,7 @@ export default function SvgToModelPage() {
       if (rawSvg) {
         const autoFix = autoFixDielineSvg(rawSvg)
         setSvgString(autoFix.fixedSvg)
-        setDielinePreviewSvg(autoFix.fixedSvg)
+        setDielinePreviewSvg(rawSvg)
         setModelTextureSvg(sanitizeSvgFor3D(rawSvg))
         // Analyze original CAD source so structural metadata and exact layer geometry survive cleanup.
         const ana = analyzeSvgDieline(rawSvg)
@@ -191,7 +191,7 @@ export default function SvgToModelPage() {
       const text = await file.text()
       const autoFix = autoFixDielineSvg(text)
       setSvgString(autoFix.fixedSvg)
-      setDielinePreviewSvg(autoFix.fixedSvg)
+      setDielinePreviewSvg(text)
       setModelTextureSvg(sanitizeSvgFor3D(text))
       const ana = analyzeSvgDieline(text)
       setAnalysis(ana)
