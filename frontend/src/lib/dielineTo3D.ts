@@ -435,6 +435,8 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
 
   if (assemblySpec?.family === "flexible_gusset_pouch" || assemblySpec?.family === "film_seal_and_deformation") {
     boxType = "pouch"
+  } else if (assemblySpec?.family === "flat_sheet_or_curved_label_wrap") {
+    boxType = typeof assemblySpec.dimensions.outerDiameter === "number" ? "cylinder-wrap" : "flat-card"
   } else if (assemblySpec?.family === "tapered_cup" || assemblySpec?.family === "tapered_cup_sleeve" || assemblySpec?.family === "circular_tube") {
     boxType = "cylinder-wrap"
   } else if (assemblySpec?.family === "rolled_wall_mailer" || assemblySpec?.family === "food_clamshell") {
@@ -624,7 +626,7 @@ export function analyzeSvgDieline(svgText: string): DielineAnalysis {
     horizontalCreases,
     panels,
     boxType,
-    dims: { length: Math.max(10, lengthMm), width: Math.max(1, widthMm), height: Math.max(10, heightMm) },
+    dims: { length: Math.max(10, lengthMm), width: Math.max(0.05, widthMm), height: Math.max(10, heightMm) },
     cadStats: {
       cutSegmentsCount,
       creaseSegmentsCount,
@@ -1128,7 +1130,9 @@ export function buildFolded3DModel(
 
     const W = cutBox.w * scale
     const H = cutBox.h * scale
-    const R = W / (Math.PI * 2)
+    const targetDiameter = analysis.assemblyDimensions?.outerDiameter
+    const R = typeof targetDiameter === "number" ? targetDiameter * scale / 2 : W / (Math.PI * 2)
+    const fullWrapAngle = W / R
 
     centerGroup.position.y = H / 2
 
@@ -1168,7 +1172,7 @@ export function buildFolded3DModel(
         }
         centerGroup.position.z = 0
       } else {
-        const phi = Math.PI * 2 * t
+        const phi = fullWrapAngle * t
         const r = W / phi
         for (let i = 0; i < pos.count; i++) {
           const col = i % (segsX + 1)
@@ -1309,14 +1313,15 @@ export function buildFolded3DModel(
         shape.holes.push(new THREE.Path(holeVectors))
       })
 
-      const nominalThicknessMm = analysis.modelId === "keychain-mockup" ? 3 : analysis.modelId === "hangtag" ? 0.8 : 1
-      const depth = Math.max(0.008, nominalThicknessMm * scale)
+      const nominalThicknessMm = analysis.modelId === "keychain-mockup" ? 3 : analysis.modelId === "hangtag" ? 0.8 : analysis.dims.width
+      const hasSoftBevel = analysis.modelId === "keychain-mockup" || analysis.modelId === "mousepad-mockup"
+      const depth = Math.max(0.002, nominalThicknessMm * scale)
       const geo = new THREE.ExtrudeGeometry(shape, {
         depth,
-        bevelEnabled: analysis.modelId === "keychain-mockup",
+        bevelEnabled: hasSoftBevel,
         bevelSegments: 2,
-        bevelSize: analysis.modelId === "keychain-mockup" ? depth * 0.16 : 0,
-        bevelThickness: analysis.modelId === "keychain-mockup" ? depth * 0.12 : 0,
+        bevelSize: hasSoftBevel ? depth * 0.16 : 0,
+        bevelThickness: hasSoftBevel ? depth * 0.12 : 0,
         curveSegments: 24,
       })
       geo.translate(0, 0, -depth / 2)

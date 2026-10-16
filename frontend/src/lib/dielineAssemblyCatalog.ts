@@ -14,6 +14,7 @@ export type AssemblyFamily =
   | "curved_pillow_carton"
   | "rsc_corrugated"
   | "film_seal_and_deformation"
+  | "flat_sheet_or_curved_label_wrap"
 
 export interface AssemblyPreviewSpec {
   family: AssemblyFamily
@@ -50,6 +51,17 @@ export const DIELINE_ASSEMBLY_CATALOG: Record<string, AssemblyPreviewSpec> = {
   "window-carton": { family: "four_wall_tuck_carton", dimensions: { L: 90, W: 40, H: 140 } },
   "pillow-pack": { family: "film_seal_and_deformation", dimensions: { L: 140, W: 55, H: 120 } },
   "flat-sachet": { family: "film_seal_and_deformation", dimensions: { L: 95, W: 12, H: 150 } },
+  "business-card": { family: "flat_sheet_or_curved_label_wrap", dimensions: { L: 90, W: 0.35, H: 55 } },
+  "can-label": { family: "flat_sheet_or_curved_label_wrap", dimensions: { outerDiameter: 66.5, H: 115 } },
+  "certificate-a4": { family: "flat_sheet_or_curved_label_wrap", dimensions: { L: 297, W: 0.2, H: 210 } },
+  "flyer-a5": { family: "flat_sheet_or_curved_label_wrap", dimensions: { L: 148, W: 0.15, H: 210 } },
+  "jar-label": { family: "flat_sheet_or_curved_label_wrap", dimensions: { outerDiameter: 65, H: 65 } },
+  "bottle-label": { family: "flat_sheet_or_curved_label_wrap", dimensions: { outerDiameter: 70, H: 90 } },
+  "bottle-label-packaging": { family: "flat_sheet_or_curved_label_wrap", dimensions: { outerDiameter: 70, H: 90 } },
+  letterhead: { family: "flat_sheet_or_curved_label_wrap", dimensions: { L: 210, W: 0.1, H: 297 } },
+  "mousepad-mockup": { family: "flat_sheet_or_curved_label_wrap", dimensions: { L: 230, W: 3, H: 200 } },
+  "postcard-a6": { family: "flat_sheet_or_curved_label_wrap", dimensions: { L: 148, W: 0.4, H: 105 } },
+  "poster-a3": { family: "flat_sheet_or_curved_label_wrap", dimensions: { L: 297, W: 0.15, H: 420 } },
 }
 
 export function getAssemblyPreviewSpec(modelId?: string): AssemblyPreviewSpec | undefined {
