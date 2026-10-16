@@ -19,7 +19,7 @@ export default function AdminSettingsPage() {
   return (
     <div className="max-w-2xl space-y-4">
       {notification && (
-        <div className="fixed bottom-5 right-5 z-50 px-4 py-2.5 rounded-xl shadow-2xl bg-emerald-950 text-emerald-300 border border-emerald-500/40 text-[12px] font-semibold flex items-center gap-2 animate-bounce">
+        <div role="status" className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-3 text-[11px] font-bold text-emerald-800 shadow-xl animate-slide-up">
           <CheckCircle2 className="w-4 h-4" />
           <span>{notification}</span>
         </div>

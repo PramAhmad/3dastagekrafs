@@ -284,7 +284,7 @@ export default function AdminCategoriesPage() {
     <div className="space-y-4">
       {/* Toast Notification */}
       {notification && (
-        <div className="fixed bottom-5 right-5 z-50 px-4 py-2.5 rounded-xl shadow-xl bg-[#1F3A5C] text-white border border-[#D5E4F0] text-[12px] font-semibold flex items-center gap-2 animate-bounce">
+        <div role="status" className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-xl border border-[#D5E4F0] bg-white px-4 py-3 text-[11px] font-bold text-[#1F3A5C] shadow-xl animate-slide-up">
           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           <span>{notification}</span>
         </div>

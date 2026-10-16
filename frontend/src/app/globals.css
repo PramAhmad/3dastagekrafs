@@ -25,6 +25,19 @@
   --secondary-yellow: #F7CB45;
   --text-dark: #1F3A5C;
   --surface: #FFFFFF;
+
+  /* Admin semantic tokens */
+  --admin-bg: #F3F7FA;
+  --admin-surface: #FFFFFF;
+  --admin-surface-subtle: #F7FAFC;
+  --admin-border: #D5E4F0;
+  --admin-border-strong: #BFD5E3;
+  --admin-text: #1F3A5C;
+  --admin-text-secondary: #52708D;
+  --admin-text-muted: #718BAA;
+  --admin-focus: #2F79A6;
+  --admin-radius: 0.875rem;
+  --admin-shadow: 0 1px 2px rgba(31, 58, 92, 0.04), 0 8px 24px rgba(31, 58, 92, 0.035);
 }
 
 @theme inline {
@@ -74,4 +87,88 @@ body {
 .no-scrollbar {
   -ms-overflow-style: none !important;  /* IE and Edge */
   scrollbar-width: none !important;  /* Firefox */
+}
+
+/* Shared admin presentation. Workspace routes keep their purpose-built canvas layout. */
+.admin-standard {
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.72)),
+    radial-gradient(circle at 18% 0%, rgba(67, 148, 195, 0.08), transparent 30rem),
+    var(--admin-bg);
+}
+
+.admin-standard > * {
+  width: 100%;
+  max-width: 90rem;
+  margin-inline: auto;
+}
+
+.admin-standard .bg-white.border,
+.admin-standard .bg-white[class*="border-"] {
+  border-color: var(--admin-border);
+  box-shadow: var(--admin-shadow);
+}
+
+.admin-standard .shadow-xs {
+  box-shadow: var(--admin-shadow);
+}
+
+.admin-standard input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+.admin-standard select,
+.admin-standard textarea {
+  min-height: 2.5rem;
+  border-color: var(--admin-border);
+  background-color: var(--admin-surface);
+  color: var(--admin-text);
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.admin-standard textarea {
+  min-height: 5.5rem;
+}
+
+.admin-standard input:focus,
+.admin-standard select:focus,
+.admin-standard textarea:focus {
+  border-color: var(--admin-focus);
+  box-shadow: 0 0 0 3px rgba(47, 121, 166, 0.12);
+  outline: none;
+}
+
+.admin-standard button,
+.admin-standard a {
+  cursor: pointer;
+}
+
+.admin-standard table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.admin-standard thead {
+  background: var(--admin-surface-subtle);
+}
+
+.admin-standard tbody tr {
+  transition: background-color 140ms ease;
+}
+
+.admin-standard tbody tr:hover {
+  background: rgba(238, 244, 248, 0.62);
+}
+
+.admin-standard :is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--admin-focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-shell *,
+  .admin-shell *::before,
+  .admin-shell *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
