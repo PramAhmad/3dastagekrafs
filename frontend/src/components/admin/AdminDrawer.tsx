@@ -21,6 +21,14 @@ const FOCUSABLE_SELECTOR = [
   "[tabindex]:not([tabindex='-1'])",
 ].join(",")
 
+function getVisibleFocusableElements(panel: HTMLElement) {
+  return Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter((element) => {
+    if (element.hasAttribute("hidden") || element.getAttribute("aria-hidden") === "true") return false
+    const style = window.getComputedStyle(element)
+    return style.display !== "none" && style.visibility !== "hidden" && element.getClientRects().length > 0
+  })
+}
+
 export default function AdminDrawer({
   open,
   onClose,
@@ -49,8 +57,7 @@ export default function AdminDrawer({
       const panel = panelRef.current
       if (!panel) return
 
-      const firstFocusable = panel.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)
-      ;(firstFocusable ?? closeButtonRef.current ?? panel).focus()
+      ;(closeButtonRef.current ?? getVisibleFocusableElements(panel)[0] ?? panel).focus()
     })
 
     return () => window.cancelAnimationFrame(focusFrame)
@@ -63,6 +70,34 @@ export default function AdminDrawer({
       if (event.key === "Escape") {
         event.preventDefault()
         onClose()
+        return
+      }
+
+      if (event.key !== "Tab") return
+
+      const panel = panelRef.current
+      if (!panel) return
+
+      const focusableElements = getVisibleFocusableElements(panel)
+      if (focusableElements.length === 0) {
+        event.preventDefault()
+        panel.focus()
+        return
+      }
+
+      const first = focusableElements[0]
+      const last = focusableElements[focusableElements.length - 1]
+      const activeElement = document.activeElement
+
+      if (!panel.contains(activeElement)) {
+        event.preventDefault()
+        ;(event.shiftKey ? last : first).focus()
+      } else if (event.shiftKey && activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && activeElement === last) {
+        event.preventDefault()
+        first.focus()
       }
     }
 

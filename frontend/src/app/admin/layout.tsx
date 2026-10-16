@@ -45,7 +45,7 @@ export default function AdminLayout({
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <AdminHeader
-            onMenuClick={() => setIsNavOpen(true)}
+            onMenuClick={() => setIsNavOpen((isOpen) => !isOpen)}
             navOpen={isNavOpen}
             navId={navId}
             isWorkspace={isWorkspace}
